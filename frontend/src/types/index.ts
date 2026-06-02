@@ -45,14 +45,14 @@ export interface StatsResponse {
   index_stats: {
     total_vector_count?: number;
     dimension?: number;
-    index_fullness?: number;
-    namespaces?: Record<string, number>;
+    status?: string;
+    hnsw?: { m: number; ef_construct: number; ef: number };
   };
 }
 
 export interface HealthResponse {
   status: string;
-  pinecone: string;
+  qdrant: string;
   nvidia: string;
   version: string;
 }
@@ -76,6 +76,8 @@ export type WSEventType =
   | 'query_embedded'
   | 'retrieval_started'
   | 'chunks_retrieved'
+  | 'reranking_started'
+  | 'reranking_completed'
   | 'generation_started'
   | 'generation_token'
   | 'generation_completed'
@@ -104,6 +106,7 @@ export type QueryStage =
   | 'idle'
   | 'embedding'
   | 'retrieving'
+  | 'reranking'
   | 'generating'
   | 'complete'
   | 'error';

@@ -70,7 +70,7 @@ export function Dashboard() {
 
   const recentEvents = eventLog.slice(0, 8);
   const activeCount = [pipeline.stage !== 'idle', queryState.stage !== 'idle' && queryState.stage !== 'complete'].filter(Boolean).length;
-  const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.pinecone === 'connected' ? 20 : 0)) : 28;
+  const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.qdrant === 'connected' ? 20 : 0)) : 28;
   const architectureLayers = [
     { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-blue-500/20 to-blue-500/5' },
     { label: 'Processing Layer', detail: 'Parsing, chunking, and embedding progression.', icon: Workflow, tone: 'from-purple-500/20 to-purple-500/5' },
@@ -186,9 +186,9 @@ export function Dashboard() {
                   tag: health === undefined ? 'Checking…' : health.status === 'ok' ? 'Online' : 'Offline',
                 },
                 {
-                  label: 'Pinecone Vector DB',
-                  ok: health?.pinecone === 'connected',
-                  tag: health === undefined ? 'Checking…' : health.pinecone === 'connected' ? 'Connected' : 'Not Connected',
+                  label: 'Qdrant Vector DB',
+                  ok: health?.qdrant === 'connected',
+                  tag: health === undefined ? 'Checking…' : health.qdrant === 'connected' ? 'Connected' : 'Not Connected',
                 },
                 {
                   label: 'NVIDIA NIM API',

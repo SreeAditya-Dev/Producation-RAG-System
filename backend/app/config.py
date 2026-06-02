@@ -12,10 +12,19 @@ class Settings(BaseSettings):
     embedding_model: str = "nvidia/nv-embedqa-e5-v5"
     embedding_dimension: int = 1024
 
-    pinecone_api_key: str = ""
-    pinecone_index_name: str = "rag-system"
-    pinecone_cloud: str = "aws"
-    pinecone_region: str = "us-east-1"
+    # Qdrant vector DB (self-hosted, Docker)
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6333
+    qdrant_collection_name: str = "rag-system"
+    # HNSW parameters
+    qdrant_hnsw_m: int = 16            # bi-directional links per node
+    qdrant_hnsw_ef_construct: int = 200  # beam width at index build time
+    qdrant_hnsw_ef: int = 128          # beam width at query time
+
+    # NVIDIA NIM reranker
+    reranker_model: str = "nvidia/llama-3.2-nv-rerankqa-1b-v2"
+    # Fetch this many candidates before reranking, then return top_k
+    reranker_candidates_multiplier: int = 4
 
     # Supabase PostgreSQL
     database_url: str = "sqlite:///./rag_system.db"
@@ -45,6 +54,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 @lru_cache()

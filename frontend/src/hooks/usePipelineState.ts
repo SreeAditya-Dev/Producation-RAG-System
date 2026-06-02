@@ -101,7 +101,7 @@ export function usePipelineState() {
 
         case 'storing_started':
           setPipeline((p) => ({ ...p, stage: 'storing' }));
-          addLog(makeLogEntry(event, `Storing ${(data as Record<string, number>).vector_count} vectors in Pinecone...`, 'info'));
+          addLog(makeLogEntry(event, `Storing ${(data as Record<string, number>).vector_count} vectors in Qdrant...`, 'info'));
           break;
 
         case 'storing_completed':
@@ -137,13 +137,26 @@ export function usePipelineState() {
 
         case 'query_embedded':
           setQueryState((q) => ({ ...q, stage: 'retrieving' }));
-          addLog(makeLogEntry(event, 'Query embedded, searching vector DB...', 'info'));
+          addLog(makeLogEntry(event, 'Query embedded — searching Qdrant HNSW index...', 'info'));
           break;
 
         case 'chunks_retrieved': {
           const d = data as Record<string, unknown>;
+          setQueryState((q) => ({ ...q, stage: 'reranking' }));
+          addLog(makeLogEntry(event, `Retrieved ${d.count} candidate chunks`, 'success'));
+          break;
+        }
+
+        case 'reranking_started':
+          setQueryState((q) => ({ ...q, stage: 'reranking' }));
+          addLog(makeLogEntry(event, `Reranking ${(data as Record<string, number>).candidate_count} candidates with NVIDIA NIM...`, 'info'));
+          break;
+
+        case 'reranking_completed': {
+          const d = data as Record<string, unknown>;
           setQueryState((q) => ({ ...q, stage: 'generating' }));
-          addLog(makeLogEntry(event, `Retrieved ${d.count} relevant chunks`, 'success'));
+          const topScore = d.top_score != null ? ` (top score: ${(d.top_score as number).toFixed(3)})` : '';
+          addLog(makeLogEntry(event, `Reranked → ${d.ranked_count} results${topScore}`, 'success'));
           break;
         }
 
@@ -174,10 +187,7 @@ export function usePipelineState() {
         }
 
         case 'query_failed':
-          setQueryState((q) => ({
-            ...q,
-            stage: 'error',
-          }));
+          setQueryState((q) => ({ ...q, stage: 'error' }));
           addLog(makeLogEntry(event, `✗ Query failed: ${(data as Record<string, string>).error}`, 'error'));
           break;
       }

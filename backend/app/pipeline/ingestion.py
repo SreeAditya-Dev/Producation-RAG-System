@@ -9,7 +9,7 @@ from app.config import settings
 from app.utils.file_parsers import parse_file
 from app.utils.chunking import RecursiveTextSplitter
 from app.services.embedding_service import embedding_service
-from app.services.pinecone_service import pinecone_service
+from app.services.qdrant_service import qdrant_service
 from app.services.storage_service import storage_service
 from app.ws_manager import manager
 
@@ -24,7 +24,7 @@ async def ingest_document(
     db_session,
 ) -> int:
     """
-    Full ingestion pipeline: download → parse → chunk → embed → upsert.
+    Full ingestion pipeline: download → parse → chunk → embed → upsert to Qdrant.
     Emits WebSocket events at each stage.
     Returns the number of chunks created.
     """
@@ -51,7 +51,7 @@ async def ingest_document(
             raise ValueError("Document appears to be empty after parsing.")
         await emit("parsing_completed", {"char_count": len(raw_text)})
 
-        # 2. Chunk
+        # 2. Chunk (recursive boundary splitting with overlap)
         await emit("chunking_started", {})
         splitter = RecursiveTextSplitter(
             chunk_size=settings.max_chunk_size,
@@ -70,7 +70,7 @@ async def ingest_document(
             "chunk_overlap": settings.chunk_overlap,
         })
 
-        # 3. Embed + Upsert (in batches for real-time feedback)
+        # 3. Embed + build vector batch
         await emit("embedding_started", {"total_chunks": total_chunks})
 
         batch_size = 16
@@ -98,7 +98,7 @@ async def ingest_document(
                             "char_start": meta.char_start,
                             "char_end": meta.char_end,
                             "boundary_level": meta.boundary_level,
-                            "text": meta.text[:1000],  # Pinecone metadata limit
+                            "text": meta.text[:1000],
                             "chunk_size": len(meta.text),
                         },
                     }
@@ -115,14 +115,14 @@ async def ingest_document(
                     },
                 )
 
-        # 4. Upsert all to Pinecone
+        # 4. Upsert all vectors to Qdrant
         await emit("storing_started", {"vector_count": len(vectors_to_upsert)})
         upserted = await asyncio.get_event_loop().run_in_executor(
-            None, pinecone_service.upsert_vectors, vectors_to_upsert
+            None, qdrant_service.upsert_vectors, vectors_to_upsert
         )
         await emit("storing_completed", {"upserted": upserted})
 
-        # 5. Update DB
+        # 5. Update DB record
         doc = db_session.query(Document).filter(Document.id == doc_id).first()
         if doc:
             doc.status = "ready"
@@ -140,11 +140,11 @@ async def ingest_document(
             },
         )
 
-        logger.info(f"Ingested doc {doc_id}: {total_chunks} chunks")
+        logger.info("Ingested doc %s: %d chunks", doc_id, total_chunks)
         return total_chunks
 
     except Exception as e:
-        logger.error(f"Ingestion failed for {doc_id}: {e}")
+        logger.error("Ingestion failed for %s: %s", doc_id, e)
 
         from app.database import Document
         doc = db_session.query(Document).filter(Document.id == doc_id).first()
@@ -154,10 +154,7 @@ async def ingest_document(
             doc.updated_at = datetime.utcnow()
             db_session.commit()
 
-        await emit(
-            "ingestion_failed",
-            {"doc_id": doc_id, "error": str(e)},
-        )
+        await emit("ingestion_failed", {"doc_id": doc_id, "error": str(e)})
         raise
 
     finally:

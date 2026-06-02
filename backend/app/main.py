@@ -31,7 +31,7 @@ from app.models import (
 )
 from app.pipeline.ingestion import ingest_document
 from app.pipeline.retrieval import retrieve_and_generate
-from app.services.pinecone_service import pinecone_service
+from app.services.qdrant_service import qdrant_service
 from app.services.llm_service import llm_service
 from app.services.storage_service import storage_service, CONTENT_TYPES
 from app.utils.file_parsers import detect_file_type
@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="RAG System API",
-    description="Production-ready Retrieval-Augmented Generation with NVIDIA NIM + Pinecone",
-    version="1.0.0",
+    description="Production-ready Retrieval-Augmented Generation with NVIDIA NIM + Qdrant HNSW",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -61,7 +61,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     create_tables()
-    logger.info("RAG System started. PostgreSQL tables ready.")
+    logger.info("RAG System started. Database tables ready.")
 
 
 # ── WebSocket ────────────────────────────────────────────────────────────────
@@ -72,7 +72,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Echo ping/pong
             try:
                 msg = json.loads(data)
                 if msg.get("type") == "ping":
@@ -87,10 +86,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    pinecone_ok = pinecone_service.test_connection()
+    qdrant_ok = await asyncio.get_event_loop().run_in_executor(
+        None, qdrant_service.test_connection
+    )
     return HealthResponse(
         status="ok",
-        pinecone="connected" if pinecone_ok else "error",
+        qdrant="connected" if qdrant_ok else "error",
         nvidia="configured" if settings.nvidia_api_key else "not configured",
     )
 
@@ -117,13 +118,11 @@ async def upload_document(
     content = await file.read()
     file_size = len(content)
 
-    # Upload to Supabase S3
     content_type = CONTENT_TYPES.get(file_type, "application/octet-stream")
     await asyncio.get_event_loop().run_in_executor(
         None, storage_service.upload, content, s3_key, content_type
     )
 
-    # Create DB record (filename stores the S3 key)
     doc = Document(
         id=doc_id,
         original_name=original_name,
@@ -139,7 +138,6 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    # Background ingestion (needs its own DB session + event loop)
     from app.database import SessionLocal
 
     def _run_ingestion():
@@ -213,15 +211,13 @@ async def delete_document(doc_id: str, db: Session = Depends(get_db)):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Delete from Pinecone
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, pinecone_service.delete_by_document, doc_id
+            None, qdrant_service.delete_by_document, doc_id
         )
     except Exception as e:
-        logger.warning(f"Could not delete vectors for {doc_id}: {e}")
+        logger.warning("Could not delete vectors for %s: %s", doc_id, e)
 
-    # Delete from S3
     await asyncio.get_event_loop().run_in_executor(
         None, storage_service.delete, doc.filename
     )
@@ -248,7 +244,7 @@ async def query(req: QueryRequest, db: Session = Depends(get_db)):
         query_id=result["query_id"],
         question=result["question"],
         answer=result["answer"],
-        sources=[SourceChunk(**s) for s in result["sources"]],
+        sources=[SourceChunk(**{k: v for k, v in s.items() if k in SourceChunk.model_fields}) for s in result["sources"]],
         processing_time=result["processing_time"],
         created_at=result["created_at"],
     )
@@ -295,7 +291,7 @@ async def get_stats(db: Session = Depends(get_db)):
     total_queries = db.query(QueryHistory).count()
 
     index_stats = await asyncio.get_event_loop().run_in_executor(
-        None, pinecone_service.get_stats
+        None, qdrant_service.get_stats
     )
 
     return StatsResponse(

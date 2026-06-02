@@ -45,9 +45,9 @@ const STAGES: StageNode[] = [
     glowClass: 'node-glow-purple',
   },
   {
-    id: 'pinecone',
-    label: 'Pinecone',
-    sublabel: 'Vector DB',
+    id: 'qdrant',
+    label: 'Qdrant',
+    sublabel: 'HNSW Search',
     icon: Database,
     color: '#3b82f6',
     rgb: '59,130,246',
@@ -65,7 +65,7 @@ const STAGES: StageNode[] = [
   {
     id: 'rerank',
     label: 'Rerank',
-    sublabel: 'Score Filter',
+    sublabel: 'NIM Reranker',
     icon: SlidersHorizontal,
     color: '#f97316',
     rgb: '249,115,22',
@@ -95,17 +95,17 @@ type NodeStatus = 'idle' | 'active' | 'complete' | 'error';
 
 function getNodeStatus(nodeId: string, current: QueryStage): NodeStatus {
   if (current === 'error') return 'error';
-  const order: QueryStage[] = ['idle', 'embedding', 'retrieving', 'generating', 'complete'];
+  const order: QueryStage[] = ['idle', 'embedding', 'retrieving', 'reranking', 'generating', 'complete'];
   const cp = order.indexOf(current);
 
   switch (nodeId) {
     case 'query':    return cp >= 1 ? 'active' : 'idle';
     case 'embed':    return cp === 1 ? 'active' : cp > 1 ? 'complete' : 'idle';
-    case 'pinecone': return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
+    case 'qdrant':   return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
     case 'retrieve': return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
     case 'rerank':   return cp === 3 ? 'active' : cp > 3 ? 'complete' : 'idle';
-    case 'llm':      return cp === 3 ? 'active' : cp > 3 ? 'complete' : 'idle';
-    case 'answer':   return cp >= 4 ? 'complete' : 'idle';
+    case 'llm':      return cp === 4 ? 'active' : cp > 4 ? 'complete' : 'idle';
+    case 'answer':   return cp >= 5 ? 'complete' : 'idle';
     default:         return 'idle';
   }
 }
@@ -186,7 +186,6 @@ function NodeCard({ stage, status }: NodeCardProps) {
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative">
-        {/* Expanding ring effect when active */}
         {isActive && (
           <>
             <div
@@ -232,7 +231,6 @@ function NodeCard({ stage, status }: NodeCardProps) {
               : undefined
           }
         >
-          {/* Glow overlay */}
           {isActive && (
             <div
               className="absolute inset-0 rounded-2xl"
@@ -258,7 +256,6 @@ function NodeCard({ stage, status }: NodeCardProps) {
         </motion.div>
       </div>
 
-      {/* Label */}
       <div className="text-center">
         <p
           className="text-[10px] font-semibold leading-none whitespace-nowrap"
@@ -324,7 +321,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               stage === 'idle' && 'border-border text-text-muted bg-bg-hover',
               stage === 'complete' && 'border-accent-green/30 bg-accent-green/10 text-accent-green',
               stage === 'error' && 'border-red-500/30 bg-red-500/10 text-red-400',
-              ['embedding', 'retrieving', 'generating'].includes(stage) &&
+              ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
                 'border-accent-purple/30 bg-accent-purple/10 text-accent-purple-light',
             )}
           >
@@ -371,10 +368,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
             >
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-                    style={{ background: '#a855f7' }}
-                  />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#a855f7' }} />
                   <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#a855f7' }} />
                 </span>
                 <p className="text-[11px] font-medium" style={{ color: '#a855f7' }}>
@@ -397,14 +391,34 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
             >
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-                    style={{ background: '#3b82f6' }}
-                  />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#3b82f6' }} />
                   <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#3b82f6' }} />
                 </span>
                 <p className="text-[11px] font-medium" style={{ color: '#3b82f6' }}>
-                  Searching Pinecone · Retrieving top-K · Reranking by relevance
+                  Qdrant HNSW search · m=16 · ef=128 · over-fetching candidates…
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {stage === 'reranking' && (
+            <motion.div
+              key="rerank-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.18 }}
+              className="rounded-xl border px-3.5 py-2.5"
+              style={{ borderColor: 'rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.07)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#f97316' }} />
+                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#f97316' }} />
+                </span>
+                <p className="text-[11px] font-medium" style={{ color: '#f97316' }}>
+                  NVIDIA llama-3.2-nv-rerankqa-1b-v2 · cross-encoder scoring…
                 </p>
               </div>
             </motion.div>
@@ -423,10 +437,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
             >
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-                    style={{ background: '#ec4899' }}
-                  />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#ec4899' }} />
                   <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#ec4899' }} />
                 </span>
                 <p className="text-[11px] font-medium" style={{ color: '#ec4899' }}>
