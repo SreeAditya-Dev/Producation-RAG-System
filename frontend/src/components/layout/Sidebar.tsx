@@ -15,7 +15,7 @@ import { clsx } from 'clsx';
 
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: '#a855f7' },
-  { to: '/documents', icon: FileText, label: 'Documents', color: '#06b6d4' },
+  { to: '/documents', icon: FileText, label: 'Documents', color: '#3b82f6' },
   { to: '/query', icon: MessageSquare, label: 'Query', color: '#10b981' },
   { to: '/visualizer', icon: Activity, label: 'Live Pipeline', color: '#f59e0b' },
 ];
@@ -30,12 +30,12 @@ export function Sidebar({ connected, mobile = false, onNavigate }: SidebarProps)
   return (
     <aside
       className={clsx(
-        'relative flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-bg-secondary',
+        'relative flex h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-bg-secondary',
         mobile ? 'w-[292px] shadow-2xl' : 'w-72'
       )}
     >
       <div className="pointer-events-none absolute left-0 top-0 h-32 w-32 rounded-full bg-accent-purple/8 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-20 right-0 h-24 w-24 rounded-full bg-accent-cyan/6 blur-2xl" />
+      <div className="pointer-events-none absolute bottom-20 right-0 h-24 w-24 rounded-full bg-accent-blue/6 blur-2xl" />
 
       <div className="relative border-b border-border px-5 py-5">
         <div className="flex items-center gap-3">
@@ -45,11 +45,11 @@ export function Sidebar({ connected, mobile = false, onNavigate }: SidebarProps)
               <defs>
                 <linearGradient id="logo-ring" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0.5" />
                 </linearGradient>
               </defs>
             </svg>
-            <div className="absolute inset-1.5 flex items-center justify-center rounded-full bg-gradient-to-br from-accent-purple to-accent-cyan shadow-neon-purple">
+            <div className="absolute inset-1.5 flex items-center justify-center rounded-full bg-gradient-to-br from-accent-purple to-accent-violet shadow-neon-purple">
               <span className="text-xs font-bold text-white">R</span>
             </div>
           </div>
@@ -61,7 +61,7 @@ export function Sidebar({ connected, mobile = false, onNavigate }: SidebarProps)
 
         <div className="mt-4 rounded-2xl border border-border bg-gradient-to-br from-white/[0.05] to-transparent p-3">
           <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
-            <Layers3 size={13} className="text-accent-cyan" />
+            <Layers3 size={13} className="text-accent-indigo-light" />
             Multi-layer retrieval workflow
           </div>
           <p className="mt-1 text-xs leading-relaxed text-text-secondary">
@@ -123,7 +123,7 @@ export function Sidebar({ connected, mobile = false, onNavigate }: SidebarProps)
           <p className="px-1 text-xs font-medium uppercase tracking-wider text-text-muted">Stack</p>
           {[
             { icon: Cpu, label: 'Llama-3.3-70B', color: '#a855f7' },
-            { icon: Activity, label: 'nv-embedqa-e5-v5', color: '#06b6d4' },
+            { icon: Activity, label: 'nv-embedqa-e5-v5', color: '#3b82f6' },
           ].map(({ icon: Icon, label, color }) => (
             <div key={label} className="flex items-center gap-2.5 px-1">
               <Icon size={12} style={{ color }} />
@@ -153,14 +153,6 @@ export function Sidebar({ connected, mobile = false, onNavigate }: SidebarProps)
               <span>Reconnecting…</span>
             </>
           )}
-        </div>
-
-        <div className="rounded-2xl border border-border bg-bg-card/70 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-text-muted">UX Mode</p>
-          <p className="mt-2 text-sm font-medium text-text-primary">Dynamic + responsive</p>
-          <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-            Live status, animated steps, refresh controls, and mobile-safe navigation are active.
-          </p>
         </div>
       </div>
     </aside>

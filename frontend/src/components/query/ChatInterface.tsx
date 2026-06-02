@@ -40,7 +40,7 @@ function AssistantMessage({ content }: { content: string }) {
           ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-text-primary">{children}</ol>,
           li: ({ children }) => <li className="leading-relaxed">{children}</li>,
           strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
-          code: ({ children }) => <code className="rounded bg-black/30 px-1.5 py-0.5 text-xs text-accent-cyan">{children}</code>,
+          code: ({ children }) => <code className="rounded bg-black/30 px-1.5 py-0.5 text-xs text-accent-indigo-light">{children}</code>,
         }}
       >
         {content}
@@ -129,7 +129,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-purple/30 to-accent-cyan/30 border border-accent-purple/20 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-purple/30 to-accent-violet/30 border border-accent-purple/20 flex items-center justify-center mb-4">
               <Zap size={28} className="text-accent-purple-light" />
             </div>
             <h3 className="text-text-primary font-semibold mb-2">Ask your documents anything</h3>
@@ -189,7 +189,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                           <p className="text-text-secondary font-medium truncate">{s.original_name}</p>
                           <p className="text-text-muted mt-0.5 line-clamp-2">{s.text}</p>
                           <p className="text-text-muted mt-0.5">
-                            Score: <span className="text-accent-cyan font-mono">{(s.score * 100).toFixed(1)}%</span>
+                            Score: <span className="text-accent-blue font-mono">{(s.score * 100).toFixed(1)}%</span>
                           </p>
                         </div>
                       </div>

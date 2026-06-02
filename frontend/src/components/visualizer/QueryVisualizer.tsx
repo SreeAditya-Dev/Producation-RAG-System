@@ -1,37 +1,289 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Cpu, Search, Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  MessageSquare,
+  Cpu,
+  Database,
+  Layers,
+  SlidersHorizontal,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Clock,
+  Hash,
+} from 'lucide-react';
 import type { QueryState, QueryStage } from '../../types';
 
-interface StepConfig {
-  id: QueryStage;
+interface StageNode {
+  id: string;
   label: string;
   sublabel: string;
   icon: React.ElementType;
-  glowColor: string;
+  color: string;
+  rgb: string;
+  glowClass: string;
 }
 
-const STEPS: StepConfig[] = [
-  { id: 'embedding', label: 'Embed', sublabel: 'Vectorize query', icon: Cpu, glowColor: '#a855f7' },
-  { id: 'retrieving', label: 'Search', sublabel: 'Pinecone lookup', icon: Search, glowColor: '#06b6d4' },
-  { id: 'generating', label: 'Generate', sublabel: 'LLM synthesis', icon: Sparkles, glowColor: '#7c3aed' },
-  { id: 'complete', label: 'Answer', sublabel: 'Response ready', icon: CheckCircle2, glowColor: '#10b981' },
+const STAGES: StageNode[] = [
+  {
+    id: 'query',
+    label: 'Query',
+    sublabel: 'User Input',
+    icon: MessageSquare,
+    color: '#e2e8f0',
+    rgb: '226,232,240',
+    glowClass: '',
+  },
+  {
+    id: 'embed',
+    label: 'Embed',
+    sublabel: 'NV-EmbedQA',
+    icon: Cpu,
+    color: '#a855f7',
+    rgb: '168,85,247',
+    glowClass: 'node-glow-purple',
+  },
+  {
+    id: 'pinecone',
+    label: 'Pinecone',
+    sublabel: 'Vector DB',
+    icon: Database,
+    color: '#3b82f6',
+    rgb: '59,130,246',
+    glowClass: 'node-glow-blue',
+  },
+  {
+    id: 'retrieve',
+    label: 'Retrieve',
+    sublabel: 'Top-K Chunks',
+    icon: Layers,
+    color: '#f59e0b',
+    rgb: '245,158,11',
+    glowClass: 'node-glow-amber',
+  },
+  {
+    id: 'rerank',
+    label: 'Rerank',
+    sublabel: 'Score Filter',
+    icon: SlidersHorizontal,
+    color: '#f97316',
+    rgb: '249,115,22',
+    glowClass: 'node-glow-orange',
+  },
+  {
+    id: 'llm',
+    label: 'LLM',
+    sublabel: 'Llama-3.3-70B',
+    icon: Sparkles,
+    color: '#ec4899',
+    rgb: '236,72,153',
+    glowClass: 'node-glow-pink',
+  },
+  {
+    id: 'answer',
+    label: 'Answer',
+    sublabel: 'Response Ready',
+    icon: CheckCircle2,
+    color: '#10b981',
+    rgb: '16,185,129',
+    glowClass: 'node-glow-emerald',
+  },
 ];
 
-const STAGE_ORDER: QueryStage[] = ['idle', 'embedding', 'retrieving', 'generating', 'complete', 'error'];
+type NodeStatus = 'idle' | 'active' | 'complete' | 'error';
 
-function stageIdx(s: QueryStage) {
-  return STAGE_ORDER.indexOf(s);
-}
-
-function stepStatus(stepId: QueryStage, current: QueryStage): 'idle' | 'active' | 'complete' | 'error' {
+function getNodeStatus(nodeId: string, current: QueryStage): NodeStatus {
   if (current === 'error') return 'error';
-  const si = stageIdx(stepId);
-  const ci = stageIdx(current);
-  if (si < ci) return 'complete';
-  if (si === ci) return 'active';
-  return 'idle';
+  const order: QueryStage[] = ['idle', 'embedding', 'retrieving', 'generating', 'complete'];
+  const cp = order.indexOf(current);
+
+  switch (nodeId) {
+    case 'query':    return cp >= 1 ? 'active' : 'idle';
+    case 'embed':    return cp === 1 ? 'active' : cp > 1 ? 'complete' : 'idle';
+    case 'pinecone': return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
+    case 'retrieve': return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
+    case 'rerank':   return cp === 3 ? 'active' : cp > 3 ? 'complete' : 'idle';
+    case 'llm':      return cp === 3 ? 'active' : cp > 3 ? 'complete' : 'idle';
+    case 'answer':   return cp >= 4 ? 'complete' : 'idle';
+    default:         return 'idle';
+  }
 }
+
+function getConnectorStatus(fromNodeId: string, current: QueryStage): NodeStatus {
+  return getNodeStatus(fromNodeId, current);
+}
+
+interface ConnectorProps {
+  status: NodeStatus;
+  color: string;
+  rgb: string;
+}
+
+function Connector({ status, color, rgb }: ConnectorProps) {
+  const isLit = status === 'active' || status === 'complete';
+
+  return (
+    <div className="relative flex h-px flex-1 items-center overflow-hidden bg-border mx-1.5">
+      {isLit && (
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ background: `linear-gradient(90deg, transparent, ${color}cc, ${color})` }}
+          initial={{ width: '0%' }}
+          animate={{ width: '100%' }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        />
+      )}
+      {status === 'active' && (
+        <>
+          <div
+            className="particle"
+            style={{
+              background: color,
+              boxShadow: `0 0 8px rgba(${rgb}, 0.9), 0 0 16px rgba(${rgb}, 0.4)`,
+              width: '5px',
+              height: '5px',
+            }}
+          />
+          <div
+            className="particle particle-delayed-1"
+            style={{
+              background: color,
+              boxShadow: `0 0 6px rgba(${rgb}, 0.7)`,
+              width: '4px',
+              height: '4px',
+              opacity: 0.8,
+            }}
+          />
+          <div
+            className="particle particle-delayed-2"
+            style={{
+              background: color,
+              boxShadow: `0 0 4px rgba(${rgb}, 0.5)`,
+              width: '3px',
+              height: '3px',
+              opacity: 0.6,
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+interface NodeCardProps {
+  stage: StageNode;
+  status: NodeStatus;
+}
+
+function NodeCard({ stage, status }: NodeCardProps) {
+  const Icon = stage.icon;
+  const isActive = status === 'active';
+  const isComplete = status === 'complete';
+  const isError = status === 'error';
+  const isIdle = status === 'idle';
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative">
+        {/* Expanding ring effect when active */}
+        {isActive && (
+          <>
+            <div
+              className="ring-expand absolute inset-0 rounded-2xl border"
+              style={{ borderColor: `rgba(${stage.rgb}, 0.5)` }}
+            />
+            <div
+              className="ring-expand-delay absolute inset-0 rounded-2xl border"
+              style={{ borderColor: `rgba(${stage.rgb}, 0.3)` }}
+            />
+          </>
+        )}
+
+        <motion.div
+          key={`${stage.id}-${status}`}
+          initial={isActive ? { scale: 0.72, opacity: 0 } : { scale: 1, opacity: 1 }}
+          animate={
+            isActive
+              ? { scale: [1, 1.07, 1], opacity: 1 }
+              : { scale: 1, opacity: 1 }
+          }
+          transition={
+            isActive
+              ? { duration: 1.7, repeat: Infinity, ease: 'easeInOut' }
+              : { duration: 0.25 }
+          }
+          className={clsx(
+            'relative flex h-11 w-11 items-center justify-center rounded-2xl border-2 transition-colors duration-300',
+            isIdle && 'border-border bg-bg-hover',
+            isError && 'border-red-500/50 bg-red-500/10',
+          )}
+          style={
+            isActive
+              ? {
+                  borderColor: stage.color,
+                  background: `rgba(${stage.rgb}, 0.14)`,
+                }
+              : isComplete
+              ? {
+                  borderColor: `rgba(${stage.rgb}, 0.5)`,
+                  background: `rgba(${stage.rgb}, 0.07)`,
+                }
+              : undefined
+          }
+        >
+          {/* Glow overlay */}
+          {isActive && (
+            <div
+              className="absolute inset-0 rounded-2xl"
+              style={{
+                boxShadow: `0 0 18px rgba(${stage.rgb}, 0.45), 0 0 36px rgba(${stage.rgb}, 0.18), inset 0 0 10px rgba(${stage.rgb}, 0.06)`,
+              }}
+            />
+          )}
+
+          {isActive ? (
+            <Loader2
+              size={17}
+              className="animate-spin relative z-10"
+              style={{ color: stage.color }}
+            />
+          ) : isComplete ? (
+            <CheckCircle2 size={17} style={{ color: stage.color }} className="relative z-10" />
+          ) : isError ? (
+            <AlertCircle size={17} className="text-red-400 relative z-10" />
+          ) : (
+            <Icon size={17} className="text-text-muted relative z-10" />
+          )}
+        </motion.div>
+      </div>
+
+      {/* Label */}
+      <div className="text-center">
+        <p
+          className="text-[10px] font-semibold leading-none whitespace-nowrap"
+          style={
+            isActive
+              ? { color: stage.color }
+              : isComplete
+              ? { color: `rgba(${stage.rgb}, 0.7)` }
+              : undefined
+          }
+        >
+          <span className={clsx(!isActive && !isComplete && 'text-text-muted')}>
+            {stage.label}
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const DETAIL_VARIANTS = {
+  initial: { opacity: 0, y: 6, scale: 0.97 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -6, scale: 0.97 },
+};
 
 interface Props {
   state: QueryState;
@@ -41,61 +293,57 @@ export function QueryVisualizer({ state }: Props) {
   const { stage, question, sources, streamingAnswer, processingTime } = state;
 
   return (
-    <div className="space-y-6 rounded-2xl border border-border bg-bg-card p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-text-primary">Query Pipeline</h3>
-          <p className="mt-0.5 max-w-xs truncate text-xs text-text-muted">
-            {question ? `"${question.slice(0, 60)}${question.length > 60 ? '…' : ''}"` : 'No active query'}
+    <div className="flex flex-col h-full rounded-2xl border border-border bg-bg-card overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-text-primary">RAG Pipeline</h3>
+          <p className="text-[11px] text-text-muted mt-0.5 truncate max-w-[220px]">
+            {question
+              ? `"${question.slice(0, 48)}${question.length > 48 ? '…' : ''}"`
+              : 'Awaiting query…'}
           </p>
         </div>
-        {stage === 'complete' && processingTime && <span className="font-mono text-xs text-accent-green">{processingTime.toFixed(2)}s</span>}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {processingTime && stage === 'complete' && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-1.5 rounded-lg border border-accent-green/25 bg-accent-green/10 px-2.5 py-1 font-mono text-[11px] text-accent-green"
+            >
+              <Clock size={10} />
+              {processingTime.toFixed(2)}s
+            </motion.span>
+          )}
+          <span
+            className={clsx(
+              'rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+              stage === 'idle' && 'border-border text-text-muted bg-bg-hover',
+              stage === 'complete' && 'border-accent-green/30 bg-accent-green/10 text-accent-green',
+              stage === 'error' && 'border-red-500/30 bg-red-500/10 text-red-400',
+              ['embedding', 'retrieving', 'generating'].includes(stage) &&
+                'border-accent-purple/30 bg-accent-purple/10 text-accent-purple-light',
+            )}
+          >
+            {stage}
+          </span>
+        </div>
       </div>
 
-      <div className="overflow-x-auto pb-2">
-        <div className="flex min-w-[420px] items-center gap-1">
-          {STEPS.map((step, i) => {
-            const status = stepStatus(step.id, stage);
-            const Icon = step.icon;
+      {/* Horizontal pipeline flow */}
+      <div className="px-4 pt-5 pb-3 shrink-0">
+        <div className="flex items-start">
+          {STAGES.map((stageNode, i) => {
+            const nodeStatus = getNodeStatus(stageNode.id, stage);
+            const connStatus = getConnectorStatus(stageNode.id, stage);
 
             return (
-              <div key={step.id} className="flex min-w-0 flex-1 items-center">
-                <motion.div
-                  className={clsx(
-                    'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-500',
-                    status === 'active' && 'border-accent-cyan bg-accent-cyan/10',
-                    status === 'complete' && 'border-accent-green/60 bg-accent-green/10',
-                    status === 'error' && 'border-accent-red/60 bg-accent-red/10',
-                    status === 'idle' && 'border-border bg-bg-hover'
-                  )}
-                  animate={
-                    status === 'active'
-                      ? { boxShadow: [`0 0 0px ${step.glowColor}00`, `0 0 20px ${step.glowColor}60`, `0 0 0px ${step.glowColor}00`] }
-                      : {}
-                  }
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                >
-                  {status === 'active' ? (
-                    <Loader2 size={17} className="animate-spin text-accent-cyan" />
-                  ) : status === 'complete' ? (
-                    <CheckCircle2 size={17} className="text-accent-green" />
-                  ) : status === 'error' ? (
-                    <AlertCircle size={17} className="text-accent-red" />
-                  ) : (
-                    <Icon size={17} className="text-text-muted" />
-                  )}
-                </motion.div>
-
-                {i < STEPS.length - 1 && (
-                  <div className="relative mx-1 h-0.5 flex-1 overflow-hidden rounded-full bg-border">
-                    {(status === 'active' || status === 'complete') && (
-                      <motion.div
-                        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-accent-cyan to-accent-purple"
-                        initial={{ width: '0%' }}
-                        animate={{ width: status === 'complete' ? '100%' : '50%' }}
-                        transition={{ duration: 0.5 }}
-                      />
-                    )}
+              <div key={stageNode.id} className="flex items-center flex-1 min-w-0">
+                <NodeCard stage={stageNode} status={nodeStatus} />
+                {i < STAGES.length - 1 && (
+                  <div className="flex-1 min-w-0 mt-[-18px]">
+                    <Connector status={connStatus} color={stageNode.color} rgb={stageNode.rgb} />
                   </div>
                 )}
               </div>
@@ -104,81 +352,211 @@ export function QueryVisualizer({ state }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="flex min-w-[420px] items-start">
-          {STEPS.map((step) => {
-            const status = stepStatus(step.id, stage);
-            return (
-              <div key={step.id} className="flex-1 text-center">
-                <p className={clsx('text-xs font-medium', status === 'active' ? 'text-accent-cyan' : status === 'complete' ? 'text-accent-green' : 'text-text-muted')}>
-                  {step.label}
+      {/* Stage detail card */}
+      <div className="px-4 pb-3 shrink-0">
+        <AnimatePresence mode="wait">
+          {stage === 'embedding' && (
+            <motion.div
+              key="embed-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.18 }}
+              className="rounded-xl border px-3.5 py-2.5"
+              style={{ borderColor: 'rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.07)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+                    style={{ background: '#a855f7' }}
+                  />
+                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#a855f7' }} />
+                </span>
+                <p className="text-[11px] font-medium" style={{ color: '#a855f7' }}>
+                  Vectorizing query · NVIDIA NV-EmbedQA-E5-v5
                 </p>
-                <p className="text-xs text-text-muted">{step.sublabel}</p>
               </div>
-            );
-          })}
-        </div>
+            </motion.div>
+          )}
+
+          {stage === 'retrieving' && (
+            <motion.div
+              key="retrieve-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.18 }}
+              className="rounded-xl border px-3.5 py-2.5"
+              style={{ borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.07)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+                    style={{ background: '#3b82f6' }}
+                  />
+                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#3b82f6' }} />
+                </span>
+                <p className="text-[11px] font-medium" style={{ color: '#3b82f6' }}>
+                  Searching Pinecone · Retrieving top-K · Reranking by relevance
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {stage === 'generating' && (
+            <motion.div
+              key="gen-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.18 }}
+              className="rounded-xl border px-3.5 py-2.5 space-y-2"
+              style={{ borderColor: 'rgba(236,72,153,0.3)', background: 'rgba(236,72,153,0.07)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+                    style={{ background: '#ec4899' }}
+                  />
+                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#ec4899' }} />
+                </span>
+                <p className="text-[11px] font-medium" style={{ color: '#ec4899' }}>
+                  Llama-3.3-70B synthesizing response…
+                </p>
+              </div>
+              {streamingAnswer && (
+                <p className="text-[11px] leading-relaxed text-text-secondary line-clamp-2 pl-4">
+                  {streamingAnswer.slice(0, 120)}
+                  <span
+                    className="inline-block w-0.5 h-3 ml-0.5 animate-pulse align-text-bottom rounded-full"
+                    style={{ background: '#ec4899' }}
+                  />
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {stage === 'complete' && (
+            <motion.div
+              key="complete-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.18 }}
+              className="rounded-xl border border-accent-green/25 bg-accent-green/7 px-3.5 py-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={12} className="text-accent-green" />
+                  <p className="text-[11px] font-semibold text-accent-green">Pipeline complete</p>
+                </div>
+                <div className="flex items-center gap-3 font-mono text-[10px] text-text-muted">
+                  <span className="flex items-center gap-1">
+                    <Hash size={9} />
+                    {sources.length} sources
+                  </span>
+                  {processingTime && (
+                    <span className="flex items-center gap-1">
+                      <Clock size={9} />
+                      {processingTime.toFixed(2)}s
+                    </span>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {stage === 'error' && (
+            <motion.div
+              key="error-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.18 }}
+              className="rounded-xl border border-red-500/25 bg-red-500/7 px-3.5 py-2.5"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle size={12} className="text-red-400" />
+                <p className="text-[11px] font-medium text-red-400">Pipeline error — please retry</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Status</p>
-          <p className="mt-2 text-sm font-semibold capitalize text-text-primary">{stage}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Sources</p>
-          <p className="mt-2 text-sm font-semibold text-text-primary">{sources.length}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Latency</p>
-          <p className="mt-2 text-sm font-semibold text-text-primary">{processingTime ? `${processingTime.toFixed(2)}s` : 'Pending'}</p>
-        </div>
+      {/* Metrics row */}
+      <div className="grid grid-cols-3 gap-2 px-4 pb-3 shrink-0">
+        {[
+          { label: 'Stage', value: stage, mono: false },
+          { label: 'Sources', value: String(sources.length), mono: true },
+          { label: 'Latency', value: processingTime ? `${processingTime.toFixed(2)}s` : '—', mono: true },
+        ].map(({ label, value, mono }) => (
+          <div key={label} className="rounded-xl border border-border bg-black/20 px-3 py-2.5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-text-muted">{label}</p>
+            <p
+              className={clsx(
+                'mt-1.5 text-sm font-semibold capitalize text-text-primary',
+                mono && 'font-mono text-xs',
+              )}
+            >
+              {value}
+            </p>
+          </div>
+        ))}
       </div>
 
+      {/* Sources list */}
       <AnimatePresence>
         {sources.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-2"
+            className="flex-1 overflow-y-auto px-4 pb-4 min-h-0"
           >
-            <p className="text-xs font-medium text-text-muted">Retrieved Chunks</p>
-            <div className="max-h-40 space-y-1.5 overflow-y-auto">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted">
+              Retrieved Sources
+            </p>
+            <div className="space-y-1.5">
               {sources.map((s, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-bg-hover px-3 py-2"
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-bg-hover px-3 py-2"
                 >
-                  <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded bg-accent-purple/20">
-                    <span className="font-mono text-xs text-accent-purple">{i + 1}</span>
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-accent-purple/20">
+                    <span className="font-mono text-[9px] font-bold text-accent-purple-light">{i + 1}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium text-text-secondary">{s.original_name}</p>
-                    <p className="truncate text-xs text-text-muted">{s.text?.slice(0, 80)}…</p>
+                    <p className="truncate text-[11px] font-medium text-text-secondary">{s.original_name}</p>
+                    <p className="line-clamp-1 text-[10px] text-text-muted">{s.text?.slice(0, 65)}…</p>
                   </div>
-                  <div className="flex-shrink-0 font-mono text-xs text-accent-cyan">{(s.score * 100).toFixed(0)}%</div>
+                  <div
+                    className="shrink-0 font-mono text-[11px] font-semibold"
+                    style={{
+                      color:
+                        s.score > 0.8
+                          ? '#10b981'
+                          : s.score > 0.6
+                          ? '#f59e0b'
+                          : '#94a3b8',
+                    }}
+                  >
+                    {(s.score * 100).toFixed(0)}%
+                  </div>
                 </motion.div>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {streamingAnswer && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-accent-purple/20 bg-bg-hover p-3">
-            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-text-muted">
-              <Sparkles size={11} className="text-accent-purple" />
-              Generating…
-            </p>
-            <p className="line-clamp-4 text-xs leading-relaxed text-text-primary">
-              {streamingAnswer}
-              {stage === 'generating' && <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-accent-purple align-text-bottom" />}
-            </p>
           </motion.div>
         )}
       </AnimatePresence>

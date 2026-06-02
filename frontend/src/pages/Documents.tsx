@@ -59,7 +59,7 @@ export function Documents() {
                 { icon: RefreshCw, label: 'Auto refresh', value: '5s' },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="rounded-2xl border border-border bg-black/20 p-4">
-                  <Icon size={16} className="text-accent-cyan" />
+                  <Icon size={16} className="text-accent-blue" />
                   <p className="mt-3 text-xs uppercase tracking-[0.2em] text-text-muted">{label}</p>
                   <p className="mt-1 text-lg font-semibold capitalize text-text-primary">{value}</p>
                 </div>
@@ -77,7 +77,7 @@ export function Documents() {
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-accent-purple to-accent-cyan px-4 py-2.5 text-sm font-medium text-white"
+              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-accent-purple to-accent-violet px-4 py-2.5 text-sm font-medium text-white"
             >
               <RotateCcw size={14} />
               Reload UI

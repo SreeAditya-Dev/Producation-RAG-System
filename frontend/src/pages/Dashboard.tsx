@@ -70,7 +70,7 @@ export function Dashboard() {
   const activeCount = [pipeline.stage !== 'idle', queryState.stage !== 'idle' && queryState.stage !== 'complete'].filter(Boolean).length;
   const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.pinecone === 'connected' ? 20 : 0)) : 28;
   const architectureLayers = [
-    { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-cyan-500/20 to-cyan-500/5' },
+    { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-blue-500/20 to-blue-500/5' },
     { label: 'Processing Layer', detail: 'Parsing, chunking, and embedding progression.', icon: Workflow, tone: 'from-purple-500/20 to-purple-500/5' },
     { label: 'Retrieval Layer', detail: 'Vector lookup, ranking, and grounded recall.', icon: Radar, tone: 'from-emerald-500/20 to-emerald-500/5' },
     { label: 'Response Layer', detail: 'Answer synthesis with live traceability.', icon: Zap, tone: 'from-amber-500/20 to-amber-500/5' },
@@ -79,11 +79,11 @@ export function Dashboard() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.18),transparent_30%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-card sm:p-8">
-          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent-cyan/10 blur-3xl" />
+        <section className="relative overflow-hidden rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_30%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-card sm:p-8">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent-blue/8 blur-3xl" />
           <div className="relative grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
             <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent-cyan/20 bg-accent-cyan/10 px-3 py-1 text-xs font-medium text-accent-cyan">
+              <div className="inline-flex items-center gap-2 rounded-full border border-accent-indigo/30 bg-accent-indigo/10 px-3 py-1 text-xs font-medium text-accent-indigo-light">
                 <Activity size={12} />
                 Live retrieval command surface
               </div>
@@ -141,7 +141,7 @@ export function Dashboard() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard icon={FileText} label="Documents" value={stats?.total_documents ?? '—'} sub="indexed & ready" color="bg-accent-purple" />
-          <StatCard icon={Layers} label="Vector Chunks" value={stats?.total_chunks ?? '—'} sub="available for retrieval" color="bg-accent-cyan" />
+          <StatCard icon={Layers} label="Vector Chunks" value={stats?.total_chunks ?? '—'} sub="available for retrieval" color="bg-accent-blue" />
           <StatCard icon={MessageSquare} label="Queries Run" value={stats?.total_queries ?? '—'} sub="conversation depth" color="bg-accent-orange" />
           <StatCard
             icon={Database}
@@ -159,7 +159,7 @@ export function Dashboard() {
                 <p className="text-xs font-medium uppercase tracking-wide text-text-muted">System Layers</p>
                 <h3 className="mt-2 text-lg font-semibold text-text-primary">What the UI highlights</h3>
               </div>
-              <ArrowRight size={16} className="text-accent-cyan" />
+              <ArrowRight size={16} className="text-accent-indigo-light" />
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {architectureLayers.map(({ label, detail, icon: Icon, tone }) => (

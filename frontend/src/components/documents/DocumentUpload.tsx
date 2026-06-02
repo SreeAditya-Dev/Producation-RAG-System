@@ -112,7 +112,7 @@ export function DocumentUpload({ onUploaded }: Props) {
               </div>
               <div className="w-full bg-border rounded-full h-1.5">
                 <motion.div
-                  className="h-1.5 rounded-full bg-gradient-to-r from-accent-purple to-accent-cyan"
+                  className="h-1.5 rounded-full bg-gradient-to-r from-accent-purple to-accent-indigo"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ ease: 'linear' }}

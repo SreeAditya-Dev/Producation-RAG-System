@@ -65,14 +65,14 @@ export function Visualizer() {
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">System Architecture</p>
               <h3 className="text-lg font-semibold text-text-primary">Layer flow</h3>
             </div>
-            <ScanSearch size={18} className="text-accent-cyan" />
+            <ScanSearch size={18} className="text-accent-indigo-light" />
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             {[
               { label: 'Documents', sub: 'PDF, DOCX, TXT, MD', color: 'from-blue-500/20 to-blue-600/20 border-blue-500/30' },
               { label: 'FastAPI', sub: 'Python backend', color: 'from-accent-purple/20 to-accent-purple/10 border-accent-purple/30', arrow: true },
               { label: 'NVIDIA NIM', sub: 'Llama-3.3-70B\nnv-embedqa-e5-v5', color: 'from-green-500/20 to-green-600/20 border-green-500/30', arrow: true },
-              { label: 'Pinecone', sub: 'Vector DB\n1024-dim cosine', color: 'from-accent-cyan/20 to-accent-cyan/10 border-accent-cyan/30', arrow: true },
+              { label: 'Pinecone', sub: 'Vector DB\n1024-dim cosine', color: 'from-accent-blue/20 to-accent-blue/10 border-accent-blue/30', arrow: true },
               { label: 'React UI', sub: 'TypeScript\nTailwindCSS', color: 'from-orange-500/20 to-orange-600/20 border-orange-500/30', arrow: true },
             ].map((node, i) => (
               <div key={i} className="flex items-center gap-2">

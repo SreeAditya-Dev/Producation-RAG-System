@@ -58,11 +58,11 @@ export function Layout() {
     <PipelineCtx.Provider value={state}>
       <div className="relative flex min-h-screen overflow-hidden bg-bg-primary">
         <div className="pointer-events-none absolute inset-0 bg-noise opacity-60" />
-        <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-accent-cyan/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-accent-blue/8 blur-3xl" />
         <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-accent-purple/12 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-accent-green/8 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-accent-indigo/6 blur-3xl" />
 
-        <div className="hidden lg:block">
+        <div className="fixed inset-y-0 left-0 z-20 hidden lg:block">
           <Sidebar connected={state.connected} />
         </div>
 
@@ -91,7 +91,7 @@ export function Layout() {
           )}
         </AnimatePresence>
 
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden lg:ml-72">
           <header className="sticky top-0 z-30 border-b border-border/70 bg-bg-primary/85 backdrop-blur-xl">
             <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
               <div className="flex min-w-0 items-center gap-3">
@@ -104,7 +104,7 @@ export function Layout() {
                 </button>
 
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent-cyan">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent-indigo-light">
                     Control Layer
                   </p>
                   <h1 className="truncate text-lg font-semibold text-text-primary sm:text-2xl">
@@ -147,7 +147,7 @@ export function Layout() {
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
-                  className="flex h-10 items-center gap-2 rounded-2xl bg-gradient-to-r from-accent-purple to-accent-cyan px-3 text-sm font-medium text-white shadow-neon-purple transition hover:opacity-90"
+                  className="flex h-10 items-center gap-2 rounded-2xl bg-gradient-to-r from-accent-purple to-accent-violet px-3 text-sm font-medium text-white shadow-neon-purple transition hover:opacity-90"
                 >
                   <RotateCcw size={15} />
                   <span className="hidden sm:inline">Reload UI</span>
@@ -167,7 +167,7 @@ export function Layout() {
           </header>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1600px]">
+            <div className="mx-auto w-full max-w-[1600px] h-full">
               <Outlet />
             </div>
           </div>

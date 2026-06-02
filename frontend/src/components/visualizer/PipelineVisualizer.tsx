@@ -31,10 +31,10 @@ const STEPS: StepConfig[] = [
     sublabel: 'File intake',
     tech: 'drag + validate',
     icon: Upload,
-    color: '#06b6d4',
-    activeClass: 'step-active-cyan',
-    iconBg: 'bg-cyan-500/15',
-    iconText: 'text-cyan-400',
+    color: '#3b82f6',
+    activeClass: 'step-active-blue',
+    iconBg: 'bg-blue-500/15',
+    iconText: 'text-blue-400',
   },
   {
     id: 'parsing',
@@ -138,9 +138,9 @@ export function PipelineVisualizer({ state }: Props) {
     <div className="glass-card overflow-hidden rounded-2xl">
       <div className="flex items-center justify-between border-b border-border/50 px-5 pb-4 pt-5">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-accent-cyan/20 bg-gradient-to-br from-accent-cyan/30 to-accent-purple/20">
-            <Upload size={13} className="text-accent-cyan" />
-            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent-cyan animate-pulse" />}
+          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-accent-blue/20 bg-gradient-to-br from-accent-blue/30 to-accent-purple/20">
+            <Upload size={13} className="text-accent-blue" />
+            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent-blue animate-pulse" />}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-text-primary">Ingestion Pipeline</h3>
