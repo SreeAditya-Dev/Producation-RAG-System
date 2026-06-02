@@ -180,16 +180,28 @@ export function Dashboard() {
             <p className="text-xs font-medium uppercase tracking-wide text-text-muted">Services</p>
             <div className="mt-4 space-y-3">
               {[
-                { label: 'Pinecone Vector DB', status: health?.pinecone === 'connected' },
-                { label: 'NVIDIA NIM API', status: health?.nvidia === 'configured' },
-                { label: 'FastAPI Backend', status: health?.status === 'ok' },
-              ].map(({ label, status }) => (
+                {
+                  label: 'FastAPI Backend',
+                  ok: health?.status === 'ok',
+                  tag: health === undefined ? 'Checking…' : health.status === 'ok' ? 'Online' : 'Offline',
+                },
+                {
+                  label: 'Pinecone Vector DB',
+                  ok: health?.pinecone === 'connected',
+                  tag: health === undefined ? 'Checking…' : health.pinecone === 'connected' ? 'Connected' : 'Not Connected',
+                },
+                {
+                  label: 'NVIDIA NIM API',
+                  ok: health?.nvidia === 'configured',
+                  tag: health === undefined ? 'Checking…' : health.nvidia === 'configured' ? 'Configured' : 'Not Configured',
+                },
+              ].map(({ label, ok, tag }) => (
                 <div key={label} className="flex items-center justify-between rounded-2xl border border-border bg-black/10 px-4 py-3">
                   <span className="text-sm text-text-secondary">{label}</span>
                   <div className="flex items-center gap-2">
-                    <div className={`h-2.5 w-2.5 rounded-full ${status ? 'bg-accent-green animate-pulse' : 'bg-accent-red'}`} />
-                    <span className={`text-xs font-medium ${status ? 'text-accent-green' : 'text-accent-red'}`}>
-                      {status ? 'Connected' : 'Error'}
+                    <div className={`h-2.5 w-2.5 rounded-full ${health === undefined ? 'bg-text-muted' : ok ? 'bg-accent-green animate-pulse' : 'bg-accent-red'}`} />
+                    <span className={`text-xs font-medium ${health === undefined ? 'text-text-muted' : ok ? 'text-accent-green' : 'text-accent-red'}`}>
+                      {tag}
                     </span>
                   </div>
                 </div>
