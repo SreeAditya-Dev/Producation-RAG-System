@@ -23,6 +23,10 @@ class Settings(BaseSettings):
 
     # NVIDIA NIM reranker
     reranker_model: str = "nvidia/llama-3.2-nv-rerankqa-1b-v2"
+
+    # PDF image / chart handling
+    # Leave empty to disable vision descriptions (OCR still runs if Tesseract is installed)
+    pdf_vision_model: str = ""
     # Fetch this many candidates before reranking, then return top_k
     reranker_candidates_multiplier: int = 4
 
