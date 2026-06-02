@@ -1,14 +1,10 @@
 import asyncio
 import json
 import logging
-import os
-import shutil
 import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import List
 
-import aiofiles
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -37,6 +33,7 @@ from app.pipeline.ingestion import ingest_document
 from app.pipeline.retrieval import retrieve_and_generate
 from app.services.pinecone_service import pinecone_service
 from app.services.llm_service import llm_service
+from app.services.storage_service import storage_service, CONTENT_TYPES
 from app.utils.file_parsers import detect_file_type
 from app.ws_manager import manager
 
@@ -64,8 +61,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     create_tables()
-    os.makedirs(settings.upload_dir, exist_ok=True)
-    logger.info("RAG System started. DB and upload dir ready.")
+    logger.info("RAG System started. PostgreSQL tables ready.")
 
 
 # ── WebSocket ────────────────────────────────────────────────────────────────
@@ -111,25 +107,27 @@ async def upload_document(
     if not file_type:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type. Supported: pdf, txt, docx, md",
+            detail="Unsupported file type. Supported: pdf, txt, docx, md",
         )
 
     doc_id = str(uuid.uuid4())
-    safe_name = f"{doc_id}.{file_type}"
-    file_path = os.path.join(settings.upload_dir, safe_name)
+    s3_key = f"{doc_id}.{file_type}"
+    original_name = file.filename or s3_key
 
-    # Save file
     content = await file.read()
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(content)
-
     file_size = len(content)
 
-    # Create DB record
+    # Upload to Supabase S3
+    content_type = CONTENT_TYPES.get(file_type, "application/octet-stream")
+    await asyncio.get_event_loop().run_in_executor(
+        None, storage_service.upload, content, s3_key, content_type
+    )
+
+    # Create DB record (filename stores the S3 key)
     doc = Document(
         id=doc_id,
-        original_name=file.filename or safe_name,
-        filename=safe_name,
+        original_name=original_name,
+        filename=s3_key,
         file_type=file_type,
         status="processing",
         chunk_count=0,
@@ -141,7 +139,7 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    # Background ingestion (needs its own DB session)
+    # Background ingestion (needs its own DB session + event loop)
     from app.database import SessionLocal
 
     def _run_ingestion():
@@ -150,7 +148,7 @@ async def upload_document(
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(
-                ingest_document(doc_id, file_path, file.filename or safe_name, file_type, session)
+                ingest_document(doc_id, s3_key, original_name, file_type, session)
             )
         finally:
             session.close()
@@ -223,10 +221,10 @@ async def delete_document(doc_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.warning(f"Could not delete vectors for {doc_id}: {e}")
 
-    # Delete file
-    file_path = os.path.join(settings.upload_dir, doc.filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    # Delete from S3
+    await asyncio.get_event_loop().run_in_executor(
+        None, storage_service.delete, doc.filename
+    )
 
     db.delete(doc)
     db.commit()

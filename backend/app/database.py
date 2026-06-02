@@ -3,12 +3,14 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from datetime import datetime
 import uuid
 
+from app.config import settings
 
-DATABASE_URL = "sqlite:///./rag_system.db"
 
 engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    settings.database_url,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10,
     echo=False,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

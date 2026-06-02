@@ -10,6 +10,7 @@ from app.utils.file_parsers import parse_file
 from app.utils.chunking import RecursiveTextSplitter
 from app.services.embedding_service import embedding_service
 from app.services.pinecone_service import pinecone_service
+from app.services.storage_service import storage_service
 from app.ws_manager import manager
 
 logger = logging.getLogger(__name__)
@@ -17,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 async def ingest_document(
     doc_id: str,
-    file_path: str,
+    s3_key: str,
     original_name: str,
     file_type: str,
     db_session,
 ) -> int:
     """
-    Full ingestion pipeline: parse → chunk → embed → upsert.
+    Full ingestion pipeline: download → parse → chunk → embed → upsert.
     Emits WebSocket events at each stage.
     Returns the number of chunks created.
     """
@@ -32,13 +33,19 @@ async def ingest_document(
     async def emit(event: str, data: Any = None):
         await manager.broadcast(event=event, data=data, document_id=doc_id)
 
+    temp_path = None
     try:
         await emit("ingestion_started", {"doc_id": doc_id, "filename": original_name})
+
+        # 0. Download from S3 to temp file
+        temp_path = await asyncio.get_event_loop().run_in_executor(
+            None, storage_service.download_to_temp, s3_key
+        )
 
         # 1. Parse
         await emit("parsing_started", {"filename": original_name})
         raw_text = await asyncio.get_event_loop().run_in_executor(
-            None, parse_file, file_path, file_type
+            None, parse_file, temp_path, file_type
         )
         if not raw_text.strip():
             raise ValueError("Document appears to be empty after parsing.")
@@ -146,3 +153,10 @@ async def ingest_document(
             {"doc_id": doc_id, "error": str(e)},
         )
         raise
+
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
