@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Bot, User, RefreshCw, Zap } from 'lucide-react';
+import { Send, Loader2, Bot, User, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
+import ReactMarkdown from 'react-markdown';
 import type { QueryResponse } from '../../types';
 
 interface Message {
@@ -25,6 +26,28 @@ const STAGE_LABELS: Record<string, string> = {
   retrieving: 'Searching knowledge base…',
   generating: 'Generating answer…',
 };
+
+function AssistantMessage({ content }: { content: string }) {
+  return (
+    <div className="space-y-3 break-words">
+      <ReactMarkdown
+        components={{
+          h1: ({ children }) => <h3 className="text-base font-semibold text-text-primary">{children}</h3>,
+          h2: ({ children }) => <h3 className="text-base font-semibold text-text-primary">{children}</h3>,
+          h3: ({ children }) => <h4 className="text-sm font-semibold text-text-primary">{children}</h4>,
+          p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-text-primary">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-text-primary">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-text-primary">{children}</ol>,
+          li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+          strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+          code: ({ children }) => <code className="rounded bg-black/30 px-1.5 py-0.5 text-xs text-accent-cyan">{children}</code>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -139,7 +162,9 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                       : 'bg-bg-card border border-border text-text-primary rounded-tl-sm'
                   )}
                 >
-                  {msg.content || (
+                  {msg.content ? (
+                    msg.role === 'assistant' ? <AssistantMessage content={msg.content} /> : <p className="whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
                     <div className="flex items-center gap-2 text-text-muted">
                       <Loader2 size={13} className="animate-spin" />
                       <span className="text-xs">{STAGE_LABELS[stage] || 'Thinking…'}</span>
