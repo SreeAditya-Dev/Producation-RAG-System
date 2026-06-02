@@ -287,14 +287,16 @@ const DETAIL_VARIANTS = {
 
 interface Props {
   state: QueryState;
+  hideHeader?: boolean;
 }
 
-export function QueryVisualizer({ state }: Props) {
+export function QueryVisualizer({ state, hideHeader = false }: Props) {
   const { stage, question, sources, streamingAnswer, processingTime } = state;
 
   return (
     <div className="flex flex-col h-full rounded-2xl border border-border bg-bg-card overflow-hidden">
       {/* Header */}
+      {!hideHeader && (
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-text-primary">RAG Pipeline</h3>
@@ -330,6 +332,7 @@ export function QueryVisualizer({ state }: Props) {
           </span>
         </div>
       </div>
+      )}
 
       {/* Horizontal pipeline flow */}
       <div className="px-4 pt-5 pb-3 shrink-0">

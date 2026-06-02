@@ -102,33 +102,49 @@ function Connector({ fromStatus, toColor }: { fromStatus: 'idle' | 'active' | 'd
   const isLit = fromStatus === 'done' || fromStatus === 'active';
 
   return (
-    <div className="relative mt-6 flex w-8 shrink-0 items-center justify-center">
-      <div className="h-0.5 w-full rounded-full bg-border" />
-      {isLit && (
-        <motion.div
-          className="absolute left-0 top-0 h-0.5 rounded-full"
-          style={{ background: `linear-gradient(90deg, ${toColor}80, ${toColor})` }}
-          initial={{ width: '0%' }}
-          animate={{ width: '100%' }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+    <div className="flex shrink-0 items-center" style={{ width: '40px' }}>
+      <div className="relative flex flex-1 items-center">
+        {/* base track */}
+        <div className="h-[2px] w-full rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }} />
+        {/* lit fill */}
+        {isLit && (
+          <motion.div
+            className="absolute inset-0 h-[2px] rounded-full"
+            style={{ background: `linear-gradient(90deg, ${toColor}60, ${toColor}cc)` }}
+            initial={{ scaleX: 0, transformOrigin: 'left' }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+          />
+        )}
+        {/* particles */}
+        {fromStatus === 'active' && (
+          <>
+            <div className="particle" style={{ background: toColor, boxShadow: `0 0 6px ${toColor}` }} />
+            <div className="particle particle-delayed-1" style={{ background: toColor, opacity: 0.7 }} />
+            <div className="particle particle-delayed-2" style={{ background: toColor, opacity: 0.5 }} />
+          </>
+        )}
+      </div>
+      {/* chevron arrow */}
+      <svg width="8" height="12" viewBox="0 0 8 12" fill="none" className="shrink-0">
+        <path
+          d="M1.5 1.5L6 6l-4.5 4.5"
+          stroke={isLit ? toColor : 'rgba(255,255,255,0.15)'}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
-      )}
-      {fromStatus === 'active' && (
-        <>
-          <div className="particle" style={{ background: toColor, boxShadow: `0 0 6px ${toColor}` }} />
-          <div className="particle particle-delayed-1" style={{ background: toColor, boxShadow: `0 0 6px ${toColor}`, opacity: 0.7 }} />
-          <div className="particle particle-delayed-2" style={{ background: toColor, boxShadow: `0 0 6px ${toColor}`, opacity: 0.5 }} />
-        </>
-      )}
+      </svg>
     </div>
   );
 }
 
 interface Props {
   state: PipelineState;
+  hideHeader?: boolean;
 }
 
-export function PipelineVisualizer({ state }: Props) {
+export function PipelineVisualizer({ state, hideHeader = false }: Props) {
   const { stage, filename, total_chunks, embedded_chunks, progress } = state;
   const isActive = stage !== 'idle';
   const isDone = stage === 'complete';
@@ -136,7 +152,7 @@ export function PipelineVisualizer({ state }: Props) {
 
   return (
     <div className="glass-card overflow-hidden rounded-2xl">
-      <div className="flex items-center justify-between border-b border-border/50 px-5 pb-4 pt-5">
+      {!hideHeader && <div className="flex items-center justify-between border-b border-border/50 px-5 pb-4 pt-5">
         <div className="flex items-center gap-3">
           <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-accent-blue/20 bg-gradient-to-br from-accent-blue/30 to-accent-purple/20">
             <Upload size={13} className="text-accent-blue" />
@@ -170,53 +186,56 @@ export function PipelineVisualizer({ state }: Props) {
             </span>
           )}
         </div>
-      </div>
+      </div>}
 
-      <div className="px-4 py-5">
-        <div className="overflow-x-auto pb-2">
-          <div className="flex min-w-[560px] items-start">
-            {STEPS.map((step, i) => {
-              const st = status(step.id, stage);
-              const Icon = step.icon;
-              const isStepActive = st === 'active';
-              const isStepDone = st === 'done';
+      <div className="px-5 py-5">
+        {/* ── Steps row ── */}
+        <div className="flex items-center">
+          {STEPS.map((step, i) => {
+            const st = status(step.id, stage);
+            const Icon = step.icon;
+            const isStepActive = st === 'active';
+            const isStepDone = st === 'done';
 
-              return (
-                <div key={step.id} className="flex items-center">
+            return (
+              <div key={step.id} className="flex flex-1 items-center">
+                {/* Step column */}
+                <div className="flex flex-1 flex-col items-center">
                   <motion.div
                     className={clsx(
-                      'relative flex w-[82px] cursor-default flex-col items-center gap-2 rounded-xl border p-3 transition-all duration-500 sm:w-[90px]',
+                      'relative flex w-full cursor-default flex-col items-center gap-2 rounded-2xl border px-2 pb-3 pt-4 transition-all duration-500',
                       isStepActive && step.activeClass,
                       isStepDone && 'border-emerald-500/30 bg-emerald-500/5',
-                      st === 'idle' && 'border-border bg-bg-hover/50',
-                      st === 'error' && 'border-red-500/30 bg-red-500/5'
+                      st === 'idle' && 'border-border/60 bg-white/[0.025]',
+                      st === 'error' && 'border-red-500/30 bg-red-500/5',
                     )}
                     animate={isStepActive ? { y: [-1, 1, -1] } : {}}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   >
                     {isStepActive && (
                       <>
-                        <div className="pulse-ring absolute inset-0 rounded-xl" style={{ border: `1px solid ${step.color}40` }} />
-                        <div
-                          className="pulse-ring absolute inset-0 rounded-xl"
-                          style={{ border: `1px solid ${step.color}30`, animationDelay: '0.5s' }}
-                        />
+                        <div className="pulse-ring absolute inset-0 rounded-2xl" style={{ border: `1px solid ${step.color}40` }} />
+                        <div className="pulse-ring absolute inset-0 rounded-2xl" style={{ border: `1px solid ${step.color}25`, animationDelay: '0.5s' }} />
                       </>
                     )}
 
-                    <div className="absolute -left-2 -top-2">
-                      <span
-                        className={clsx('flex h-4 w-4 items-center justify-center rounded-full border text-[9px] font-bold', isStepActive && 'border-transparent text-white')}
-                        style={isStepActive ? { background: step.color } : { borderColor: '#2a2a50', color: '#4a5568' }}
-                      >
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                    </div>
+                    {/* Number badge */}
+                    <span
+                      className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex h-5 min-w-[20px] items-center justify-center rounded-full border px-1 text-[9px] font-black"
+                      style={
+                        isStepActive
+                          ? { background: step.color, borderColor: 'transparent', color: '#fff' }
+                          : { borderColor: '#2a2a50', color: '#4a5568', background: 'var(--bg-primary, #0d0d1a)' }
+                      }
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
 
+                    {/* Icon */}
                     <div
                       className={clsx(
-                        'flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-300',
-                        isStepActive ? step.iconBg : isStepDone ? 'bg-emerald-500/10' : 'bg-white/4'
+                        'flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300',
+                        isStepActive ? step.iconBg : isStepDone ? 'bg-emerald-500/10' : 'bg-white/[0.04]',
                       )}
                     >
                       {isStepActive ? (
@@ -230,32 +249,26 @@ export function PipelineVisualizer({ state }: Props) {
                       )}
                     </div>
 
+                    {/* Label */}
                     <div className="text-center">
                       <p className={clsx('text-xs font-semibold leading-tight', isStepActive ? 'text-text-primary' : isStepDone ? 'text-emerald-400' : 'text-text-muted')}>
                         {step.label}
                       </p>
-                      <p className="mt-0.5 hidden text-[10px] leading-tight text-text-muted sm:block">{step.sublabel}</p>
+                      <p className="mt-0.5 text-[10px] leading-tight text-text-muted">{step.sublabel}</p>
                     </div>
                   </motion.div>
 
-                  {i < STEPS.length - 1 && <Connector fromStatus={status(step.id, stage)} toColor={STEPS[i + 1].color} />}
+                  {/* Tech label */}
+                  <p className="mt-2 w-full truncate px-1 text-center text-[10px] text-text-muted">{step.tech}</p>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <div className="mt-3 flex min-w-[560px]">
-            {STEPS.map((step, i) => (
-              <div key={step.id} className="flex items-center">
-                <div className="w-[82px] text-center sm:w-[90px]">
-                  <p className="truncate px-1 text-[10px] text-text-muted">{step.tech}</p>
-                </div>
-                {i < STEPS.length - 1 && <div className="w-8" />}
+                {/* Connector (between steps only) */}
+                {i < STEPS.length - 1 && (
+                  <Connector fromStatus={st} toColor={STEPS[i + 1].color} />
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">

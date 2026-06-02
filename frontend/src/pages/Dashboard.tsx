@@ -12,6 +12,8 @@ import {
   Radar,
   TimerReset,
   Workflow,
+  Upload,
+  Sparkles,
 } from 'lucide-react';
 import { systemApi } from '../services/api';
 import { usePipelineCtx } from '../components/layout/Layout';
@@ -225,9 +227,70 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <PipelineVisualizer state={pipeline} />
-          <QueryVisualizer state={queryState} />
+        <div className="space-y-6">
+
+          {/* ══ Row 01 · Ingestion Pipeline ══ */}
+          <div className="overflow-hidden rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.05] via-transparent to-transparent shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_8px_48px_rgba(59,130,246,0.07)]">
+            <div className="relative overflow-hidden border-b border-blue-500/15 bg-gradient-to-r from-blue-500/10 via-blue-400/5 to-transparent px-6 py-4">
+              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-400/8 blur-2xl" />
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/15">
+                    <Upload size={18} className="text-blue-400" />
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-blue-500/40 bg-bg-primary text-[9px] font-black text-blue-400">01</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400/60">Stage 01</span>
+                      <span className="h-px w-3 bg-blue-400/20" />
+                      <span className="text-[10px] text-text-muted">Upload → Parse → Chunk → Embed → Store</span>
+                    </div>
+                    <h3 className="mt-0.5 text-sm font-bold text-text-primary">Ingestion Pipeline</h3>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/8 px-3 py-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-400" />
+                  </span>
+                  <span className="text-xs font-semibold text-blue-300">Document Processing</span>
+                </div>
+              </div>
+            </div>
+            <PipelineVisualizer state={pipeline} hideHeader />
+          </div>
+
+          {/* ══ Row 02 · Query Pipeline ══ */}
+          <div className="overflow-hidden rounded-[28px] border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.05] via-transparent to-transparent shadow-[0_0_0_1px_rgba(168,85,247,0.06),0_8px_48px_rgba(168,85,247,0.07)]">
+            <div className="relative overflow-hidden border-b border-purple-500/15 bg-gradient-to-r from-purple-500/10 via-purple-400/5 to-transparent px-6 py-4">
+              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-purple-400/8 blur-2xl" />
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-purple-500/30 bg-purple-500/15">
+                    <Sparkles size={18} className="text-purple-400" />
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-purple-500/40 bg-bg-primary text-[9px] font-black text-purple-400">02</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400/60">Stage 02</span>
+                      <span className="h-px w-3 bg-purple-400/20" />
+                      <span className="text-[10px] text-text-muted">Query → Embed → Retrieve → Rerank → LLM → Answer</span>
+                    </div>
+                    <h3 className="mt-0.5 text-sm font-bold text-text-primary">Query Pipeline</h3>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 rounded-xl border border-purple-500/20 bg-purple-500/8 px-3 py-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+                  </span>
+                  <span className="text-xs font-semibold text-purple-300">Retrieval & Generation</span>
+                </div>
+              </div>
+            </div>
+            <QueryVisualizer state={queryState} hideHeader />
+          </div>
+
         </div>
       </div>
     </div>
