@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime
-import uuid
 
 
 class DocumentResponse(BaseModel):
@@ -56,6 +55,8 @@ class StatsResponse(BaseModel):
     total_documents: int
     total_chunks: int
     total_queries: int
+    failed_queries: int
+    failed_ingestions: int
     index_stats: dict
 
 
@@ -72,3 +73,59 @@ class HealthResponse(BaseModel):
     qdrant: str
     nvidia: str
     version: str = "1.0.0"
+
+
+# ── Observability ─────────────────────────────────────────────────────────────
+
+class LatencyStats(BaseModel):
+    avg_total_ms: Optional[float] = None
+    p95_total_ms: Optional[float] = None
+    avg_embed_ms: Optional[float] = None
+    avg_retrieve_ms: Optional[float] = None
+    avg_rerank_ms: Optional[float] = None
+    avg_llm_ms: Optional[float] = None
+
+
+class TokenStats(BaseModel):
+    avg_prompt_tokens: Optional[float] = None
+    avg_completion_tokens: Optional[float] = None
+    total_prompt_tokens: int = 0
+    total_completion_tokens: int = 0
+    avg_embed_tokens: Optional[float] = None
+    total_embed_tokens: int = 0
+
+
+class RetrievalStats(BaseModel):
+    avg_score_mean: Optional[float] = None
+    avg_score_max: Optional[float] = None
+    avg_rerank_top: Optional[float] = None
+    avg_faithfulness: Optional[float] = None
+    low_faithfulness_count: int = 0   # faithfulness < 0.4
+
+
+class FailureStats(BaseModel):
+    total_queries: int = 0
+    failed_queries: int = 0
+    query_failure_rate: float = 0.0
+    total_ingestions: int = 0
+    failed_ingestions: int = 0
+    ingestion_failure_rate: float = 0.0
+    by_stage: Dict[str, int] = {}
+    recent: List[Dict[str, Any]] = []
+
+
+class IngestionLatencyStats(BaseModel):
+    avg_total_ms: Optional[float] = None
+    avg_download_ms: Optional[float] = None
+    avg_parse_ms: Optional[float] = None
+    avg_chunk_ms: Optional[float] = None
+    avg_embed_ms: Optional[float] = None
+    avg_store_ms: Optional[float] = None
+
+
+class ObservabilityResponse(BaseModel):
+    latency: LatencyStats
+    ingestion_latency: IngestionLatencyStats
+    tokens: TokenStats
+    retrieval: RetrievalStats
+    failures: FailureStats

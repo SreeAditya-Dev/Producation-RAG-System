@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { clsx } from 'clsx';
 import {
   FileText,
   Layers,
@@ -14,6 +15,11 @@ import {
   Workflow,
   Upload,
   Sparkles,
+  Timer,
+  Coins,
+  ShieldCheck,
+  TriangleAlert,
+  TrendingUp,
 } from 'lucide-react';
 import { systemApi } from '../services/api';
 import { usePipelineCtx } from '../components/layout/Layout';
@@ -66,6 +72,12 @@ export function Dashboard() {
     queryKey: ['health'],
     queryFn: () => systemApi.health().then((r) => r.data),
     refetchInterval: 30000,
+  });
+
+  const { data: obs } = useQuery({
+    queryKey: ['observability'],
+    queryFn: () => systemApi.observability().then((r) => r.data),
+    refetchInterval: 15000,
   });
 
   const recentEvents = eventLog.slice(0, 8);
@@ -153,6 +165,209 @@ export function Dashboard() {
             color="bg-accent-green"
           />
         </div>
+
+        {/* ══ Observability Panel ══ */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="rounded-[24px] border border-border bg-bg-card/90 shadow-card overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">Live Observability</p>
+              <h3 className="mt-1 text-base font-semibold text-text-primary">Latency · Tokens · Retrieval · Faithfulness · Failures</h3>
+            </div>
+            <TrendingUp size={16} className="text-accent-indigo-light shrink-0" />
+          </div>
+
+          <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-5">
+            {/* ── Latency ── */}
+            <div className="bg-bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Timer size={13} className="text-blue-400" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-blue-400">Latency</p>
+              </div>
+              {[
+                { label: 'Avg total', value: obs?.latency.avg_total_ms != null ? `${obs.latency.avg_total_ms.toFixed(0)} ms` : '—' },
+                { label: 'p95 total', value: obs?.latency.p95_total_ms != null ? `${obs.latency.p95_total_ms.toFixed(0)} ms` : '—' },
+                { label: 'Embed', value: obs?.latency.avg_embed_ms != null ? `${obs.latency.avg_embed_ms.toFixed(0)} ms` : '—' },
+                { label: 'Retrieve', value: obs?.latency.avg_retrieve_ms != null ? `${obs.latency.avg_retrieve_ms.toFixed(0)} ms` : '—' },
+                { label: 'Rerank', value: obs?.latency.avg_rerank_ms != null ? `${obs.latency.avg_rerank_ms.toFixed(0)} ms` : '—' },
+                { label: 'LLM', value: obs?.latency.avg_llm_ms != null ? `${obs.latency.avg_llm_ms.toFixed(0)} ms` : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">{label}</span>
+                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Tokens ── */}
+            <div className="bg-bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Coins size={13} className="text-amber-400" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-400">Token Usage</p>
+              </div>
+              {[
+                { label: 'Avg prompt', value: obs?.tokens.avg_prompt_tokens != null ? `${obs.tokens.avg_prompt_tokens.toFixed(0)} tk` : '—' },
+                { label: 'Avg completion', value: obs?.tokens.avg_completion_tokens != null ? `${obs.tokens.avg_completion_tokens.toFixed(0)} tk` : '—' },
+                { label: 'Total prompt', value: obs?.tokens.total_prompt_tokens ? obs.tokens.total_prompt_tokens.toLocaleString() : '—' },
+                { label: 'Total completion', value: obs?.tokens.total_completion_tokens ? obs.tokens.total_completion_tokens.toLocaleString() : '—' },
+                { label: 'Avg embed', value: obs?.tokens.avg_embed_tokens != null ? `${obs.tokens.avg_embed_tokens.toFixed(0)} tk` : '—' },
+                { label: 'Total embed', value: obs?.tokens.total_embed_tokens ? obs.tokens.total_embed_tokens.toLocaleString() : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">{label}</span>
+                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Retrieval quality ── */}
+            <div className="bg-bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Radar size={13} className="text-emerald-400" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">Retrieval</p>
+              </div>
+              {[
+                { label: 'Avg cosine mean', value: obs?.retrieval.avg_score_mean != null ? obs.retrieval.avg_score_mean.toFixed(3) : '—' },
+                { label: 'Avg cosine max', value: obs?.retrieval.avg_score_max != null ? obs.retrieval.avg_score_max.toFixed(3) : '—' },
+                { label: 'Avg rerank top', value: obs?.retrieval.avg_rerank_top != null ? obs.retrieval.avg_rerank_top.toFixed(3) : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">{label}</span>
+                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
+                </div>
+              ))}
+
+              {/* Faithfulness */}
+              <div className="pt-1 border-t border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck size={13} className="text-purple-400" />
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-purple-400">Faithfulness</p>
+                </div>
+                {(() => {
+                  const f = obs?.retrieval.avg_faithfulness;
+                  const pct = f != null ? Math.round(f * 100) : null;
+                  const color = pct == null ? 'bg-text-muted' : pct >= 70 ? 'bg-accent-green' : pct >= 40 ? 'bg-accent-orange' : 'bg-accent-red';
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] text-text-muted">Avg score</span>
+                        <span className={clsx('font-mono text-[11px] font-bold', pct == null ? 'text-text-muted' : pct >= 70 ? 'text-accent-green' : pct >= 40 ? 'text-accent-orange' : 'text-accent-red')}>
+                          {pct != null ? `${pct}%` : '—'}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-white/5">
+                        <div className={clsx('h-full rounded-full transition-all', color)} style={{ width: pct != null ? `${pct}%` : '0%' }} />
+                      </div>
+                      {(obs?.retrieval.low_faithfulness_count ?? 0) > 0 && (
+                        <p className="mt-1.5 text-[10px] text-accent-orange">
+                          ⚠ {obs?.retrieval.low_faithfulness_count} low-score {'queries'}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* ── Ingestion latency ── */}
+            <div className="bg-bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Upload size={13} className="text-blue-300" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-blue-300">Ingestion</p>
+              </div>
+              {[
+                { label: 'Avg total', value: obs?.ingestion_latency.avg_total_ms != null ? `${obs.ingestion_latency.avg_total_ms.toFixed(0)} ms` : '—' },
+                { label: 'Download', value: obs?.ingestion_latency.avg_download_ms != null ? `${obs.ingestion_latency.avg_download_ms.toFixed(0)} ms` : '—' },
+                { label: 'Parse', value: obs?.ingestion_latency.avg_parse_ms != null ? `${obs.ingestion_latency.avg_parse_ms.toFixed(0)} ms` : '—' },
+                { label: 'Chunk', value: obs?.ingestion_latency.avg_chunk_ms != null ? `${obs.ingestion_latency.avg_chunk_ms.toFixed(0)} ms` : '—' },
+                { label: 'Embed', value: obs?.ingestion_latency.avg_embed_ms != null ? `${obs.ingestion_latency.avg_embed_ms.toFixed(0)} ms` : '—' },
+                { label: 'Store', value: obs?.ingestion_latency.avg_store_ms != null ? `${obs.ingestion_latency.avg_store_ms.toFixed(0)} ms` : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">{label}</span>
+                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Failures ── */}
+            <div className="bg-bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <TriangleAlert size={13} className="text-red-400" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-red-400">Failures</p>
+              </div>
+              {[
+                {
+                  label: 'Query fail rate',
+                  value: obs?.failures.query_failure_rate != null
+                    ? `${(obs.failures.query_failure_rate * 100).toFixed(1)}%`
+                    : '—',
+                  bad: (obs?.failures.query_failure_rate ?? 0) > 0.05,
+                },
+                {
+                  label: 'Ingest fail rate',
+                  value: obs?.failures.ingestion_failure_rate != null
+                    ? `${(obs.failures.ingestion_failure_rate * 100).toFixed(1)}%`
+                    : '—',
+                  bad: (obs?.failures.ingestion_failure_rate ?? 0) > 0.05,
+                },
+                {
+                  label: 'Failed queries',
+                  value: String(obs?.failures.failed_queries ?? 0),
+                  bad: (obs?.failures.failed_queries ?? 0) > 0,
+                },
+                {
+                  label: 'Failed ingestions',
+                  value: String(obs?.failures.failed_ingestions ?? 0),
+                  bad: (obs?.failures.failed_ingestions ?? 0) > 0,
+                },
+              ].map(({ label, value, bad }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted">{label}</span>
+                  <span className={clsx('font-mono text-[11px] font-semibold', bad ? 'text-accent-red' : 'text-accent-green')}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+
+              {/* Stage breakdown */}
+              {obs?.failures.by_stage && Object.keys(obs.failures.by_stage).length > 0 && (
+                <div className="pt-1 border-t border-border space-y-1">
+                  <p className="text-[10px] text-text-muted uppercase tracking-[0.2em]">By stage</p>
+                  {Object.entries(obs.failures.by_stage).map(([stage, count]) => (
+                    <div key={stage} className="flex items-center justify-between">
+                      <span className="text-[10px] text-text-muted">{stage}</span>
+                      <span className="font-mono text-[10px] text-accent-red">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Recent failures */}
+              {obs?.failures.recent && obs.failures.recent.length > 0 && (
+                <div className="pt-1 border-t border-border">
+                  <p className="mb-1.5 text-[10px] text-text-muted uppercase tracking-[0.2em]">Recent</p>
+                  <div className="space-y-1.5">
+                    {obs.failures.recent.slice(0, 3).map((f, i) => (
+                      <div key={i} className="rounded-lg border border-red-500/15 bg-red-500/5 px-2.5 py-1.5">
+                        <p className="text-[10px] font-medium text-red-400 capitalize">{f.type} · {f.stage ?? '?'}</p>
+                        {f.question && (
+                          <p className="mt-0.5 truncate text-[10px] text-text-muted">{f.question}</p>
+                        )}
+                        <p className="mt-0.5 text-[9px] text-text-muted/60">{f.error_type}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
         <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">

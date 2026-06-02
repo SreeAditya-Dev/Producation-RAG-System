@@ -5,6 +5,7 @@ import type {
   QueryResponse,
   StatsResponse,
   HealthResponse,
+  ObservabilityResponse,
 } from '../types';
 
 const api = axios.create({
@@ -35,9 +36,7 @@ export const documentsApi = {
   },
 
   list: () => api.get<DocumentListResponse>('/documents'),
-
   get: (id: string) => api.get<Document>(`/documents/${id}`),
-
   delete: (id: string) => api.delete(`/documents/${id}`),
 };
 
@@ -52,4 +51,5 @@ export const queryApi = {
 export const systemApi = {
   stats: () => api.get<StatsResponse>('/stats'),
   health: () => api.get<HealthResponse>('/health', { baseURL: '' }),
+  observability: () => api.get<ObservabilityResponse>('/observability'),
 };

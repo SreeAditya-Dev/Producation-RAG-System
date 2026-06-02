@@ -42,6 +42,8 @@ export interface StatsResponse {
   total_documents: number;
   total_chunks: number;
   total_queries: number;
+  failed_queries: number;
+  failed_ingestions: number;
   index_stats: {
     total_vector_count?: number;
     dimension?: number;
@@ -57,7 +59,71 @@ export interface HealthResponse {
   version: string;
 }
 
-// WebSocket event types
+// ── Observability ─────────────────────────────────────────────────────────────
+
+export interface LatencyStats {
+  avg_total_ms: number | null;
+  p95_total_ms: number | null;
+  avg_embed_ms: number | null;
+  avg_retrieve_ms: number | null;
+  avg_rerank_ms: number | null;
+  avg_llm_ms: number | null;
+}
+
+export interface IngestionLatencyStats {
+  avg_total_ms: number | null;
+  avg_download_ms: number | null;
+  avg_parse_ms: number | null;
+  avg_chunk_ms: number | null;
+  avg_embed_ms: number | null;
+  avg_store_ms: number | null;
+}
+
+export interface TokenStats {
+  avg_prompt_tokens: number | null;
+  avg_completion_tokens: number | null;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  avg_embed_tokens: number | null;
+  total_embed_tokens: number;
+}
+
+export interface RetrievalStats {
+  avg_score_mean: number | null;
+  avg_score_max: number | null;
+  avg_rerank_top: number | null;
+  avg_faithfulness: number | null;
+  low_faithfulness_count: number;
+}
+
+export interface FailureStats {
+  total_queries: number;
+  failed_queries: number;
+  query_failure_rate: number;
+  total_ingestions: number;
+  failed_ingestions: number;
+  ingestion_failure_rate: number;
+  by_stage: Record<string, number>;
+  recent: Array<{
+    type: 'query' | 'ingestion';
+    id: string;
+    question?: string;
+    stage?: string;
+    error_type?: string;
+    at: string;
+  }>;
+}
+
+export interface ObservabilityResponse {
+  latency: LatencyStats;
+  ingestion_latency: IngestionLatencyStats;
+  tokens: TokenStats;
+  retrieval: RetrievalStats;
+  failures: FailureStats;
+}
+
+// ── WebSocket event types ─────────────────────────────────────────────────────
+
 export type WSEventType =
   | 'ingestion_started'
   | 'parsing_started'
