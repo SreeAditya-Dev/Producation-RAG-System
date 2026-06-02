@@ -9,21 +9,35 @@ logger = logging.getLogger(__name__)
 
 class PineconeService:
     def __init__(self):
-        self.pc = Pinecone(api_key=settings.pinecone_api_key)
+        self.pc = None
         self.index_name = settings.pinecone_index_name
         self._index = None
+        self._index_ready = False
+
+    def is_configured(self) -> bool:
+        return bool(settings.pinecone_api_key and self.index_name)
+
+    def _get_client(self):
+        if not self.is_configured():
+            raise RuntimeError("Pinecone is not configured. Set PINECONE_API_KEY and PINECONE_INDEX_NAME.")
+        if self.pc is None:
+            self.pc = Pinecone(api_key=settings.pinecone_api_key)
+        return self.pc
 
     def get_index(self):
         if self._index is None:
             self._ensure_index()
-            self._index = self.pc.Index(self.index_name)
+            self._index = self._get_client().Index(self.index_name)
         return self._index
 
     def _ensure_index(self):
-        existing = [idx.name for idx in self.pc.list_indexes()]
+        if self._index_ready:
+            return
+        client = self._get_client()
+        existing = client.list_indexes().names()
         if self.index_name not in existing:
             logger.info(f"Creating Pinecone index '{self.index_name}'...")
-            self.pc.create_index(
+            client.create_index(
                 name=self.index_name,
                 dimension=settings.embedding_dimension,
                 metric="cosine",
@@ -34,16 +48,19 @@ class PineconeService:
             )
             # Wait for index to be ready
             for _ in range(30):
-                status = self.pc.describe_index(self.index_name).status
+                status = client.describe_index(self.index_name).status
                 if status.get("ready"):
                     break
                 time.sleep(2)
             logger.info(f"Index '{self.index_name}' is ready.")
         else:
             logger.info(f"Index '{self.index_name}' already exists.")
+        self._index_ready = True
 
     def upsert_vectors(self, vectors: List[Dict[str, Any]], namespace: str = "") -> int:
         """Upsert vectors in batches of 100. Returns count upserted."""
+        if not vectors:
+            return 0
         index = self.get_index()
         batch_size = 100
         total = 0
@@ -55,7 +72,7 @@ class PineconeService:
                 total += result.upserted_count
             except Exception as e:
                 logger.error(f"Pinecone upsert error at batch {i}: {e}")
-                raise
+                raise RuntimeError(f"Failed to store embeddings in Pinecone: {e}") from e
 
         return total
 
@@ -86,7 +103,7 @@ class PineconeService:
             ]
         except Exception as e:
             logger.error(f"Pinecone query error: {e}")
-            raise
+            raise RuntimeError(f"Failed to query Pinecone: {e}") from e
 
     def delete_by_document(self, doc_id: str, namespace: str = ""):
         """Delete all vectors belonging to a document."""
@@ -96,11 +113,13 @@ class PineconeService:
             logger.info(f"Deleted vectors for doc_id={doc_id}")
         except Exception as e:
             logger.error(f"Pinecone delete error: {e}")
-            raise
+            raise RuntimeError(f"Failed to delete vectors from Pinecone: {e}") from e
 
     def get_stats(self) -> Dict[str, Any]:
         """Return index statistics."""
         try:
+            if not self.is_configured():
+                return {"error": "pinecone_not_configured"}
             index = self.get_index()
             stats = index.describe_index_stats()
             return {
@@ -111,11 +130,13 @@ class PineconeService:
             }
         except Exception as e:
             logger.error(f"Pinecone stats error: {e}")
-            return {}
+            return {"error": str(e)}
 
     def test_connection(self) -> bool:
         try:
-            self.pc.list_indexes()
+            if not self.is_configured():
+                return False
+            self._get_client().list_indexes()
             return True
         except Exception as e:
             logger.error(f"Pinecone connection test failed: {e}")

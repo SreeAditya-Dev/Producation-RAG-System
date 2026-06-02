@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 from typing import List
 import json
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -25,6 +26,7 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = ""
     s3_region: str = "ap-south-1"
     s3_bucket_name: str = "rag-documents"
+    local_storage_path: str = str((Path(__file__).resolve().parents[1] / "uploads"))
 
     max_chunk_size: int = 512
     chunk_overlap: int = 50
