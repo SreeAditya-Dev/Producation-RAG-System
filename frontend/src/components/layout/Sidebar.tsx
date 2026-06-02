@@ -8,7 +8,6 @@ import {
   Wifi,
   WifiOff,
   ChevronRight,
-  Layers3,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -57,16 +56,6 @@ export function Sidebar({ connected, mobile = false, onNavigate }: SidebarProps)
             <div className="text-sm font-bold tracking-wide text-text-primary">RAG System</div>
             <div className="mt-0.5 truncate text-xs text-text-muted">NVIDIA NIM + Pinecone</div>
           </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-border bg-gradient-to-br from-white/[0.05] to-transparent p-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
-            <Layers3 size={13} className="text-accent-indigo-light" />
-            Multi-layer retrieval workflow
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-            Upload, parse, chunk, embed, retrieve, and answer inside one responsive control surface.
-          </p>
         </div>
       </div>
 

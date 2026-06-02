@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { createContext, useContext, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, RefreshCw, RotateCcw, Wifi, WifiOff, X } from 'lucide-react';
+import { Menu, Wifi, WifiOff, X } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { usePipelineState } from '../../hooks/usePipelineState';
 import type { PipelineState, QueryState, EventLogEntry } from '../../types';
@@ -135,25 +135,7 @@ export function Layout() {
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new Event('rag:refresh'))}
-                  className="flex h-10 items-center gap-2 rounded-2xl border border-border bg-bg-card px-3 text-sm text-text-secondary transition hover:border-border-light hover:text-text-primary"
-                >
-                  <RefreshCw size={15} />
-                  <span className="hidden sm:inline">Refresh Data</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="flex h-10 items-center gap-2 rounded-2xl bg-gradient-to-r from-accent-purple to-accent-violet px-3 text-sm font-medium text-white shadow-neon-purple transition hover:opacity-90"
-                >
-                  <RotateCcw size={15} />
-                  <span className="hidden sm:inline">Reload UI</span>
-                </button>
-
-                {sidebarOpen && (
+{sidebarOpen && (
                   <button
                     type="button"
                     onClick={() => setSidebarOpen(false)}

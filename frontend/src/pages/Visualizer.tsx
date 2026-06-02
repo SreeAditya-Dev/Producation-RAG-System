@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Radio, RotateCcw, ScanSearch, Signal, Upload, Sparkles } from 'lucide-react';
+import { Radio, ScanSearch, Signal, Upload, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 import { usePipelineCtx } from '../components/layout/Layout';
 import { PipelineVisualizer } from '../components/visualizer/PipelineVisualizer';
@@ -43,14 +43,6 @@ export function Visualizer() {
                 <Radio size={12} className={connected ? 'animate-pulse' : ''} />
                 {connected ? 'Live' : 'Disconnected'}
               </div>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="flex items-center gap-2 rounded-full border border-border bg-bg-card px-4 py-2.5 text-xs font-medium text-text-secondary transition hover:border-border-light hover:text-text-primary"
-              >
-                <RotateCcw size={13} />
-                Reload UI
-              </button>
             </div>
           </div>
         </section>
