@@ -334,11 +334,18 @@ async def get_observability(db: Session = Depends(get_db)):
     Covers: latency (per-stage), token usage, retrieval quality, faithfulness, failures.
     """
 
-    def _avg(col):
-        return db.query(func.avg(col)).filter(col.isnot(None)).scalar()
+    def _avg(col) -> float | None:
+        """Return rounded average or None (never 0.0) when no rows exist."""
+        v = db.query(func.avg(col)).filter(col.isnot(None)).scalar()
+        return round(float(v), 1) if v is not None else None
 
-    def _sum(col):
-        return db.query(func.sum(col)).filter(col.isnot(None)).scalar() or 0
+    def _avg4(col) -> float | None:
+        v = db.query(func.avg(col)).filter(col.isnot(None)).scalar()
+        return round(float(v), 4) if v is not None else None
+
+    def _sum(col) -> int:
+        v = db.query(func.sum(col)).filter(col.isnot(None)).scalar()
+        return int(v) if v is not None else 0
 
     def _percentile95(values):
         if not values:
@@ -356,32 +363,32 @@ async def get_observability(db: Session = Depends(get_db)):
     ]
 
     latency = LatencyStats(
-        avg_total_ms=round(float(_avg(QueryMetrics.total_ms) or 0), 1),
+        avg_total_ms=_avg(QueryMetrics.total_ms),
         p95_total_ms=_percentile95(all_total_ms),
-        avg_embed_ms=round(float(_avg(QueryMetrics.embed_ms) or 0), 1),
-        avg_retrieve_ms=round(float(_avg(QueryMetrics.retrieve_ms) or 0), 1),
-        avg_rerank_ms=round(float(_avg(QueryMetrics.rerank_ms) or 0), 1),
-        avg_llm_ms=round(float(_avg(QueryMetrics.llm_ms) or 0), 1),
+        avg_embed_ms=_avg(QueryMetrics.embed_ms),
+        avg_retrieve_ms=_avg(QueryMetrics.retrieve_ms),
+        avg_rerank_ms=_avg(QueryMetrics.rerank_ms),
+        avg_llm_ms=_avg(QueryMetrics.llm_ms),
     )
 
     # ── Ingestion latency ─────────────────────────────────────────────────────
     ingestion_latency = IngestionLatencyStats(
-        avg_total_ms=round(float(_avg(IngestionMetrics.total_ms) or 0), 1),
-        avg_download_ms=round(float(_avg(IngestionMetrics.download_ms) or 0), 1),
-        avg_parse_ms=round(float(_avg(IngestionMetrics.parse_ms) or 0), 1),
-        avg_chunk_ms=round(float(_avg(IngestionMetrics.chunk_ms) or 0), 1),
-        avg_embed_ms=round(float(_avg(IngestionMetrics.embed_ms) or 0), 1),
-        avg_store_ms=round(float(_avg(IngestionMetrics.store_ms) or 0), 1),
+        avg_total_ms=_avg(IngestionMetrics.total_ms),
+        avg_download_ms=_avg(IngestionMetrics.download_ms),
+        avg_parse_ms=_avg(IngestionMetrics.parse_ms),
+        avg_chunk_ms=_avg(IngestionMetrics.chunk_ms),
+        avg_embed_ms=_avg(IngestionMetrics.embed_ms),
+        avg_store_ms=_avg(IngestionMetrics.store_ms),
     )
 
     # ── Token usage ───────────────────────────────────────────────────────────
     tokens = TokenStats(
-        avg_prompt_tokens=round(float(_avg(QueryMetrics.prompt_tokens) or 0), 1),
-        avg_completion_tokens=round(float(_avg(QueryMetrics.completion_tokens) or 0), 1),
-        total_prompt_tokens=int(_sum(QueryMetrics.prompt_tokens)),
-        total_completion_tokens=int(_sum(QueryMetrics.completion_tokens)),
-        avg_embed_tokens=round(float(_avg(QueryMetrics.embed_tokens) or 0), 1),
-        total_embed_tokens=int(_sum(QueryMetrics.embed_tokens)),
+        avg_prompt_tokens=_avg(QueryMetrics.prompt_tokens),
+        avg_completion_tokens=_avg(QueryMetrics.completion_tokens),
+        total_prompt_tokens=_sum(QueryMetrics.prompt_tokens),
+        total_completion_tokens=_sum(QueryMetrics.completion_tokens),
+        avg_embed_tokens=_avg(QueryMetrics.embed_tokens),
+        total_embed_tokens=_sum(QueryMetrics.embed_tokens),
     )
 
     # ── Retrieval quality ─────────────────────────────────────────────────────
@@ -391,10 +398,10 @@ async def get_observability(db: Session = Depends(get_db)):
     ).count()
 
     retrieval = RetrievalStats(
-        avg_score_mean=round(float(_avg(QueryMetrics.retrieval_score_mean) or 0), 4),
-        avg_score_max=round(float(_avg(QueryMetrics.retrieval_score_max) or 0), 4),
-        avg_rerank_top=round(float(_avg(QueryMetrics.rerank_score_top) or 0), 4),
-        avg_faithfulness=round(float(_avg(QueryMetrics.faithfulness_score) or 0), 4),
+        avg_score_mean=_avg4(QueryMetrics.retrieval_score_mean),
+        avg_score_max=_avg4(QueryMetrics.retrieval_score_max),
+        avg_rerank_top=_avg4(QueryMetrics.rerank_score_top),
+        avg_faithfulness=_avg4(QueryMetrics.faithfulness_score),
         low_faithfulness_count=low_faith,
     )
 
