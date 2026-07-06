@@ -69,12 +69,14 @@ export function Layout() {
   return (
     <PipelineCtx.Provider value={state}>
       <div className="relative flex min-h-screen overflow-hidden bg-[#09090b]">
-        <div className="fixed inset-y-0 left-0 z-20 hidden lg:block">
-          <Sidebar 
-            connected={state.connected} 
-            collapsed={collapsed}
-            onToggleCollapse={toggleCollapse}
-          />
+        <div className="fixed inset-y-0 left-0 z-20 hidden lg:block pointer-events-none">
+          <div className="h-full pointer-events-auto">
+            <Sidebar 
+              connected={state.connected} 
+              collapsed={collapsed}
+              onToggleCollapse={toggleCollapse}
+            />
+          </div>
         </div>
 
         <AnimatePresence>
@@ -104,7 +106,7 @@ export function Layout() {
 
         <main className={clsx(
           "relative flex min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300",
-          collapsed ? "lg:ml-20" : "lg:ml-[280px]"
+          collapsed ? "lg:ml-[108px]" : "lg:ml-[292px]"
         )}>
           <header className="sticky top-0 z-30 border-b border-[#1e1e24] bg-[#0c0c0e]/95 backdrop-blur-xl">
             <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-6 py-4">

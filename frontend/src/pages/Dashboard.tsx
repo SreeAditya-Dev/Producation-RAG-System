@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
@@ -24,8 +26,10 @@ import {
   Zap,
   ChevronRight,
   RefreshCw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  GitCommitVertical
 } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { clsx } from 'clsx';
 import { systemApi, queryApi, documentsApi } from '../services/api';
 import { usePipelineCtx } from '../components/layout/Layout';
@@ -86,7 +90,7 @@ export function Dashboard() {
 
   const { data: queryHistory } = useQuery({
     queryKey: ['queryHistory'],
-    queryFn: () => queryApi.history(4).then((r) => r.data),
+    queryFn: () => queryApi.history(8).then((r) => r.data),
     refetchInterval: 10000,
   });
 
@@ -127,6 +131,55 @@ export function Dashboard() {
     { key: 'embedding', label: 'Embed' },
     { key: 'storing', label: 'Store' },
   ];
+
+  // Generate data points for the graph
+  const chartPoints = (() => {
+    // 7 days default values if there are no query runs
+    const defaultPoints = [76, 82, 79, 85, 88, 84, avgFaithfulness || 90];
+    
+    if (!queryHistory?.queries || queryHistory.queries.length === 0) {
+      return defaultPoints.map((val, idx) => ({
+        label: `T-${6 - idx}d`,
+        value: val,
+        isSuccess: true,
+        question: undefined as string | undefined
+      }));
+    }
+
+    // Sort queries in ascending order of time (oldest to newest) to display left-to-right
+    const sortedQueries = [...queryHistory.queries]
+      .slice(0, 8)
+      .reverse();
+
+    // Map to points
+    return sortedQueries.map((q: any) => {
+      const isSuccess = q.status === 'success' || !q.failure_stage;
+      let score = 0;
+      if (isSuccess) {
+        // Average score of retrieved chunks, fallback to avgFaithfulness or 85
+        const validSources = q.sources?.filter((s: any) => s.score != null) ?? [];
+        if (validSources.length > 0) {
+          const sum = validSources.reduce((acc: number, curr: any) => acc + curr.score, 0);
+          score = Math.round((sum / validSources.length) * 100);
+          score = Math.max(50, Math.min(100, score));
+        } else {
+          score = avgFaithfulness || 85;
+        }
+      } else {
+        score = 30; // Failed query represented as low grounding index
+      }
+
+      const time = new Date(q.created_at);
+      const label = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      return {
+        label,
+        value: score,
+        question: q.question,
+        isSuccess
+      };
+    });
+  })();
 
   return (
     <div className="relative min-h-full bg-[#030303] text-white px-8 py-8 space-y-8 overflow-hidden font-sans">
@@ -336,73 +389,100 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* SVG Line Graph Redesigned */}
+          {/* Recharts Grounding Line Chart */}
           <div className="h-44 w-full relative pt-2">
-            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
-                {/* Line Gradient */}
-                <linearGradient id="chart-line-grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="50%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#f4831f" />
-                </linearGradient>
-                {/* Area Gradient */}
-                <linearGradient id="chart-area-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.08" />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* Grid Lines */}
-              <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5" strokeDasharray="3 3" />
-              <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5" strokeDasharray="3 3" />
-              <line x1="0" y1="80" x2="100" y2="80" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5" strokeDasharray="3 3" />
-              
-              {/* Area path */}
-              <path
-                d="M 0 100 L 0 65 L 16.6 62 L 33.3 68 L 50 50 L 66.6 44 L 83.3 35 L 100 30.8 L 100 100 Z"
-                fill="url(#chart-area-grad)"
-              />
-
-              {/* Glowing back-line */}
-              <path
-                d="M 0 65 L 16.6 62 L 33.3 68 L 50 50 L 66.6 44 L 83.3 35 L 100 30.8"
-                fill="none"
-                stroke="url(#chart-line-grad)"
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.15"
-              />
-
-              {/* Main Line path */}
-              <path
-                d="M 0 65 L 16.6 62 L 33.3 68 L 50 50 L 66.6 44 L 83.3 35 L 100 30.8"
-                fill="none"
-                stroke="url(#chart-line-grad)"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Dots on points */}
-              <circle cx="0" cy="65" r="1.5" fill="#3b82f6" />
-              <circle cx="16.6" cy="62" r="1.5" fill="#3b82f6" />
-              <circle cx="33.3" cy="68" r="1.5" fill="#5073f2" />
-              <circle cx="50" cy="50" r="1.5" fill="#8b5cf6" />
-              <circle cx="66.6" cy="44" r="1.5" fill="#b064e4" />
-              <circle cx="83.3" cy="35" r="1.5" fill="#d96c14" />
-              
-              {/* Highlight Active Node */}
-              <circle cx="100" cy="30.8" r="2.2" fill="#f4831f" className="animate-pulse" />
-              <circle cx="100" cy="30.8" r="4.5" fill="none" stroke="#f4831f" strokeWidth="1" opacity="0.5" className="animate-pulse-ring" />
-            </svg>
-            
-            {/* Axis Labels */}
-            <div className="absolute left-0 top-0 text-[8px] text-slate-600 font-mono">100%</div>
-            <div className="absolute left-0 top-[45%] text-[8px] text-slate-600 font-mono">50%</div>
-            <div className="absolute left-0 bottom-4 text-[8px] text-slate-600 font-mono">0%</div>
-            <div className="absolute right-0 bottom-0 text-[8px] text-slate-600 font-mono font-medium">12 Jun 2026</div>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartPoints.map((pt) => ({
+                  name: pt.label,
+                  score: pt.value,
+                  question: pt.question,
+                  isSuccess: pt.isSuccess
+                }))}
+                margin={{
+                  left: 12,
+                  right: 12,
+                  top: 10,
+                  bottom: 5
+                }}
+              >
+                <defs>
+                  {/* Line Gradient */}
+                  <linearGradient id="chart-line-grad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="50%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#f4831f" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  stroke="#64748b"
+                  style={{ fontSize: '10px', fontFamily: 'JetBrains Mono' }}
+                />
+                <Tooltip
+                  cursor={false}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-[#09090b]/95 border border-white/10 rounded-xl p-3 shadow-xl backdrop-blur-md max-w-[260px] pointer-events-none">
+                          <div className="flex items-center justify-between gap-4 mb-1.5 border-b border-white/5 pb-1">
+                            <span className="text-[9px] font-mono text-slate-400">{data.name}</span>
+                            <span className={clsx(
+                              "text-[8px] font-bold px-1.5 py-0.5 rounded font-mono uppercase tracking-wider",
+                              data.isSuccess === false ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            )}>
+                              {data.isSuccess === false ? 'FAIL' : 'GROUNDED'}
+                            </span>
+                          </div>
+                          {data.question ? (
+                            <p className="text-[10px] text-white font-semibold line-clamp-2 mb-1.5">
+                              "{data.question}"
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-white font-semibold mb-1.5">Grounding Index Proxy</p>
+                          )}
+                          <p className="text-xs font-black text-orange-400 font-mono">
+                            {data.score}% Accuracy
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line
+                  dataKey="score"
+                  type="natural"
+                  stroke="url(#chart-line-grad)"
+                  strokeWidth={2.2}
+                  dot={({ cx, cy, payload }) => {
+                    if (cx == null || cy == null) {
+                      return null;
+                    }
+                    const isSuccess = payload.isSuccess;
+                    const strokeColor = isSuccess === false ? "#ef4444" : "#f4831f";
+                    const r = 16;
+                    return (
+                      <GitCommitVertical
+                        key={payload.name}
+                        x={cx - r / 2}
+                        y={cy - r / 2}
+                        width={r}
+                        height={r}
+                        fill="#030303"
+                        stroke={strokeColor}
+                      />
+                    );
+                  }}
+                  activeDot={{ r: 6, fill: "#f4831f", strokeWidth: 1 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

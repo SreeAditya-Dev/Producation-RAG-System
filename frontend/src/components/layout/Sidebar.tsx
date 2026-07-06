@@ -32,15 +32,18 @@ export function Sidebar({
   collapsed = false,
   onToggleCollapse
 }: SidebarProps) {
-  // If in mobile mode, collapse state is disabled (always show full layout in sidebar drawer)
   const isCollapsed = collapsed && !mobile;
 
   return (
     <aside
       className={clsx(
-        'relative flex h-screen shrink-0 flex-col overflow-hidden border-r border-[#1e1e24] bg-[#0c0c0e] text-white transition-all duration-300',
-        isCollapsed ? 'w-20' : 'w-[280px]',
-        mobile && 'w-[292px] shadow-2xl'
+        'flex shrink-0 flex-col overflow-hidden text-white transition-all duration-300 ease-in-out',
+        mobile 
+          ? 'h-screen w-[292px] border-r border-[#1e1e24] bg-[#09090b] shadow-2xl'
+          : clsx(
+              'h-[calc(100vh-32px)] m-4 rounded-2xl border border-white/5 bg-[#09090b]/90 backdrop-blur-xl shadow-2xl shadow-black/80',
+              isCollapsed ? 'w-[76px]' : 'w-[260px]'
+            )
       )}
     >
       {/* Brand Header */}
