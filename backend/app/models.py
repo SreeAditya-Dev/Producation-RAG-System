@@ -26,6 +26,7 @@ class DocumentListResponse(BaseModel):
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
+    session_id: Optional[str] = Field(default=None, description="Optional episodic chat session ID")
 
 
 class SourceChunk(BaseModel):

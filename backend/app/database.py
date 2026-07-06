@@ -39,6 +39,7 @@ class QueryHistory(Base):
     __tablename__ = "query_history"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, nullable=True, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=True)
     sources_json = Column(Text, nullable=True)
@@ -116,6 +117,7 @@ def _apply_migrations() -> None:
             ("status",        "ALTER TABLE query_history ADD COLUMN status VARCHAR DEFAULT 'success'"),
             ("failure_stage", "ALTER TABLE query_history ADD COLUMN failure_stage TEXT"),
             ("error_type",    "ALTER TABLE query_history ADD COLUMN error_type TEXT"),
+            ("session_id",    "ALTER TABLE query_history ADD COLUMN session_id VARCHAR"),
         ],
     }
 

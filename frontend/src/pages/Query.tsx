@@ -7,6 +7,9 @@ import { QueryVisualizer } from '../components/visualizer/QueryVisualizer';
 import { EventLog } from '../components/visualizer/EventLog';
 
 export function Query() {
+  const [sessionId] = useState(() => {
+    return 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+  });
   const { query } = useRAG();
   const { queryState, eventLog, clearLog, connected } = usePipelineCtx();
   const [logCollapsed, setLogCollapsed] = useState(false);
@@ -25,7 +28,7 @@ export function Query() {
       <div className="flex flex-1 min-w-0 flex-col border-r border-zinc-900 bg-black">
         <ChatInterface
           onQuery={async (q, topK) => {
-            const result = await query(q, topK);
+            const result = await query(q, topK, sessionId);
             return result;
           }}
           streamingAnswer={queryState.streamingAnswer}

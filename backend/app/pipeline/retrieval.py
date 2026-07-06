@@ -121,6 +121,7 @@ async def retrieve_and_generate(
     question: str,
     top_k: int,
     db_session,
+    session_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Full RAG pipeline: Decompose → Parallel Embed/Retrieve → DB Filter → Rerank → Compress → Generate.
@@ -128,6 +129,12 @@ async def retrieve_and_generate(
     Persists both successful AND failed queries to QueryHistory + QueryMetrics.
     """
     from app.database import QueryHistory, QueryMetrics
+    from app.services.session_episodic_memory import SessionEpisodicMemory
+    from app.services.hybrid_memory_coordinator import HybridMemoryCoordinator
+    from app.services.llm_service import SYSTEM_PROMPT
+
+    episodic_memory = SessionEpisodicMemory(db_session)
+    memory_coordinator = HybridMemoryCoordinator(episodic_memory, SYSTEM_PROMPT)
 
     query_id = str(uuid.uuid4())
     pipeline_start = time.perf_counter()
@@ -218,8 +225,15 @@ async def retrieve_and_generate(
         await emit("generation_started", {"model": settings.llm_model})
         t = time.perf_counter()
 
+        # Compile messages from hybrid memory systems (System Prompt, Chat History, retrieved context chunks + current question)
+        working_messages = memory_coordinator.compile_working_memory(
+            session_id=session_id,
+            user_query=question,
+            context_chunks=sources
+        )
+
         def stream_sync():
-            return llm_service.generate_stream_tracked(question, sources)
+            return llm_service.generate_messages_stream_tracked(working_messages)
 
         tokens, llm_usage = await asyncio.get_event_loop().run_in_executor(None, stream_sync)
         full_answer = "".join(tokens)
@@ -253,6 +267,7 @@ async def retrieve_and_generate(
         # ── 8. Persist ────────────────────────────────────────────────────────
         history = QueryHistory(
             id=query_id,
+            session_id=session_id,
             question=question,
             answer=full_answer,
             sources_json=json.dumps(sources),
@@ -265,8 +280,9 @@ async def retrieve_and_generate(
         db_session.commit()
 
         logger.info(
-            "Query %s: %.0f ms total | embed %.0f | retrieve %.0f | rerank %.0f | llm %.0f | faith=%.2f",
+            "Query %s (Session: %s): %.0f ms total | embed %.0f | retrieve %.0f | rerank %.0f | llm %.0f | faith=%.2f",
             query_id[:8],
+            session_id,
             qm["total_ms"], qm.get("embed_ms", 0), qm.get("retrieve_ms", 0),
             qm["rerank_ms"], qm["llm_ms"],
             qm["faithfulness_score"] or 0,
@@ -298,6 +314,7 @@ async def retrieve_and_generate(
         try:
             history = QueryHistory(
                 id=query_id,
+                session_id=session_id,
                 question=question,
                 answer=None,
                 sources_json=None,

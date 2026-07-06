@@ -41,8 +41,8 @@ export const documentsApi = {
 };
 
 export const queryApi = {
-  query: (question: string, top_k = 5) =>
-    api.post<QueryResponse>('/query', { question, top_k }),
+  query: (question: string, top_k = 5, session_id?: string) =>
+    api.post<QueryResponse>('/query', { question, top_k, session_id }),
 
   history: (limit = 20) =>
     api.get<{ queries: QueryResponse[]; total: number }>(`/queries?limit=${limit}`),

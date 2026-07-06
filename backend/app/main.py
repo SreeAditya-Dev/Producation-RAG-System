@@ -254,7 +254,12 @@ async def query(req: QueryRequest, db: Session = Depends(get_db)):
     from app.database import SessionLocal
     session = SessionLocal()
     try:
-        result = await retrieve_and_generate(req.question, req.top_k, session)
+        result = await retrieve_and_generate(
+            question=req.question,
+            top_k=req.top_k,
+            db_session=session,
+            session_id=req.session_id
+        )
     finally:
         session.close()
 

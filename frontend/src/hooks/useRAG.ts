@@ -22,11 +22,11 @@ export function useRAG() {
   const [state, setState] = useState<RAGState>(initialState);
   const [history, setHistory] = useState<QueryResponse[]>([]);
 
-  const query = useCallback(async (question: string, topK = 5) => {
+  const query = useCallback(async (question: string, topK = 5, sessionId?: string) => {
     setState({ stage: 'embedding', answer: '', sources: [], error: undefined });
 
     try {
-      const { data } = await queryApi.query(question, topK);
+      const { data } = await queryApi.query(question, topK, sessionId);
 
       setState({
         stage: 'complete',

@@ -61,6 +61,39 @@ class LLMService:
         """
         return self._stream_with_usage(question, context_chunks)
 
+    def generate_messages_stream_tracked(
+        self, messages: List[Dict[str, str]]
+    ) -> Tuple[List[str], Dict[str, int]]:
+        """
+        Executes generation over a pre-compiled list of chat messages (e.g. system, history, user query).
+        Returns (token_list, {"prompt_tokens": N, "completion_tokens": M}).
+        """
+        usage: Dict[str, int] = {}
+        tokens: List[str] = []
+
+        try:
+            stream = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=settings.temperature,
+                top_p=0.7,
+                max_tokens=settings.max_tokens,
+                stream=True,
+                stream_options={"include_usage": True},
+            )
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content is not None:
+                    tokens.append(chunk.choices[0].delta.content)
+                if getattr(chunk, "usage", None):
+                    usage = {
+                        "prompt_tokens": chunk.usage.prompt_tokens or 0,
+                        "completion_tokens": chunk.usage.completion_tokens or 0,
+                    }
+            return tokens, usage
+        except Exception as e:
+            logger.error("LLM streaming messages error: %s", e)
+            raise
+
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _stream_with_usage(
