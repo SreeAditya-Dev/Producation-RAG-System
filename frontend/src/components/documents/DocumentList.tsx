@@ -117,17 +117,13 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
         </div>
 
         <div className="divide-y divide-zinc-900 bg-black">
-          <AnimatePresence>
             {paged.map((doc) => {
               const TypeIcon = TYPE_ICONS[doc.file_type] || File;
               const isDeleting = deleting === doc.id;
 
               return (
-                <motion.div
+                <div
                   key={doc.id}
-                  initial={{ opacity: 0, y: 3 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
                   className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 p-4 md:px-4 md:py-3 hover:bg-zinc-950/60 transition-colors duration-200 group text-xs text-zinc-300 border-zinc-900"
                 >
                   {/* File name & details */}
@@ -218,10 +214,9 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
                       )}
                     </button>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </AnimatePresence>
         </div>
       </div>
 
