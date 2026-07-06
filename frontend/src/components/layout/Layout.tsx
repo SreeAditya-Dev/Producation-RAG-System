@@ -93,14 +93,6 @@ export function Layout() {
 
   // Combine commands, documents, and past queries
   const allItems = useMemo(() => {
-    const docItems = (docsData?.documents ?? []).map((doc: any) => ({
-      id: `doc-${doc.id}`,
-      title: `Ingest / Manage Document: ${doc.original_name}`,
-      category: 'Payload Inventory',
-      icon: FileText,
-      action: () => navigate('/documents')
-    }));
-
     const queryItems = (queryHistory?.queries ?? []).map((q: any) => ({
       id: `query-${q.query_id}`,
       title: `Ask Query: "${q.question}"`,
@@ -109,8 +101,8 @@ export function Layout() {
       action: () => navigate('/query', { state: { initialQuestion: q.question } })
     }));
 
-    return [...baseCommands, ...docItems, ...queryItems];
-  }, [baseCommands, docsData, queryHistory, navigate]);
+    return [...baseCommands, ...queryItems];
+  }, [baseCommands, queryHistory, navigate]);
 
   // Filter based on search query
   const filteredItems = useMemo(() => {
