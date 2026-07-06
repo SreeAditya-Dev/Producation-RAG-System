@@ -14,7 +14,8 @@ import {
   Columns, 
   Trash2, 
   Sparkles, 
-  CornerDownLeft 
+  CornerDownLeft,
+  BookOpen
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Sidebar } from './Sidebar';
@@ -83,6 +84,7 @@ export function Layout() {
     { id: 'nav-documents', title: 'Go to Document Control', category: 'Navigation', icon: FileText, action: () => navigate('/documents') },
     { id: 'nav-query', title: 'Go to Answer Studio', category: 'Navigation', icon: MessageSquare, action: () => navigate('/query') },
     { id: 'nav-visualizer', title: 'Go to Live Pipeline View', category: 'Navigation', icon: Terminal, action: () => navigate('/visualizer') },
+    { id: 'nav-docs', title: 'Go to System Documentation', category: 'Navigation', icon: BookOpen, action: () => navigate('/docs') },
     { id: 'act-upload', title: 'Upload Document Payload', category: 'Actions', icon: Upload, action: () => navigate('/documents') },
     { id: 'act-ask', title: 'Open Query Studio', category: 'Actions', icon: Sparkles, action: () => navigate('/query') },
     { id: 'act-clear-log', title: 'Clear Telemetry Logs', category: 'Actions', icon: Trash2, action: () => { state.clearLog(); toast.success('Telemetry logs cleared'); } },
@@ -180,6 +182,11 @@ export function Layout() {
         return {
           title: 'Pipeline Live View',
           subtitle: 'Follow ingestion and query execution with a real-time telemetry surface.',
+        };
+      case '/docs':
+        return {
+          title: 'System Documentation',
+          subtitle: 'Detailed explanation of the RAG architecture, retrieval pipeline, and active stack services.',
         };
       default:
         return {

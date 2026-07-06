@@ -6,7 +6,8 @@ import {
   Activity,
   Cpu,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BookOpen
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -15,6 +16,7 @@ const links = [
   { to: '/documents', icon: FileText, label: 'Documents', color: '#3b82f6' },
   { to: '/query', icon: MessageSquare, label: 'Query', color: '#10b981' },
   { to: '/visualizer', icon: Activity, label: 'Live Pipeline', color: '#f59e0b' },
+  { to: '/docs', icon: BookOpen, label: 'Documentation', color: '#a855f7' },
 ];
 
 interface SidebarProps {
