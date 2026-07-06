@@ -1612,6 +1612,40 @@ sources = reranker_service.rerank(
                         </div>
                       </div>
 
+                      {/* Challenge 12 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 12
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Sudden Hosted LLM Deprecation & Outage Handling
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Scenario:</strong> Your production RAG relies on <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">meta/llama-3.1-70b-instruct</code>. The hosted NIM provider suddenly deprecates/shuts down the model endpoint, returning immediate HTTP <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">404</code> or <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">410 Gone</code> errors.
+                          </p>
+                          <div className="space-y-2 text-sm text-zinc-300">
+                            <strong className="text-emerald-400">Outage Mitigation & Fallback Architecture:</strong>
+                            <ul className="list-disc list-inside ml-2 space-y-1 text-zinc-300 leading-relaxed">
+                              <li><strong>Prioritized Model Pool Routing:</strong> Replace hardcoded endpoint configurations with a dynamic model fallback chain in env variables: <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">LLM_POOL=meta/llama-3.1-70b-instruct,meta/llama-3.3-70b-instruct,meta/llama-3.1-8b-instruct</code>.</li>
+                              <li><strong>Automated Circuit Breaker Retry:</strong> Wrap API invocations in a try-catch block. On encountering standard model lifecycle HTTP errors (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">404</code>, <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">410</code>, <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">503</code>), the handler catches the exception, shifts index to the next backup model (e.g. Llama 3.3), and retries the request transparently within a few hundred milliseconds.</li>
+                              <li><strong>OpenAPI/Chat-Completions Schema Standard:</strong> Keep input/output schemas identical across models to ensure that fallback switches require zero rewrite configurations.</li>
+                              <li><strong>Real-time Incident Dispatching:</strong> Outage switches trigger warnings to alerting dashboards (e.g. Datadog, Slack) to let engineering know the primary endpoint needs update config changes.</li>
+                            </ul>
+                          </div>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Keywords: <code className="text-zinc-400">Deprecation Outage</code> &bull; <code className="text-zinc-400">Circuit Breaker</code> &bull; <code className="text-zinc-400">Model Fallbacks</code>
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
