@@ -20,9 +20,9 @@ export function Query() {
   }, [clearLog]);
 
   return (
-    <div className="flex h-[calc(100vh-65px)] overflow-hidden bg-[#09090b]">
-      {/* ── Left panel: Chat ── */}
-      <div className="flex flex-1 min-w-0 flex-col border-r border-zinc-800">
+    <div className="flex h-[calc(100vh-65px)] overflow-hidden bg-black">
+      {/* ── Left panel: Chat (Editorial Stream) ── */}
+      <div className="flex flex-1 min-w-0 flex-col border-r border-zinc-900 bg-black">
         <ChatInterface
           onQuery={async (q, topK) => {
             const result = await query(q, topK);
@@ -34,39 +34,17 @@ export function Query() {
         />
       </div>
 
-      {/* ── Right panel: Pipeline flow + Event log ── */}
-      <div className="flex w-[460px] shrink-0 flex-col bg-[#0c0c0e] xl:w-[500px]">
-        {/* Status bar */}
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 shrink-0 bg-[#0c0c0e]">
-          <div className="flex items-center gap-2">
-            {connected ? (
-              <>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400">Online</span>
-              </>
-            ) : (
-              <>
-                <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Offline</span>
-              </>
-            )}
-            <span className="text-zinc-700 font-mono text-[9px]">&middot;</span>
-            <span className="text-[10px] font-mono text-zinc-400 capitalize">{queryState.stage}</span>
-          </div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Answer Studio
-          </span>
-        </div>
-
-        {/* Pipeline flow (grows to fill) */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+      {/* ── Right panel: Vertical Progress Telemetry + Event Log ── */}
+      <div className="flex w-[380px] shrink-0 flex-col bg-[#09090b] xl:w-[420px]">
+        {/* Pipeline vertical flow */}
+        <div className="flex-1 min-h-0">
           <QueryVisualizer state={queryState} />
         </div>
 
-        {/* Event log (dynamic height) */}
+        {/* Live event logs */}
         <div className={clsx(
-          "shrink-0 border-t border-zinc-800 transition-all duration-300 ease-in-out",
-          logCollapsed ? "h-[41px]" : "h-[220px]"
+          "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
+          logCollapsed ? "h-10" : "h-[220px]"
         )}>
           <EventLog 
             entries={eventLog} 
@@ -80,3 +58,4 @@ export function Query() {
     </div>
   );
 }
+export default Query;
