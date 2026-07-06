@@ -119,13 +119,13 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
       {/* Code Area */}
       <div className="p-4 overflow-x-auto bg-[#040406]/60 flex">
         {/* Line Numbers */}
-        <div className="text-zinc-650 text-right pr-4 select-none border-r border-zinc-900 min-w-[2rem] text-[10px]">
+        <div className="text-zinc-650 text-right pr-4 select-none border-r border-zinc-900 min-w-[2rem] text-[10px] leading-5 font-mono">
           {code.split('\n').map((_, i) => (
-            <div key={i} className="h-5">{i + 1}</div>
+            <div key={i}>{i + 1}</div>
           ))}
         </div>
         {/* Tokenized Output */}
-        <pre className="pl-4 text-zinc-350 select-text whitespace-pre flex-1 font-mono text-[11.5px]">
+        <pre className="pl-4 text-zinc-350 select-text whitespace-pre flex-1 font-mono text-[11.5px] leading-5">
           {tokens.map((token, i) => {
             let className = '';
             if (token.type === 'comment') className = 'text-zinc-550 italic';
@@ -135,11 +135,11 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
             else if (token.type === 'type') className = 'text-blue-400';
             else if (token.type === 'number') className = 'text-yellow-500/90';
             else if (token.type === 'decorator') className = 'text-violet-400';
-            else if (token.type === 'operator') className = 'text-zinc-450';
+            else if (token.type === 'operator') className = 'text-zinc-455';
             else if (token.type === 'punctuation') className = 'text-zinc-600';
             
             return (
-              <span key={i} className={clsx(className, "inline-block h-5")}>
+              <span key={i} className={className}>
                 {token.value}
               </span>
             );
