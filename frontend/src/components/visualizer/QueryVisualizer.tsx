@@ -72,7 +72,7 @@ function getNodeStatus(nodeId: string, current: QueryStage): NodeStatus {
 
   switch (nodeId) {
     case 'query':
-      return cp >= 1 ? 'complete' : 'active';
+      return current === 'idle' ? 'idle' : 'complete';
     case 'embed':
       return cp === 1 ? 'active' : cp > 1 ? 'complete' : 'idle';
     case 'pinecone':
