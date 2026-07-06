@@ -106,26 +106,6 @@ export function Sidebar({
             ))}
           </nav>
         </div>
-
-        {/* Stack Info */}
-        {!isCollapsed && (
-          <div className="px-3 py-2 rounded-xl bg-[#121215] border border-[#1e1e24] space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#5c5c6c]">
-              Active Stack
-            </p>
-            <div className="space-y-1.5">
-              {[
-                { icon: Cpu, label: 'Llama-3.3-70B NIM' },
-                { icon: Activity, label: 'nv-embedqa-e5-v5' },
-              ].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <Icon size={12} className="text-orange-500" />
-                  <span className="truncate text-xs text-[#a1a1aa]">{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Footer / Profile */}
