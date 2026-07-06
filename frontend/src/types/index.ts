@@ -29,6 +29,7 @@ export interface SourceChunk {
 
 export interface QueryResponse {
   query_id: string;
+  session_id?: string;
   question: string;
   answer: string;
   sources: SourceChunk[];

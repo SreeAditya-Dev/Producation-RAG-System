@@ -6,7 +6,7 @@ import { clsx } from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import type { QueryResponse } from '../../types';
 
-interface Message {
+export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
@@ -20,6 +20,8 @@ interface Props {
   streamingAnswer: string;
   isLoading: boolean;
   stage: string;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -60,9 +62,8 @@ function AssistantMessage({ content }: { content: string }) {
   );
 }
 
-export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Props) {
+export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, messages, setMessages }: Props) {
   const location = useLocation();
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [topK, setTopK] = useState(5);
   const bottomRef = useRef<HTMLDivElement>(null);

@@ -301,6 +301,7 @@ def get_query_history(limit: int = 20, db: Session = Depends(get_db)):
                 pass
         result.append({
             "query_id": q.id,
+            "session_id": q.session_id,
             "question": q.question,
             "answer": q.answer,
             "sources": sources,
