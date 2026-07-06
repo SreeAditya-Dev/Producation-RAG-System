@@ -140,3 +140,32 @@ The selected chunks are injected into a structured system template:
 Every operational pipeline run writes metric audits to SQL:
 - **`IngestionMetrics`**: Logs download, parse, chunk, embed, store, and total time elapsed, along with document lengths and token counts.
 - **`QueryMetrics`**: Logs embed, retrieve, rerank, generation, and total query latencies, token counts (prompt, completion, embed), max/mean scores, rerank scores, and faithfulness proxy ratings.
+
+---
+
+## 6. Core RAG Challenges & Architectural Solutions
+
+The system addresses three complex production RAG challenges with modular domain services:
+
+### Challenge 1: Structured Table Layout Preservation (PDF row 14, col 3)
+* **Problem**: Normal text splitters break markdown tables across arbitrary character boundaries. If an answer sits in row 14, column 3, standard chunking splits row 14 away from the column headers, causing retrieval to fail because the row values lack semantic context.
+* **Architectural Solution**: We implemented the [TableAwareSplitter](file:///D:/Projects/RAG%20System/backend/app/pipeline/table_splitter.py) domain service.
+  - During the ingestion pipeline, it identifies markdown tables as distinct, atomic blocks.
+  - If a table fits within the `max_chunk_size`, it is kept intact as a single chunk.
+  - If a table is too large, it is split row-by-row. Crucially, the splitter injects the table's header lines (column names and separator) into every row chunk.
+  - This ensures every single cell value retains its column label in the vector index, guaranteeing high embedding match quality.
+
+### Challenge 2: Retrieval Diversity & Coverage (Avoiding Redundant Top-K)
+* **Problem**: Standard semantic searches often retrieve 5 near-duplicate chunks from different parts of a document that repeat the same information. The generator looks highly confident, but lacks coverage of the full question scope.
+* **Architectural Solution**: We implemented the [MaximalMarginalRelevanceFilter](file:///D:/Projects/RAG%20System/backend/app/services/diversity_filter.py) (MMR) service in the retrieval flow.
+  - We configure the vector query to return a larger candidate pool ($K = \text{top\_k} \times 4$).
+  - We fetch the candidate chunk vectors from Pinecone using `include_values=True`.
+  - The MMR service filters down candidates by calculating query similarity vs candidate-to-candidate redundancy, penalizing text blocks that are too similar to already selected chunks.
+  - Reranking is subsequently run only on this diversified subset.
+
+### Challenge 3: Code-Mixed Query Translation (Hinglish Queries)
+* **Problem**: Casual queries are asked in a mixture of Hindi and English (Hinglish), e.g., *"kitna refund milega for cancelled order"*, whereas the documents are in formal English. This vocabulary mismatch leads to low embedding similarity and retrieval failure.
+* **Architectural Solution**: We implemented the [QueryTranslator](file:///D:/Projects/RAG%20System/backend/app/services/query_translator.py) service.
+  - Before embedding the query, the retrieval pipeline routes the raw query through a fast, deterministic LLM translation step (using `meta/llama-3.3-70b-instruct` at `temp=0.0`).
+  - Hinglish queries are rewritten into formal English queries (e.g. *"How much refund will I receive for a cancelled order?"*).
+  - The vector index is searched using the formal English query vector for high recall, while the original Hinglish question is passed to the LLM during generation to ensure context-appropriate natural language responses.

@@ -24,7 +24,8 @@ import {
   Search,
   Check,
   FileCode,
-  Sliders as SlidersIcon
+  Sliders as SlidersIcon,
+  HelpCircle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -151,7 +152,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
 }
 
 export function Docs() {
-  const [activeTab, setActiveTab] = useState<'blueprint' | 'ingestion' | 'retrieval' | 'config'>('blueprint');
+  const [activeTab, setActiveTab] = useState<'blueprint' | 'ingestion' | 'retrieval' | 'config' | 'faq'>('blueprint');
   const [activeStep, setActiveStep] = useState<number>(0);
   const [simulating, setSimulating] = useState(false);
   
@@ -443,6 +444,7 @@ sources = reranker_service.rerank(
             { id: 'ingestion', label: 'Ingestion Layer', icon: Layers },
             { id: 'retrieval', label: 'Retrieval & Rerank', icon: Cpu },
             { id: 'config', label: 'Active Parameters', icon: Sliders },
+            { id: 'faq', label: 'RAG Q&A', icon: HelpCircle },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -1231,6 +1233,119 @@ sources = reranker_service.rerank(
                           </p>
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* TAB 5: RAG Q&A */}
+              {activeTab === 'faq' && (
+                <div className="space-y-8 animate-fade-in">
+                  
+                  {/* Title card */}
+                  <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl relative overflow-hidden space-y-6">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 rounded-full blur-[80px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none" />
+                    
+                    <div className="border-b border-zinc-800/80 pb-5">
+                      <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
+                        RAG Implementation Q&A
+                      </h3>
+                      <h4 className="text-xl font-bold text-white mt-1">
+                        Addressing Core Production Challenges
+                      </h4>
+                      <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
+                        How we solved critical RAG failures: retaining layout structures in table parsers, avoiding information redundancy during semantic searches, and handling informal code-mixed Hinglish queries.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                      
+                      {/* Challenge 1 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 1
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Structured Table Layout Preservation (Row 14, Column 3)
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> A PDF has a table where the answer sits in row 14, column 3. Normal text splitters break markdown tables across arbitrary character boundaries, severing row 14 from the column headers. During retrieval, individual cells are matched but their column context is completely lost, causing RAG model response failure.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Solution:</strong> We implemented the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">TableAwareSplitter</code> class. It extracts markdown tables as distinct, atomic blocks. If a table exceeds the target chunk size, the splitter cuts it row-by-row and injects the column headers (first two lines) at the top of every row chunk.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/pipeline/table_splitter.py</code> &bull; Integrated in <code className="text-zinc-400">ingestion.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 2 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 2
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Retrieval Diversity & Coverage (Avoiding Redundant Top-K)
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> Retrieval queries frequently return 5 text chunks that say the same thing (redundancy). The model looks highly confident because the candidates all match semantic keyword queries, but they have no real coverage of other sections that might answer different aspects of the user's question.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Solution:</strong> We implemented the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">MaximalMarginalRelevanceFilter</code> (MMR) service. We query Pinecone with <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">include_values=True</code> to fetch candidate vector embeddings, then select the top-N diverse chunks by maximizing relevance minus max redundancy with already selected chunks.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/diversity_filter.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 3 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 3
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Code-Mixed Query Translation (Hinglish Support)
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> Users ask questions in casual Hindi-English (Hinglish, e.g. *"kitna refund milega for cancelled order"*), while documents are in formal English. Monolingual semantic search fails because embeddings do not match across distinct languages and styles.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Solution:</strong> We implemented the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryTranslator</code> service. Raw input queries are routed through a fast, deterministic LLM translation step (using Llama-3.3-70b at temperature 0.0) to rewrite Hinglish into formal English before embedding and vector search.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/query_translator.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
