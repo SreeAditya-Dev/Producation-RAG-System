@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, MessageSquare, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, MessageSquare, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRAG } from '../hooks/useRAG';
 import { usePipelineCtx } from '../components/layout/Layout';
 import { ChatInterface, Message } from '../components/query/ChatInterface';
@@ -18,6 +19,7 @@ export function Query() {
   const { query } = useRAG();
   const { queryState, eventLog, clearLog, connected } = usePipelineCtx();
   const [logCollapsed, setLogCollapsed] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
   const isLoading = ['embedding', 'retrieving', 'generating'].includes(queryState.stage);
 
@@ -96,62 +98,91 @@ export function Query() {
     <div className="flex h-[calc(100vh-65px)] w-full overflow-hidden bg-black text-slate-100 font-sans relative">
       
       {/* ── Left Sidebar: Session History ── */}
-      <div className="w-[250px] shrink-0 border-r border-zinc-900 bg-[#09090b]/90 backdrop-blur-xl flex flex-col h-full">
-        {/* New Chat Button */}
-        <div className="p-4 border-b border-zinc-900">
-          <button
-            onClick={() => {
-              const newId = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-              setCurrentSessionId(newId);
-            }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 text-white text-xs font-semibold transition-all duration-200 cursor-pointer"
+      <AnimatePresence initial={false}>
+        {!historyCollapsed && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 250, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="shrink-0 border-r border-zinc-900 bg-[#09090b]/90 backdrop-blur-xl flex flex-col h-full overflow-hidden"
           >
-            <Plus size={14} className="text-orange-500" />
-            <span>New Chat</span>
-          </button>
-        </div>
-
-        {/* Sessions List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1.5 no-scrollbar">
-          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-2.5 mb-2 flex items-center gap-1.5">
-            <MessageSquare size={11} className="text-orange-500" />
-            <span>Chat History</span>
-          </div>
-
-          {sessions.length === 0 ? (
-            <div className="text-xs text-zinc-600 px-3 py-4 text-center italic">
-              No chat logs found
+            {/* New Chat & Collapse Header */}
+            <div className="p-4 border-b border-zinc-900 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const newId = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+                  setCurrentSessionId(newId);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 text-white text-xs font-semibold transition-all duration-200 cursor-pointer"
+              >
+                <Plus size={13} className="text-orange-500" />
+                <span>New Chat</span>
+              </button>
+              
+              <button
+                onClick={() => setHistoryCollapsed(true)}
+                className="p-2.5 rounded-xl border border-white/5 bg-transparent text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer flex items-center justify-center"
+                title="Collapse Sidebar"
+              >
+                <ChevronLeft size={14} />
+              </button>
             </div>
-          ) : (
-            sessions.map((s) => {
-              const isActive = s.sessionId === currentSessionId;
-              return (
-                <button
-                  key={s.sessionId}
-                  onClick={() => setCurrentSessionId(s.sessionId)}
-                  className={clsx(
-                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl border transition-all duration-200 flex flex-col gap-1 cursor-pointer",
-                    isActive
-                      ? "bg-orange-500/10 border-orange-500/30 text-white shadow-lg shadow-orange-500/5"
-                      : "bg-transparent border-transparent text-[#8b8b9f] hover:bg-white/5 hover:text-white"
-                  )}
-                >
-                  <span className="truncate w-full font-semibold">{s.title}</span>
-                  <div className="flex items-center gap-1 text-[9px] text-zinc-500">
-                    <Clock size={9} />
-                    <span>
-                      {new Date(s.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} &middot; {new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
+
+            {/* Sessions List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 no-scrollbar">
+              <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-2.5 mb-2 flex items-center gap-1.5">
+                <MessageSquare size={11} className="text-orange-500" />
+                <span>Chat History</span>
+              </div>
+
+              {sessions.length === 0 ? (
+                <div className="text-xs text-zinc-600 px-3 py-4 text-center italic">
+                  No chat logs found
+                </div>
+              ) : (
+                sessions.map((s) => {
+                  const isActive = s.sessionId === currentSessionId;
+                  return (
+                    <button
+                      key={s.sessionId}
+                      onClick={() => setCurrentSessionId(s.sessionId)}
+                      className={clsx(
+                        "w-full text-left px-3 py-2 text-xs font-medium rounded-xl border transition-all duration-200 flex flex-col gap-1 cursor-pointer",
+                        isActive
+                          ? "bg-orange-500/10 border-orange-500/30 text-white shadow-lg shadow-orange-500/5"
+                          : "bg-transparent border-transparent text-[#8b8b9f] hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      <span className="truncate w-full font-semibold">{s.title}</span>
+                      <div className="flex items-center gap-1 text-[9px] text-zinc-500 font-mono">
+                        <Clock size={9} />
+                        <span>
+                          {new Date(s.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} &middot; {new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Center panel: Chat (Editorial Stream) ── */}
-      <div className="flex flex-1 min-w-0 flex-col border-r border-zinc-900 bg-black">
+      <div className="flex flex-1 min-w-0 flex-col border-r border-zinc-900 bg-black relative">
+        {/* Floating Expand Sidebar Button when Collapsed */}
+        {historyCollapsed && (
+          <button
+            onClick={() => setHistoryCollapsed(false)}
+            className="absolute top-4 left-4 z-10 p-2.5 rounded-xl border border-white/5 bg-[#09090b]/90 text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer shadow-lg backdrop-blur-xl flex items-center justify-center"
+            title="Expand Chat History"
+          >
+            <ChevronRight size={14} className="text-orange-500" />
+          </button>
+        )}
+
         <ChatInterface
           onQuery={async (q, topK) => {
             const result = await query(q, topK, currentSessionId);
