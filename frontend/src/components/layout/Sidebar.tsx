@@ -54,11 +54,7 @@ export function Sidebar({
         'py-6 flex items-center transition-all duration-300',
         isCollapsed ? 'justify-center px-0' : 'px-6 gap-3'
       )}>
-        {/* Simple orange circle icon similar to the Mentor logo */}
-        <div className="relative h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
-          <div className="h-3 w-3 rounded-full bg-[#0c0c0e]" />
-          <div className="absolute right-1 top-1 h-2 w-2 rounded-full bg-orange-400" />
-        </div>
+        <img src="/logo.png" alt="RAG System" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
         {!isCollapsed && (
           <div className="min-w-0">
             <h2 className="text-lg font-bold tracking-tight text-white leading-none">

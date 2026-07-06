@@ -320,7 +320,7 @@ sources = reranker_service.rerank(
     ],
     6: [
       `[INFO] Formatting prompt templates. Candidate context payload injected (2,450 chars).`,
-      `[INFO] Initializing streaming request to Llama-3.3-70b-instruct.`,
+      `[INFO] Initializing streaming request to Llama-3.1-70b-instruct.`,
       `[DEBUG] Token streaming active. Mean throughput: 65 tokens/sec.`,
       `[SUCCESS] Stream finalized. Sigmoid faithfulness evaluation: 0.8921 (Passed).`
     ]
@@ -388,36 +388,41 @@ sources = reranker_service.rerank(
   ];
 
   return (
-    <div className="px-6 py-8 mx-auto w-full max-w-[1600px] font-sans text-zinc-200 relative leading-relaxed antialiased">
+    <div className="px-3 sm:px-6 py-4 sm:py-8 mx-auto w-full max-w-[1600px] font-sans text-zinc-200 relative leading-relaxed antialiased">
       {/* Visual Ambient Glows */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-500/3 rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="absolute top-[30vh] right-1/4 w-[600px] h-[600px] bg-blue-500/2 rounded-full blur-[140px] pointer-events-none -z-10" />
       
       <div className="space-y-8">
         {/* Header Section */}
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-8 backdrop-blur-md shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-4 sm:p-8 backdrop-blur-md shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
-              <h1 className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-zinc-450">
-                System Core Specs
-              </h1>
+            <div className="flex items-center gap-2.5">
+              <img src="/logo.png" alt="RAG System" className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                  <h1 className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-zinc-450">
+                    System Core Specs
+                  </h1>
+                </div>
+                <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-white mt-1">
+                  Production RAG System Architecture
+                </h2>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-white">
-              Production RAG System Architecture
-            </h2>
             <p className="text-zinc-400 text-sm sm:text-base max-w-2xl leading-relaxed">
               Technical documentation, active parameters, schemas, and live simulator for our dual-stage retrieval augmented completion pipeline.
             </p>
           </div>
 
           {/* Quick specs grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 shrink-0">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 shrink-0 w-full lg:w-auto">
             <div className="flex flex-col gap-1 p-3.5 rounded-xl border border-zinc-900 bg-black/60 shadow-inner">
               <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-semibold">LLM Engine</span>
               <span className="text-xs font-bold text-orange-400 font-mono flex items-center gap-1.5 mt-1">
                 <Cpu size={12} className="text-orange-500 shrink-0" />
-                Llama-3.3-70B NIM
+                Llama-3.1-70B NIM
               </span>
             </div>
             <div className="flex flex-col gap-1 p-3.5 rounded-xl border border-zinc-900 bg-black/60 shadow-inner">
@@ -438,7 +443,7 @@ sources = reranker_service.rerank(
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-zinc-800/80 pb-px gap-1 overflow-x-auto no-scrollbar">
+        <div className="flex border-b border-zinc-800/80 pb-px gap-0.5 sm:gap-1 overflow-x-auto no-scrollbar -mx-1 px-1">
           {[
             { id: 'blueprint', label: 'Architecture Blueprint', icon: Workflow },
             { id: 'ingestion', label: 'Ingestion Layer', icon: Layers },
@@ -453,7 +458,7 @@ sources = reranker_service.rerank(
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={clsx(
-                  "relative flex items-center gap-2 px-5 py-3 text-sm font-sans font-semibold transition-all border-b-2 -mb-px cursor-pointer whitespace-nowrap outline-none",
+                  "relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-5 py-2.5 sm:py-3 text-[11px] sm:text-sm font-sans font-semibold transition-all border-b-2 -mb-px cursor-pointer whitespace-nowrap outline-none",
                   active 
                     ? "border-orange-500 text-white bg-zinc-900/10" 
                     : "border-transparent text-zinc-450 hover:text-zinc-200 hover:bg-zinc-900/5"
@@ -762,7 +767,7 @@ sources = reranker_service.rerank(
                         </h4>
                         <ul className="space-y-2 text-xs text-zinc-450 font-sans leading-relaxed">
                           <li className="flex items-start gap-1.5">&bull; <span>Format system templates with context chunks</span></li>
-                          <li className="flex items-start gap-1.5">&bull; <span>Dispatch request to Llama-3.3-70b-instruct</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Dispatch request to Llama-3.1-70b-instruct</span></li>
                           <li className="flex items-start gap-1.5">&bull; <span>Stream completion tokens via Server-Sent Events</span></li>
                           <li className="flex items-start gap-1.5">&bull; <span>Evaluate Rerank score Sigmoid faithfulness</span></li>
                           <li className="flex items-start gap-1.5">&bull; <span>Persist latency audit traces in SQL database</span></li>
@@ -1336,7 +1341,7 @@ sources = reranker_service.rerank(
                             <strong className="text-zinc-100">Problem:</strong> Users ask questions in casual Hindi-English (Hinglish, e.g. *"kitna refund milega for cancelled order"*), while documents are in formal English. Monolingual semantic search fails because embeddings do not match across distinct languages and styles.
                           </p>
                           <p className="text-sm text-zinc-300 leading-relaxed">
-                            <strong className="text-emerald-400">Solution:</strong> We implemented the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryTranslator</code> service. Raw input queries are routed through a fast, deterministic LLM translation step (using Llama-3.3-70b at temperature 0.0) to rewrite Hinglish into formal English before embedding and vector search.
+                            <strong className="text-emerald-400">Solution:</strong> We implemented the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryTranslator</code> service. Raw input queries are routed through a fast, deterministic LLM translation step (using Llama-3.1-70b at temperature 0.0) to rewrite Hinglish into formal English before embedding and vector search.
                           </p>
                         </div>
                         <div className="border-t border-zinc-800/50 pt-3">
