@@ -13,6 +13,8 @@ from app.services.pinecone_service import pinecone_service
 from app.services.reranker_service import reranker_service
 from app.services.llm_service import llm_service
 from app.ws_manager import manager
+from app.services.query_translator import QueryTranslator
+from app.services.diversity_filter import MaximalMarginalRelevanceFilter
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +64,15 @@ async def retrieve_and_generate(
     try:
         await emit("query_started", {"query_id": query_id, "question": question})
 
-        # ── 1. Embed query ────────────────────────────────────────────────────
+        # ── 1. Translate Query (Code-mixed handling) ──────────────────────────
         await emit("query_embedding_started", {"question": question})
+        translator = QueryTranslator()
+        search_query = await translator.translate_query(question)
+        
+        # ── 2. Embed translated query ─────────────────────────────────────────
         t = time.perf_counter()
         query_vector, embed_tokens = await asyncio.get_event_loop().run_in_executor(
-            None, embedding_service.embed_query_tracked, question
+            None, embedding_service.embed_query_tracked, search_query
         )
         qm["embed_ms"] = _ms(t)
         qm["embed_tokens"] = embed_tokens
@@ -76,7 +82,7 @@ async def retrieve_and_generate(
             "tokens": embed_tokens,
         })
 
-        # ── 2. HNSW search (over-fetch) ───────────────────────────────────────
+        # ── 3. HNSW search (over-fetch with vectors) ──────────────────────────
         current_stage = "retrieve"
         candidates_k = top_k * settings.reranker_candidates_multiplier
         await emit("retrieval_started", {"top_k": candidates_k})
@@ -84,7 +90,11 @@ async def retrieve_and_generate(
 
         raw_matches = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: pinecone_service.query(vector=query_vector, top_k=candidates_k),
+            lambda: pinecone_service.query(
+                vector=query_vector,
+                top_k=candidates_k,
+                include_values=True,
+            ),
         )
         qm["retrieve_ms"] = _ms(t)
 
@@ -103,17 +113,27 @@ async def retrieve_and_generate(
                 "char_start": m["metadata"].get("char_start"),
                 "char_end": m["metadata"].get("char_end"),
                 "boundary_level": m["metadata"].get("boundary_level"),
+                "values": m.get("values"),
             }
             for m in filtered
         ]
 
-        scores = [c["score"] for c in candidates]
-        qm["candidate_count"] = len(candidates)
+        # ── 4. Diversity Filter (MMR) ─────────────────────────────────────────
+        mmr_filter = MaximalMarginalRelevanceFilter(lambda_mult=0.5)
+        # Select up to top_k * 2 diverse candidates from the raw pool
+        diverse_candidates = mmr_filter.filter_candidates(
+            query_vector,
+            candidates,
+            top_k * 2,
+        )
+
+        scores = [c["score"] for c in diverse_candidates]
+        qm["candidate_count"] = len(diverse_candidates)
         qm["retrieval_score_mean"] = _safe_mean(scores)
         qm["retrieval_score_max"] = round(max(scores), 4) if scores else None
 
         await emit("chunks_retrieved", {
-            "count": len(candidates),
+            "count": len(diverse_candidates),
             "elapsed_ms": qm["retrieve_ms"],
             "score_mean": qm["retrieval_score_mean"],
             "sources": [
@@ -122,17 +142,17 @@ async def retrieve_and_generate(
                     "score": s["score"],
                     "preview": s["text"][:100] + "..." if len(s["text"]) > 100 else s["text"],
                 }
-                for s in candidates
+                for s in diverse_candidates
             ],
         })
 
-        # ── 3. Rerank ─────────────────────────────────────────────────────────
+        # ── 5. Rerank ─────────────────────────────────────────────────────────
         current_stage = "rerank"
-        await emit("reranking_started", {"candidate_count": len(candidates)})
+        await emit("reranking_started", {"candidate_count": len(diverse_candidates)})
         t = time.perf_counter()
         sources = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: reranker_service.rerank(question, candidates, top_k=top_k),
+            lambda: reranker_service.rerank(search_query, diverse_candidates, top_k=top_k),
         )
         qm["rerank_ms"] = _ms(t)
         qm["returned_count"] = len(sources)

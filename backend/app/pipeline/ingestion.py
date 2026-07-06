@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 
 from app.config import settings
 from app.utils.file_parsers import parse_file
-from app.utils.chunking import RecursiveTextSplitter
+from app.pipeline.table_splitter import TableAwareSplitter
 from app.services.embedding_service import embedding_service
 from app.services.pinecone_service import pinecone_service
 from app.services.storage_service import storage_service
@@ -85,12 +85,12 @@ async def ingest_document(
         current_stage = "chunk"
         await emit("chunking_started", {})
         t = time.perf_counter()
-        splitter = RecursiveTextSplitter(
+        splitter = TableAwareSplitter(
             chunk_size=settings.max_chunk_size,
             chunk_overlap=settings.chunk_overlap,
         )
         chunk_metas = await asyncio.get_event_loop().run_in_executor(
-            None, splitter.split_with_metadata, raw_text
+            None, splitter.split_document, raw_text
         )
         metrics["chunk_ms"] = _ms(t)
 

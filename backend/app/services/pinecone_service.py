@@ -82,6 +82,7 @@ class PineconeService:
         top_k: int = 5,
         filter: Optional[Dict] = None,
         namespace: str = "",
+        include_values: bool = False,
     ) -> List[Dict[str, Any]]:
         """Query Pinecone and return matches with metadata."""
         index = self.get_index()
@@ -90,6 +91,7 @@ class PineconeService:
                 vector=vector,
                 top_k=top_k,
                 include_metadata=True,
+                include_values=include_values,
                 filter=filter,
                 namespace=namespace,
             )
@@ -98,6 +100,7 @@ class PineconeService:
                     "id": match.id,
                     "score": match.score,
                     "metadata": match.metadata or {},
+                    "values": match.values if include_values else None,
                 }
                 for match in response.matches
             ]
