@@ -20,6 +20,20 @@ export function Query() {
   const { queryState, eventLog, clearLog, connected } = usePipelineCtx();
   const [logCollapsed, setLogCollapsed] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile) {
+        setHistoryCollapsed(true);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const isLoading = ['embedding', 'retrieving', 'generating'].includes(queryState.stage);
 
@@ -97,15 +111,25 @@ export function Query() {
   return (
     <div className="flex h-[calc(100vh-65px)] w-full overflow-hidden bg-black text-slate-100 font-sans relative">
       
+      {isMobile && !historyCollapsed && (
+        <div 
+          onClick={() => setHistoryCollapsed(true)} 
+          className="absolute inset-0 bg-black/60 z-15 backdrop-blur-xs cursor-pointer animate-fade-in"
+        />
+      )}
+
       {/* ── Left Sidebar: Session History ── */}
       <AnimatePresence initial={false}>
         {!historyCollapsed && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 250, opacity: 1 }}
+            animate={{ width: isMobile ? 240 : 250, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="shrink-0 border-r border-zinc-900 bg-[#09090b]/90 backdrop-blur-xl flex flex-col h-full overflow-hidden"
+            className={clsx(
+              "border-r border-zinc-900 bg-[#09090b]/95 backdrop-blur-xl flex flex-col h-full overflow-hidden",
+              isMobile ? "absolute top-0 bottom-0 left-0 z-20" : "shrink-0"
+            )}
           >
             {/* New Chat & Collapse Header */}
             <div className="p-4 border-b border-zinc-900 flex items-center gap-2">
@@ -113,6 +137,7 @@ export function Query() {
                 onClick={() => {
                   const newId = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
                   setCurrentSessionId(newId);
+                  if (isMobile) setHistoryCollapsed(true);
                 }}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 text-white text-xs font-semibold transition-all duration-200 cursor-pointer"
               >
@@ -146,7 +171,10 @@ export function Query() {
                   return (
                     <button
                       key={s.sessionId}
-                      onClick={() => setCurrentSessionId(s.sessionId)}
+                      onClick={() => {
+                        setCurrentSessionId(s.sessionId);
+                        if (isMobile) setHistoryCollapsed(true);
+                      }}
                       className={clsx(
                         "w-full text-left px-3 py-2 text-xs font-medium rounded-xl border transition-all duration-200 flex flex-col gap-1 cursor-pointer",
                         isActive
@@ -198,26 +226,28 @@ export function Query() {
       </div>
 
       {/* ── Right panel: Vertical Progress Telemetry + Event Log ── */}
-      <div className="flex w-[350px] shrink-0 flex-col bg-[#09090b] xl:w-[380px]">
-        {/* Pipeline vertical flow */}
-        <div className="flex-1 min-h-0">
-          <QueryVisualizer state={queryState} />
-        </div>
+      {!isMobile && (
+        <div className="flex w-[350px] shrink-0 flex-col bg-[#09090b] xl:w-[380px]">
+          {/* Pipeline vertical flow */}
+          <div className="flex-1 min-h-0">
+            <QueryVisualizer state={queryState} />
+          </div>
 
-        {/* Live event logs */}
-        <div className={clsx(
-          "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
-          logCollapsed ? "h-10" : "h-[220px]"
-        )}>
-          <EventLog 
-            entries={eventLog} 
-            onClear={clearLog} 
-            connected={connected} 
-            collapsed={logCollapsed}
-            onToggleCollapse={() => setLogCollapsed(!logCollapsed)}
-          />
+          {/* Live event logs */}
+          <div className={clsx(
+            "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
+            logCollapsed ? "h-10" : "h-[220px]"
+          )}>
+            <EventLog 
+              entries={eventLog} 
+              onClear={clearLog} 
+              connected={connected} 
+              collapsed={logCollapsed}
+              onToggleCollapse={() => setLogCollapsed(!logCollapsed)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );
