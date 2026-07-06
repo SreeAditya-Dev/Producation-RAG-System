@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Loader2, Zap, CornerDownLeft, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -60,6 +61,7 @@ function AssistantMessage({ content }: { content: string }) {
 }
 
 export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Props) {
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [topK, setTopK] = useState(5);
@@ -70,6 +72,58 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingAnswer]);
+
+  // Trigger question from command palette navigation
+  useEffect(() => {
+    const routeState = location.state as { initialQuestion?: string } | null;
+    if (routeState?.initialQuestion && messages.length === 0 && !isLoading) {
+      const q = routeState.initialQuestion;
+      
+      // Clear route state so we don't re-run on reload
+      window.history.replaceState({}, document.title);
+      
+      const triggerQuery = async () => {
+        const userMsg: Message = { id: Date.now().toString(), role: 'user', content: q };
+        const assistantId = (Date.now() + 1).toString();
+        streamMsgIdRef.current = assistantId;
+
+        setMessages((prev) => [
+          ...prev,
+          userMsg,
+          { id: assistantId, role: 'assistant', content: '', isStreaming: true },
+        ]);
+
+        try {
+          const result = await onQuery(q, topK);
+          if (result) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: result.answer,
+                      sources: result.sources,
+                      processingTime: result.processing_time,
+                      isStreaming: false,
+                    }
+                  : m
+              )
+            );
+          }
+        } catch (err: any) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: `Error: ${err.message}`, isStreaming: false }
+                : m
+            )
+          );
+        }
+      };
+
+      triggerQuery();
+    }
+  }, [location.state, onQuery, topK, isLoading, messages.length]);
 
   useEffect(() => {
     if (streamingAnswer && streamMsgIdRef.current) {
