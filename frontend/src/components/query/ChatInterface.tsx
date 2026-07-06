@@ -138,7 +138,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
       <div className="flex-1 overflow-y-auto divide-y divide-zinc-900/60 scrollbar-thin">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full max-w-[500px] mx-auto text-center px-6 py-12 font-sans select-none">
-            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-zinc-400">
+            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-[#F4831F]">
               <Zap size={14} />
             </div>
             <h3 className="text-zinc-200 font-mono text-xs uppercase tracking-widest font-semibold">Grounded RAG Workspace</h3>
@@ -148,14 +148,14 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
             
             {/* Active specs grid */}
             <div className="mt-8 w-full border border-zinc-800 rounded bg-[#09090b]/40 p-4 text-left font-mono text-[10px] text-zinc-400 space-y-2">
-              <div className="text-[9px] uppercase tracking-widest text-zinc-500 font-semibold border-b border-zinc-900 pb-1.5 mb-2 flex items-center gap-1.5">
+              <div className="text-[9px] uppercase tracking-widest text-[#F4831F] font-semibold border-b border-zinc-900/80 pb-1.5 mb-2 flex items-center gap-1.5">
                 <Sparkles size={10} />
                 Active Core Ingestion Specs
               </div>
-              <div className="flex justify-between"><span className="text-zinc-600">Embedding model:</span><span className="text-zinc-300">NV-EmbedQA-E5-v5</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">Vector store:</span><span className="text-zinc-300">Pinecone (Cosine Index)</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">Reranker algorithm:</span><span className="text-zinc-300">NIM Cross-Encoder Llama-3</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">Synthesis LLM:</span><span className="text-zinc-300">Llama-3.3-70B-Spec</span></div>
+              <div className="flex justify-between"><span className="text-zinc-650">Embedding model:</span><span className="text-zinc-300">NV-EmbedQA-E5-v5</span></div>
+              <div className="flex justify-between"><span className="text-zinc-650">Vector store:</span><span className="text-zinc-300">Pinecone (Cosine Index)</span></div>
+              <div className="flex justify-between"><span className="text-zinc-655">Reranker algorithm:</span><span className="text-zinc-300">NIM Cross-Encoder Llama-3</span></div>
+              <div className="flex justify-between"><span className="text-zinc-650">Synthesis LLM:</span><span className="text-zinc-300">Llama-3.3-70B-Spec</span></div>
             </div>
           </div>
         )}
@@ -180,8 +180,8 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                     ID: {msg.id}
                   </span>
                   {msg.processingTime !== undefined && (
-                    <span className="text-[9px] font-mono text-zinc-500 bg-zinc-950 border border-zinc-900 px-1.5 py-0.5 rounded">
-                      latency: {msg.processingTime.toFixed(2)}s
+                    <span className="text-[9px] font-mono text-zinc-400 bg-zinc-950 border border-zinc-900 px-1.5 py-0.5 rounded">
+                      latency: <span className="text-[#F4831F] font-bold">{msg.processingTime.toFixed(2)}s</span>
                     </span>
                   )}
                 </div>
@@ -196,15 +196,15 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                       </p>
                     )
                   ) : (
-                    <div className="flex items-center gap-2 text-zinc-500">
-                      <Loader2 size={12} className="animate-spin text-zinc-400" />
-                      <span className="text-[10px] font-mono uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-zinc-550">
+                      <Loader2 size={12} className="animate-spin text-[#F4831F]" />
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-450">
                         {STAGE_LABELS[stage] || 'Searching indices...'}
                       </span>
                     </div>
                   )}
                   {msg.isStreaming && msg.content && (
-                    <span className="inline-block w-1.5 h-3.5 bg-zinc-300 animate-pulse ml-1 align-middle" />
+                    <span className="inline-block w-1.5 h-3.5 bg-[#F4831F] animate-pulse ml-1 align-middle" />
                   )}
                 </div>
 
@@ -227,12 +227,12 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                             <p className="text-zinc-300 font-mono text-[10px] font-semibold truncate" title={s.original_name}>
                               {s.original_name}
                             </p>
-                            <p className="text-zinc-500 text-[10px] line-clamp-2 mt-1 leading-relaxed font-sans">
+                            <p className="text-zinc-550 text-[10px] line-clamp-2 mt-1 leading-relaxed font-sans">
                               {s.text}
                             </p>
                             <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-zinc-900/50">
                               <span className="text-zinc-600 text-[8px] uppercase tracking-wider font-mono">Similarity:</span>
-                              <span className="text-zinc-400 font-mono text-[9px] font-semibold">{(s.score * 100).toFixed(0)}%</span>
+                              <span className="text-[#F4831F] font-mono text-[9px] font-semibold">{(s.score * 100).toFixed(0)}%</span>
                             </div>
                           </div>
                         </div>
@@ -250,7 +250,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
       {/* Input panel */}
       <div className="border-t border-zinc-900 bg-black px-6 py-4">
         <div className="max-w-[700px] mx-auto w-full space-y-2">
-          <div className="relative flex items-stretch border border-zinc-800 rounded bg-zinc-950 focus-within:border-zinc-600 transition-colors">
+          <div className="relative flex items-stretch border border-zinc-850 rounded bg-zinc-950 focus-within:border-[#F4831F]/50 transition-colors">
             <textarea
               ref={inputRef}
               value={input}
@@ -259,7 +259,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
               placeholder="Ask a question grounded in vector data..."
               rows={1}
               disabled={isLoading}
-              className="flex-1 bg-transparent px-4 py-3 text-xs text-white placeholder-zinc-600 resize-none focus:outline-none disabled:opacity-50 font-sans leading-relaxed"
+              className="flex-1 bg-transparent px-4 py-3 text-xs text-white placeholder-zinc-650 resize-none focus:outline-none disabled:opacity-50 font-sans leading-relaxed"
               style={{ maxHeight: '100px', overflowY: 'auto' }}
             />
             
@@ -270,7 +270,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                 <select
                   value={topK}
                   onChange={(e) => setTopK(Number(e.target.value))}
-                  className="bg-transparent text-zinc-400 font-bold border-none outline-none focus:outline-none cursor-pointer pr-1"
+                  className="bg-transparent text-zinc-450 font-bold border-none outline-none focus:outline-none cursor-pointer pr-1"
                   title="Sources to retrieve"
                 >
                   {[3, 5, 8, 10].map((k) => (
@@ -284,11 +284,11 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
               <button
                 onClick={handleSubmit}
                 disabled={!input.trim() || isLoading}
-                className="w-7 h-7 rounded bg-zinc-100 hover:bg-white text-black disabled:bg-zinc-900 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center justify-center transition-colors border border-zinc-800 cursor-pointer"
+                className="w-7 h-7 rounded bg-[#F4831F] hover:bg-[#d96c14] text-white disabled:bg-zinc-900 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center justify-center transition-colors border border-[#d96c14]/40 cursor-pointer"
                 title="Send query"
               >
                 {isLoading ? (
-                  <Loader2 size={11} className="animate-spin text-zinc-400" />
+                  <Loader2 size={11} className="animate-spin text-white" />
                 ) : (
                   <Send size={10} />
                 )}

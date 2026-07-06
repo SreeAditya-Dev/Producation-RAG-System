@@ -18,67 +18,43 @@ interface StepConfig {
   sublabel: string;
   tech: string;
   icon: React.ElementType;
-  color: string;
-  activeClass: string;
-  iconBg: string;
-  iconText: string;
 }
 
 const STEPS: StepConfig[] = [
   {
     id: 'upload',
-    label: 'Upload',
-    sublabel: 'File intake',
-    tech: 'drag + validate',
+    label: 'Payload Intake',
+    sublabel: 'Ingesting source document',
+    tech: 'Multipart Form',
     icon: Upload,
-    color: '#F4831F',
-    activeClass: 'step-active',
-    iconBg: 'bg-accent-primary/15',
-    iconText: 'text-accent-primary',
   },
   {
     id: 'parsing',
-    label: 'Parse',
-    sublabel: 'Text extract',
+    label: 'Document Parsing',
+    sublabel: 'Extracting semantic text layers',
     tech: 'pdfplumber / docx',
     icon: FileSearch,
-    color: '#F4831F',
-    activeClass: 'step-active',
-    iconBg: 'bg-accent-primary/15',
-    iconText: 'text-accent-primary',
   },
   {
     id: 'chunking',
-    label: 'Chunk',
-    sublabel: 'Segment text',
-    tech: 'recursive split',
+    label: 'Semantic Chunking',
+    sublabel: 'Splitting text into overlapping nodes',
+    tech: 'Recursive Split',
     icon: Scissors,
-    color: '#F4831F',
-    activeClass: 'step-active',
-    iconBg: 'bg-accent-primary/15',
-    iconText: 'text-accent-primary',
   },
   {
     id: 'embedding',
-    label: 'Embed',
-    sublabel: 'Vector encode',
-    tech: 'nv-embedqa-e5-v5',
+    label: 'Vector Embedding',
+    sublabel: 'Calculating float32 dense vectors',
+    tech: 'NV-EmbedQA-E5-v5',
     icon: Cpu,
-    color: '#F4831F',
-    activeClass: 'step-active',
-    iconBg: 'bg-accent-primary/15',
-    iconText: 'text-accent-primary',
   },
   {
     id: 'storing',
-    label: 'Store',
-    sublabel: 'Index vectors',
-    tech: 'Pinecone upsert',
+    label: 'Vector Store Ingestion',
+    sublabel: 'Upserting index vectors',
+    tech: 'Pinecone Upsert',
     icon: Database,
-    color: '#F4831F',
-    activeClass: 'step-active',
-    iconBg: 'bg-accent-primary/15',
-    iconText: 'text-accent-primary',
   },
 ];
 
@@ -98,47 +74,6 @@ function status(stepId: PipelineStage, current: PipelineStage): 'idle' | 'active
   return 'idle';
 }
 
-function Connector({ fromStatus, toColor }: { fromStatus: 'idle' | 'active' | 'done' | 'error'; toColor: string }) {
-  const isLit = fromStatus === 'done' || fromStatus === 'active';
-
-  return (
-    <div className="flex shrink-0 items-center" style={{ width: '40px' }}>
-      <div className="relative flex flex-1 items-center">
-        {/* base track */}
-        <div className="h-[2px] w-full rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }} />
-        {/* lit fill */}
-        {isLit && (
-          <motion.div
-            className="absolute inset-0 h-[2px] rounded-full"
-            style={{ background: `linear-gradient(90deg, ${toColor}60, ${toColor}cc)` }}
-            initial={{ scaleX: 0, transformOrigin: 'left' }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
-          />
-        )}
-        {/* particles */}
-        {fromStatus === 'active' && (
-          <>
-            <div className="particle" style={{ background: toColor, boxShadow: `0 0 6px ${toColor}` }} />
-            <div className="particle particle-delayed-1" style={{ background: toColor, opacity: 0.7 }} />
-            <div className="particle particle-delayed-2" style={{ background: toColor, opacity: 0.5 }} />
-          </>
-        )}
-      </div>
-      {/* chevron arrow */}
-      <svg width="8" height="12" viewBox="0 0 8 12" fill="none" className="shrink-0">
-        <path
-          d="M1.5 1.5L6 6l-4.5 4.5"
-          stroke={isLit ? toColor : 'rgba(255,255,255,0.15)'}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
-
 interface Props {
   state: PipelineState;
   hideHeader?: boolean;
@@ -151,26 +86,26 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
   const isError = stage === 'error';
 
   return (
-    <div className="bg-[#0c0c0e] overflow-hidden rounded-lg border border-zinc-800">
+    <div className="bg-[#000000] overflow-hidden rounded-lg border border-zinc-800 font-sans select-none">
       {!hideHeader && (
-        <div className="flex items-center justify-between border-b border-zinc-800/80 px-4 py-3.5">
+        <div className="flex items-center justify-between border-b border-zinc-800 bg-[#09090b] px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Pipeline telemetry</span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-300 font-semibold">Ingestion Ingress</span>
           </div>
           <div className="flex items-center gap-2">
             {isActive && !isDone && !isError && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/50 px-2 py-0.5 text-[10px] font-mono text-zinc-300">
-                <Loader2 size={10} className="animate-spin text-zinc-400" />
+              <span className="inline-flex items-center gap-1.5 rounded border border-[#F4831F]/30 bg-[#F4831F]/5 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#F4831F]">
+                <Loader2 size={10} className="animate-spin text-[#F4831F]" />
                 Ingesting
               </span>
             )}
             {isDone && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-[10px] font-mono text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 rounded border border-zinc-800 bg-zinc-900/20 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-zinc-400">
                 Ready
               </span>
             )}
             {isError && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/5 px-2 py-0.5 text-[10px] font-mono text-red-400">
+              <span className="inline-flex items-center gap-1.5 rounded border border-red-950 bg-red-950/20 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-red-405">
                 Error
               </span>
             )}
@@ -178,29 +113,29 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
         </div>
       )}
 
-      <div className="p-4 space-y-5">
+      <div className="p-5 space-y-5">
         {/* Active filename details */}
         {filename && (
-          <div className="border border-zinc-800 bg-zinc-900/10 rounded-lg p-3 flex items-center justify-between">
+          <div className="border border-zinc-800 bg-[#09090b]/80 rounded-md p-3 flex items-center justify-between font-mono text-[9px] text-zinc-450">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Processing Payload</p>
-              <p className="text-xs text-zinc-200 truncate mt-1">{filename}</p>
+              <span className="text-zinc-600">Payload:</span>
+              <p className="text-zinc-200 truncate mt-0.5 text-xs font-sans font-semibold">{filename}</p>
             </div>
             {total_chunks > 0 && (
               <div className="text-right pl-4">
-                <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Segment Chunks</p>
-                <p className="text-xs text-zinc-200 font-mono mt-1">{total_chunks}</p>
+                <span className="text-zinc-655">Chunks:</span>
+                <p className="text-[#F4831F] font-mono mt-0.5 text-xs font-semibold">{total_chunks}</p>
               </div>
             )}
           </div>
         )}
 
         {/* ── Vertical Timeline Steps ── */}
-        <div className="relative pl-2.5">
+        <div className="relative pl-1">
           {/* Vertical track line */}
-          <div className="absolute left-[21px] top-2.5 bottom-2.5 w-[1px] bg-zinc-800" />
+          <div className="absolute left-[13px] top-2 bottom-2 w-[1px] bg-zinc-850" />
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             {STEPS.map((step, i) => {
               const st = status(step.id, stage);
               const isStepActive = st === 'active';
@@ -208,31 +143,28 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
               const isStepError = st === 'error';
 
               return (
-                <div key={step.id} className="relative flex items-start gap-4 group">
-                  {/* Node Circle */}
+                <div key={step.id} className="relative flex items-start gap-4">
+                  {/* Node Circle Indicator */}
                   <div
                     className={clsx(
-                      'relative z-10 flex items-center justify-center w-6 h-6 rounded-full bg-[#0c0c0e] border transition-all duration-300',
+                      'relative z-10 flex items-center justify-center w-7 h-7 rounded-lg bg-black border transition-colors duration-200',
                       isStepActive
-                        ? 'border-zinc-200 text-zinc-200 shadow-[0_0_8px_rgba(255,255,255,0.05)]'
+                        ? 'border-[#F4831F] text-[#F4831F] bg-[#F4831F]/5 shadow-[0_0_8px_rgba(244,131,31,0.06)]'
                         : isStepDone
-                        ? 'border-zinc-700 text-zinc-400'
+                        ? 'border-zinc-700 text-zinc-400 bg-zinc-900/30'
                         : isStepError
-                        ? 'border-red-500/50 text-red-400 bg-red-500/5'
-                        : 'border-zinc-900 text-zinc-600 bg-zinc-950'
+                        ? 'border-red-500 text-red-500 bg-red-950/10'
+                        : 'border-zinc-800 text-zinc-600 bg-zinc-950'
                     )}
                   >
-                    {isStepDone ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
-                    ) : isStepActive ? (
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-300 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-200" />
-                      </span>
+                    {isStepActive ? (
+                      <Loader2 size={11} className="animate-spin text-[#F4831F]" />
+                    ) : isStepDone ? (
+                      <CheckCircle2 size={11} className="text-zinc-400" />
                     ) : isStepError ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                      <AlertCircle size={11} />
                     ) : (
-                      <span className="h-1 w-1 rounded-full bg-zinc-800" />
+                      <step.icon size={11} />
                     )}
                   </div>
 
@@ -241,15 +173,22 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                     <div className="flex items-center justify-between">
                       <p
                         className={clsx(
-                          'text-xs font-semibold',
-                          isStepActive ? 'text-zinc-200' : isStepDone ? 'text-zinc-400' : 'text-zinc-600'
+                          'text-xs font-semibold font-mono uppercase tracking-wider',
+                          isStepActive ? 'text-[#F4831F]' : isStepDone ? 'text-zinc-400' : 'text-zinc-600'
                         )}
                       >
                         {step.label}
                       </p>
-                      <span className="text-[10px] font-mono text-zinc-600">{step.tech}</span>
+                      <span className="text-[9px] font-mono text-zinc-600">{step.tech}</span>
                     </div>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">{step.sublabel}</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5 font-sans leading-relaxed">{step.sublabel}</p>
+
+                    {/* Inline metadata under active chunking/storing steps */}
+                    {isStepActive && step.id === 'chunking' && (
+                      <div className="mt-2 text-[9px] font-mono text-zinc-400 bg-zinc-950 border border-zinc-900 p-2 rounded">
+                        <span className="text-zinc-600">Strategy:</span> Recursive Character Split (size: 500, overlap: 50)
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -266,21 +205,21 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden pt-2"
             >
-              <div className="border border-zinc-800 bg-zinc-900/10 rounded-lg p-3 space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                  <span>Embedding Vector Sets</span>
-                  <span>{progress.toFixed(1)}%</span>
+              <div className="border border-zinc-800 bg-[#09090b]/80 rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400">
+                  <span>Upserting Ingestion Vectors</span>
+                  <span className="font-semibold text-zinc-200">{progress.toFixed(1)}%</span>
                 </div>
-                <div className="w-full bg-zinc-900 border border-zinc-800 rounded-full h-1 overflow-hidden">
+                <div className="w-full bg-zinc-900 border border-zinc-850 rounded h-1 overflow-hidden">
                   <motion.div
-                    className="h-full bg-zinc-300"
+                    className="h-full bg-[#F4831F]"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ ease: 'easeOut', duration: 0.3 }}
                   />
                 </div>
-                <p className="text-zinc-500 text-[10px] font-mono text-right">
-                  {embedded_chunks} / {total_chunks} chunks stored
+                <p className="text-zinc-500 text-[9px] font-mono text-right uppercase tracking-wider">
+                  <span className="text-[#F4831F] font-bold">{embedded_chunks}</span> / {total_chunks} blocks indexed
                 </p>
               </div>
             </motion.div>
@@ -288,20 +227,20 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
         </AnimatePresence>
 
         {/* ── Status Metrics ── */}
-        <div className="grid gap-2 grid-cols-3 pt-2 border-t border-zinc-800/60">
+        <div className="grid gap-2 grid-cols-3 pt-3.5 border-t border-zinc-850 bg-black">
           <div className="text-left">
-            <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Stage</p>
-            <p className="mt-1 text-xs font-semibold text-zinc-200 capitalize font-mono truncate">{stage}</p>
+            <p className="text-[9px] uppercase tracking-wider text-zinc-600 font-mono font-semibold">Active State</p>
+            <p className="mt-1 text-xs font-semibold text-[#F4831F] capitalize font-mono truncate">{stage}</p>
           </div>
           <div className="text-center">
-            <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Chunks</p>
-            <p className="mt-1 text-xs font-semibold text-zinc-200 font-mono">
+            <p className="text-[9px] uppercase tracking-wider text-zinc-600 font-mono font-semibold">Vectors Indexed</p>
+            <p className="mt-1 text-xs font-semibold text-zinc-350 font-mono">
               {embedded_chunks}/{total_chunks}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Progress</p>
-            <p className="mt-1 text-xs font-semibold text-zinc-200 font-mono">{progress.toFixed(0)}%</p>
+            <p className="text-[9px] uppercase tracking-wider text-zinc-600 font-mono font-semibold">Upsert Rate</p>
+            <p className="mt-1 text-xs font-semibold text-zinc-350 font-mono">{progress.toFixed(0)}%</p>
           </div>
         </div>
       </div>

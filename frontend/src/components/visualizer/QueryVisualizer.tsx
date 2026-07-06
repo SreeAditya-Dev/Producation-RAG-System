@@ -112,15 +112,15 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
           className={clsx(
             'flex h-7 w-7 items-center justify-center rounded-lg border transition-colors duration-200 select-none bg-black',
             isIdle && 'border-zinc-800 text-zinc-600',
-            isActive && 'border-zinc-100 text-white shadow-[0_0_8px_rgba(255,255,255,0.06)]',
+            isActive && 'border-[#F4831F] text-[#F4831F] bg-[#F4831F]/5 shadow-[0_0_8px_rgba(244,131,31,0.06)]',
             isComplete && 'border-zinc-700 text-zinc-400 bg-zinc-900/30',
             isError && 'border-red-500 text-red-500'
           )}
         >
           {isActive ? (
-            <Loader2 size={12} className="animate-spin text-zinc-200" />
+            <Loader2 size={12} className="animate-spin text-[#F4831F]" />
           ) : isComplete ? (
-            <CheckCircle2 size={12} />
+            <CheckCircle2 size={12} className="text-zinc-400" />
           ) : isError ? (
             <AlertCircle size={12} />
           ) : (
@@ -131,7 +131,10 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
           <div className="w-[1px] flex-1 bg-zinc-800 min-h-[30px] my-1 relative">
             {(isComplete || isActive) && (
               <motion.div
-                className="absolute inset-x-0 top-0 bg-zinc-600"
+                className={clsx(
+                  "absolute inset-x-0 top-0",
+                  isActive ? "bg-[#F4831F]/60" : "bg-zinc-600"
+                )}
                 initial={{ height: '0%' }}
                 animate={{ height: '100%' }}
                 transition={{ duration: 0.3 }}
@@ -147,7 +150,7 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
           <h4
             className={clsx(
               'text-xs font-mono tracking-wider uppercase font-semibold transition-colors duration-200',
-              isActive ? 'text-zinc-100' : isComplete ? 'text-zinc-400' : 'text-zinc-600'
+              isActive ? 'text-[#F4831F]' : isComplete ? 'text-zinc-400' : 'text-zinc-600'
             )}
           >
             {stageNode.label}
@@ -156,7 +159,7 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
         <p
           className={clsx(
             'text-[10px] font-mono mt-0.5 leading-relaxed',
-            isActive ? 'text-zinc-300 font-medium' : isComplete ? 'text-zinc-500' : 'text-zinc-650'
+            isActive ? 'text-zinc-200 font-medium' : isComplete ? 'text-zinc-500' : 'text-zinc-650'
           )}
         >
           {stageNode.sublabel}
@@ -175,29 +178,29 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
               <div className="mt-2 rounded-md border border-zinc-800 bg-[#09090b]/80 p-2.5 font-mono text-[9px] text-zinc-400 space-y-1">
                 {stageNode.id === 'query' && (
                   <div className="space-y-0.5">
-                    <div className="text-zinc-500">Query Parameter:</div>
+                    <div className="text-zinc-550">Query Parameter:</div>
                     <div className="text-zinc-200 leading-normal">"{question || '...'}"</div>
                   </div>
                 )}
 
                 {stageNode.id === 'embed' && (
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    <div><span className="text-zinc-600">Model:</span> NV-EmbedQA</div>
-                    <div><span className="text-zinc-600">Dimensions:</span> 1024</div>
-                    <div><span className="text-zinc-600">Format:</span> float32</div>
-                    <div><span className="text-zinc-600">Engine:</span> NIM</div>
+                    <div><span className="text-zinc-550">Model:</span> NV-EmbedQA</div>
+                    <div><span className="text-zinc-550">Dimensions:</span> 1024</div>
+                    <div><span className="text-zinc-550">Format:</span> float32</div>
+                    <div><span className="text-zinc-555">Engine:</span> NIM</div>
                   </div>
                 )}
 
                 {stageNode.id === 'pinecone' && (
                   <div className="space-y-1">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                      <div><span className="text-zinc-600">Index:</span> prod-rag</div>
-                      <div><span className="text-zinc-600">Metric:</span> Cosine</div>
+                      <div><span className="text-zinc-555">Index:</span> prod-rag</div>
+                      <div><span className="text-zinc-550">Metric:</span> Cosine</div>
                     </div>
                     {isComplete && (
                       <div className="border-t border-zinc-900 pt-1 mt-1 text-[8px] text-zinc-500">
-                        Candidates Fetched: {sources?.length || 0} chunks
+                        Candidates Fetched: <span className="text-[#F4831F] font-bold">{sources?.length || 0}</span> chunks
                       </div>
                     )}
                   </div>
@@ -205,21 +208,21 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
 
                 {stageNode.id === 'rerank' && (
                   <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                    <div><span className="text-zinc-600">Cross-Enc:</span> Llama-3-Mini</div>
-                    <div><span className="text-zinc-600">Top-K Out:</span> {sources?.length || 0}</div>
+                    <div><span className="text-zinc-550">Cross-Enc:</span> Llama-3-Mini</div>
+                    <div><span className="text-zinc-550">Top-K Out:</span> {sources?.length || 0}</div>
                   </div>
                 )}
 
                 {stageNode.id === 'llm' && (
                   <div className="space-y-1">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                      <div><span className="text-zinc-600">Host:</span> Local-NIM</div>
-                      <div><span className="text-zinc-600">Temp:</span> 0.2</div>
+                      <div><span className="text-zinc-550">Host:</span> Local-NIM</div>
+                      <div><span className="text-zinc-550">Temp:</span> 0.2</div>
                     </div>
                     {streamingAnswer && (
-                      <div className="border-t border-zinc-900 pt-1 mt-1 font-mono text-zinc-500 break-words leading-relaxed select-all">
+                      <div className="border-t border-zinc-900 pt-1 mt-1 font-mono text-zinc-400 break-words leading-relaxed select-all">
                         {streamingAnswer.slice(0, 140)}
-                        {isActive && <span className="inline-block w-1.5 h-3 ml-0.5 animate-pulse bg-zinc-300" />}
+                        {isActive && <span className="inline-block w-1.5 h-3 ml-0.5 animate-pulse bg-[#F4831F]" />}
                       </div>
                     )}
                   </div>
@@ -227,10 +230,10 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
 
                 {stageNode.id === 'answer' && (
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between text-zinc-400">
+                    <div className="flex items-center justify-between text-zinc-450">
                       <span>Pipeline execution ready</span>
                       {processingTime && (
-                        <span className="text-zinc-300 font-semibold">{processingTime.toFixed(2)}s latency</span>
+                        <span className="text-[#F4831F] font-bold">{processingTime.toFixed(2)}s latency</span>
                       )}
                     </div>
                   </div>
@@ -278,7 +281,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
                 stage === 'complete' && 'border-zinc-700 bg-zinc-900/20 text-zinc-300',
                 stage === 'error' && 'border-red-950 bg-red-950/20 text-red-405',
                 ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
-                  'border-zinc-750 bg-zinc-900/40 text-zinc-200'
+                  'border-[#F4831F]/30 bg-[#F4831F]/5 text-[#F4831F]'
               )}
             >
               {stage}
@@ -320,13 +323,13 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
                   className="flex items-center gap-2.5 rounded border border-zinc-900 bg-black px-2 py-1.5 hover:border-zinc-850 transition-colors cursor-pointer"
                 >
                   <div className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-zinc-900 border border-zinc-800">
-                    <span className="font-mono text-[8px] text-zinc-400 font-bold">{i + 1}</span>
+                    <span className="font-mono text-[8px] text-[#F4831F] font-bold">{i + 1}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[10px] font-semibold text-zinc-300">{s.original_name}</p>
-                    <p className="truncate text-[9px] text-zinc-500 mt-0.5 font-mono">{s.text}</p>
+                    <p className="truncate text-[9px] text-zinc-550 mt-0.5 font-mono">{s.text}</p>
                   </div>
-                  <div className="shrink-0 font-mono text-[9px] text-zinc-500">
+                  <div className="shrink-0 font-mono text-[9px] text-[#F4831F]">
                     {(s.score * 100).toFixed(0)}%
                   </div>
                 </div>
