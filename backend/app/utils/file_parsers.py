@@ -286,6 +286,7 @@ def _describe_with_vision(image_bytes: bytes, model: str) -> str:
         client = OpenAI(
             base_url=settings.nvidia_base_url,
             api_key=settings.nvidia_api_key,
+            timeout=30.0,
         )
         resp = client.chat.completions.create(
             model=model,

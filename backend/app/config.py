@@ -8,7 +8,7 @@ from pathlib import Path
 class Settings(BaseSettings):
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
-    llm_model: str = "meta/llama-3.3-70b-instruct"
+    llm_model: str = "meta/llama-3.1-70b-instruct"
     embedding_model: str = "nvidia/nv-embedqa-e5-v5"
     embedding_dimension: int = 1024
 

@@ -11,6 +11,7 @@ class EmbeddingService:
         self.client = OpenAI(
             base_url=settings.nvidia_base_url,
             api_key=settings.nvidia_api_key,
+            timeout=30.0,
         )
         self.model = settings.embedding_model
         self.dimension = settings.embedding_dimension
