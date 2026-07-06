@@ -871,31 +871,6 @@ export function KTGraph() {
           </div>
         )}
 
-        {/* Floating Hover Card */}
-        {hoveredNode && (
-          <div 
-            className={clsx(
-              "absolute pointer-events-none bg-zinc-950/90 border border-orange-500/20 backdrop-blur-xl px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3",
-              isMobile ? "bottom-6 left-6 right-6" : "bottom-6 left-6"
-            )}
-          >
-            <div 
-              className="h-8 w-8 rounded-lg border flex items-center justify-center text-white shadow-md shrink-0"
-              style={{ backgroundColor: `${hoveredNode.color}15`, borderColor: hoveredNode.color }}
-            >
-              {(() => {
-                const Icon = getNodeIcon(hoveredNode.type);
-                return <Icon size={14} style={{ color: hoveredNode.color }} />;
-              })()}
-            </div>
-            <div>
-              <h5 className="text-xs font-bold text-white leading-none">{hoveredNode.label}</h5>
-              <span className="text-[9px] uppercase tracking-wider font-bold mt-1 block" style={{ color: hoveredNode.color }}>
-                {hoveredNode.type}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Right Sidebar: Memory Node Details Inspector ── */}
@@ -1014,6 +989,34 @@ export function KTGraph() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Hover Card */}
+      {hoveredNode && (
+        <div 
+          className={clsx(
+            "absolute pointer-events-none bg-zinc-950/95 border border-orange-500/30 backdrop-blur-xl px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-30 transition-all duration-150 ease-out",
+            isMobile 
+              ? "bottom-24 left-6 right-6" 
+              : "bottom-8 left-1/2 -translate-x-1/2 min-w-[240px] max-w-[320px]"
+          )}
+        >
+          <div 
+            className="h-8 w-8 rounded-lg border flex items-center justify-center text-white shadow-md shrink-0"
+            style={{ backgroundColor: `${hoveredNode.color}15`, borderColor: hoveredNode.color }}
+          >
+            {(() => {
+              const Icon = getNodeIcon(hoveredNode.type);
+              return <Icon size={14} style={{ color: hoveredNode.color }} />;
+            })()}
+          </div>
+          <div>
+            <h5 className="text-xs font-bold text-white leading-none">{hoveredNode.label}</h5>
+            <span className="text-[9px] uppercase tracking-wider font-bold mt-1 block" style={{ color: hoveredNode.color }}>
+              {hoveredNode.type}
+            </span>
+          </div>
+        </div>
+      )}
 
     </div>
   );
