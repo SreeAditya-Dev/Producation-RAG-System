@@ -210,7 +210,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
               <div className="flex justify-between"><span className="text-zinc-600">Embedding model:</span><span className="text-zinc-300">NV-EmbedQA-E5-v5</span></div>
               <div className="flex justify-between"><span className="text-zinc-600">Vector store:</span><span className="text-zinc-300">Pinecone (Cosine Index)</span></div>
               <div className="flex justify-between"><span className="text-zinc-655">Reranker algorithm:</span><span className="text-zinc-300">NIM Cross-Encoder Llama-3</span></div>
-              <div className="flex justify-between"><span className="text-zinc-600">Synthesis LLM:</span><span className="text-zinc-300">Llama-3.3-70B-Spec</span></div>
+              <div className="flex justify-between"><span className="text-zinc-600">Synthesis LLM:</span><span className="text-zinc-300">Llama-3.1-70B-Instruct</span></div>
             </div>
           </div>
         )}

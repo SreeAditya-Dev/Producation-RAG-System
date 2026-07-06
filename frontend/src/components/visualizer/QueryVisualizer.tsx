@@ -50,7 +50,7 @@ const STAGES: StageNode[] = [
   {
     id: 'llm',
     label: 'Answer Synthesis',
-    sublabel: 'Llama-3.3-70B Synthesizer',
+    sublabel: 'Llama-3.1-70B Synthesizer',
     icon: Sparkles,
   },
   {

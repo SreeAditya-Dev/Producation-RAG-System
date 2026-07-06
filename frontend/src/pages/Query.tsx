@@ -205,7 +205,10 @@ export function Query() {
         {/* Floating Expand Sidebar Button when Collapsed */}
         {historyCollapsed && (
           <button
-            onClick={() => setHistoryCollapsed(false)}
+            onClick={() => {
+              setHistoryCollapsed(false);
+              if (isMobile) setTelemetryCollapsed(true);
+            }}
             className="absolute top-4 left-4 z-10 p-2.5 rounded-xl border border-white/5 bg-[#09090b]/90 text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer shadow-lg backdrop-blur-xl flex items-center justify-center animate-fade-in"
             title="Expand Chat History"
           >
@@ -214,9 +217,12 @@ export function Query() {
         )}
 
         {/* Floating Expand Telemetry Button when Collapsed */}
-        {!isMobile && telemetryCollapsed && (
+        {telemetryCollapsed && (
           <button
-            onClick={() => setTelemetryCollapsed(false)}
+            onClick={() => {
+              setTelemetryCollapsed(false);
+              if (isMobile) setHistoryCollapsed(true);
+            }}
             className="absolute top-4 right-4 z-10 p-2.5 rounded-xl border border-white/5 bg-[#09090b]/90 text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer shadow-lg backdrop-blur-xl flex items-center justify-center animate-fade-in"
             title="Expand Telemetry Channel"
           >
@@ -238,53 +244,61 @@ export function Query() {
         />
       </div>
 
-      {/* ── Right panel: Vertical Progress Telemetry + Event Log ── */}
-      {!isMobile && (
-        <AnimatePresence initial={false}>
-          {!telemetryCollapsed && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 350, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="shrink-0 border-l border-zinc-900 bg-[#09090b] flex flex-col h-full overflow-hidden"
-            >
-              {/* Header with collapse button */}
-              <div className="p-4 border-b border-zinc-900 flex justify-between items-center bg-[#09090b]">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
-                  Telemetry Channel
-                </span>
-                <button
-                  onClick={() => setTelemetryCollapsed(true)}
-                  className="p-2.5 rounded-xl border border-white/5 bg-transparent text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer flex items-center justify-center"
-                  title="Collapse Telemetry"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-
-              {/* Pipeline vertical flow */}
-              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                <QueryVisualizer state={queryState} />
-              </div>
-
-              {/* Live event logs */}
-              <div className={clsx(
-                "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
-                logCollapsed ? "h-10" : "h-[220px]"
-              )}>
-                <EventLog 
-                  entries={eventLog} 
-                  onClear={clearLog} 
-                  connected={connected} 
-                  collapsed={logCollapsed}
-                  onToggleCollapse={() => setLogCollapsed(!logCollapsed)}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {isMobile && !telemetryCollapsed && (
+        <div 
+          onClick={() => setTelemetryCollapsed(true)} 
+          className="absolute inset-0 bg-black/60 z-15 backdrop-blur-xs cursor-pointer animate-fade-in"
+        />
       )}
+
+      {/* ── Right panel: Vertical Progress Telemetry + Event Log ── */}
+      <AnimatePresence initial={false}>
+        {!telemetryCollapsed && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: isMobile ? 280 : 350, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className={clsx(
+              "border-l border-zinc-900 bg-[#09090b]/95 backdrop-blur-xl flex flex-col h-full overflow-hidden",
+              isMobile ? "absolute top-0 bottom-0 right-0 z-20" : "shrink-0"
+            )}
+          >
+            {/* Header with collapse button */}
+            <div className="p-4 border-b border-zinc-900 flex justify-between items-center bg-[#09090b]">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+                Telemetry Channel
+              </span>
+              <button
+                onClick={() => setTelemetryCollapsed(true)}
+                className="p-2.5 rounded-xl border border-white/5 bg-transparent text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer flex items-center justify-center"
+                title="Collapse Telemetry"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            {/* Pipeline vertical flow */}
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+              <QueryVisualizer state={queryState} />
+            </div>
+
+            {/* Live event logs */}
+            <div className={clsx(
+              "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
+              logCollapsed ? "h-10" : "h-[220px]"
+            )}>
+              <EventLog 
+                entries={eventLog} 
+                onClear={clearLog} 
+                connected={connected} 
+                collapsed={logCollapsed}
+                onToggleCollapse={() => setLogCollapsed(!logCollapsed)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
