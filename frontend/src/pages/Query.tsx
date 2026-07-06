@@ -20,6 +20,7 @@ export function Query() {
   const { queryState, eventLog, clearLog, connected } = usePipelineCtx();
   const [logCollapsed, setLogCollapsed] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [telemetryCollapsed, setTelemetryCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function Query() {
       setIsMobile(mobile);
       if (mobile) {
         setHistoryCollapsed(true);
+        setTelemetryCollapsed(true);
       }
     };
     handleResize();
@@ -204,10 +206,21 @@ export function Query() {
         {historyCollapsed && (
           <button
             onClick={() => setHistoryCollapsed(false)}
-            className="absolute top-4 left-4 z-10 p-2.5 rounded-xl border border-white/5 bg-[#09090b]/90 text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer shadow-lg backdrop-blur-xl flex items-center justify-center"
+            className="absolute top-4 left-4 z-10 p-2.5 rounded-xl border border-white/5 bg-[#09090b]/90 text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer shadow-lg backdrop-blur-xl flex items-center justify-center animate-fade-in"
             title="Expand Chat History"
           >
             <ChevronRight size={14} className="text-orange-500" />
+          </button>
+        )}
+
+        {/* Floating Expand Telemetry Button when Collapsed */}
+        {!isMobile && telemetryCollapsed && (
+          <button
+            onClick={() => setTelemetryCollapsed(false)}
+            className="absolute top-4 right-4 z-10 p-2.5 rounded-xl border border-white/5 bg-[#09090b]/90 text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer shadow-lg backdrop-blur-xl flex items-center justify-center animate-fade-in"
+            title="Expand Telemetry Channel"
+          >
+            <ChevronLeft size={14} className="text-orange-500" />
           </button>
         )}
 
@@ -227,26 +240,50 @@ export function Query() {
 
       {/* ── Right panel: Vertical Progress Telemetry + Event Log ── */}
       {!isMobile && (
-        <div className="flex w-[350px] shrink-0 flex-col bg-[#09090b] xl:w-[380px]">
-          {/* Pipeline vertical flow */}
-          <div className="flex-1 min-h-0">
-            <QueryVisualizer state={queryState} />
-          </div>
+        <AnimatePresence initial={false}>
+          {!telemetryCollapsed && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 350, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="shrink-0 border-l border-zinc-900 bg-[#09090b] flex flex-col h-full overflow-hidden"
+            >
+              {/* Header with collapse button */}
+              <div className="p-4 border-b border-zinc-900 flex justify-between items-center bg-[#09090b]">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+                  Telemetry Channel
+                </span>
+                <button
+                  onClick={() => setTelemetryCollapsed(true)}
+                  className="p-2.5 rounded-xl border border-white/5 bg-transparent text-zinc-400 hover:text-white hover:border-white/10 transition-all cursor-pointer flex items-center justify-center"
+                  title="Collapse Telemetry"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
 
-          {/* Live event logs */}
-          <div className={clsx(
-            "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
-            logCollapsed ? "h-10" : "h-[220px]"
-          )}>
-            <EventLog 
-              entries={eventLog} 
-              onClear={clearLog} 
-              connected={connected} 
-              collapsed={logCollapsed}
-              onToggleCollapse={() => setLogCollapsed(!logCollapsed)}
-            />
-          </div>
-        </div>
+              {/* Pipeline vertical flow */}
+              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                <QueryVisualizer state={queryState} />
+              </div>
+
+              {/* Live event logs */}
+              <div className={clsx(
+                "shrink-0 border-t border-zinc-900 transition-all duration-300 ease-in-out bg-[#09090b]",
+                logCollapsed ? "h-10" : "h-[220px]"
+              )}>
+                <EventLog 
+                  entries={eventLog} 
+                  onClear={clearLog} 
+                  connected={connected} 
+                  collapsed={logCollapsed}
+                  onToggleCollapse={() => setLogCollapsed(!logCollapsed)}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
 
     </div>
