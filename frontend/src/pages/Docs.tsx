@@ -1346,6 +1346,103 @@ sources = reranker_service.rerank(
                         </div>
                       </div>
 
+                      {/* Challenge 4 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 4
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Multi-Document Reasoning (Connecting Dispersed Facts)
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> Standard RAG embeds a complex query into a single vector. If the query requires information from multiple documents (e.g., *"Compare Q1 and Q2 sales"*), standard retrieval retrieves chunks matching the hybrid vector, often completely missing one of the parts.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Solution:</strong> We introduced a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryDecomposer</code> service that uses a fast LLM call to break down complex queries into a list of simpler, independent sub-queries. The system retrieves candidate pools for each sub-query in parallel and merges them.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/query_decomposer.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 5 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 5
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Retrieval of Deep Chunks (e.g. Chunk #12) without Context Flooding
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> If a chunk is ranked 12th in raw vector search, increasing <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">top_k</code> to 20 or 30 retrieves it but floods the LLM context window.
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-emerald-400">Solution:</strong> We solve this using a multi-stage approach:
+                            </p>
+                            <ol className="list-decimal list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li>We retrieve a larger candidate pool (e.g. 20-30 chunks).</li>
+                              <li>We bypass diversity filters (like MMR) before reranking because they can prematurely prune the correct chunk. Instead, we run the Cross-Encoder Reranker directly on all candidates, as sequence-level attention is highly precise at ranking the exact match to the top.</li>
+                              <li>We apply a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ContextCompressor</code> to split the top reranked chunks into sentences, retaining only sentences matching key queries/keywords. This compresses chunks by 50-70% (removing irrelevant filler), allowing the LLM to process more sources without exceeding token limits.</li>
+                            </ol>
+                          </div>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/context_compressor.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 6 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 6
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Dynamic 5-Minute Live Updates
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> Under a fast update loop, simple inserts lead to duplicate or stale chunks showing up in search results.
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-emerald-400">Solution:</strong> We implemented a multi-layered consistency pattern:
+                            </p>
+                            <ol className="list-decimal list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Idempotence & Active Purging:</strong> When a document with an existing name is uploaded, we actively purge its old vectors from Pinecone and its local/S3 files first, preventing duplicate or stale index items.</li>
+                              <li><strong>DB-Backed State Reconciliation:</strong> When a query retrieves chunks from vector search, we check the retrieved document IDs against the relational SQL database. Chunks belonging to documents that are deleted, orphaned, or not yet marked <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ready</code> are dynamically filtered out.</li>
+                            </ol>
+                          </div>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/main.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
