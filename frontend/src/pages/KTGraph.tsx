@@ -180,7 +180,11 @@ export function KTGraph() {
         description: p.desc,
         metadata: {
           'Latency Class': p.id === 'parametric' ? '<1ms' : p.id === 'external' ? '30-150ms' : '5-15ms',
-          'Storage Format': p.id === 'parametric' ? 'Neural Weights' : p.id === 'external' ? 'Pinecone Vectors' : 'SQLite Database'
+          'Storage Format': 
+            p.id === 'parametric' ? 'Neural Weights' : 
+            p.id === 'external' ? 'Pinecone Vectors' : 
+            p.id === 'working' ? 'GPU KV-Cache' : 
+            'Supabase PostgreSQL'
         },
         color: p.color,
         size: p.size,
