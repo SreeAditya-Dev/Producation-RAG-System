@@ -38,7 +38,7 @@ export function Documents() {
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="space-y-8">
         <section className="rounded-[28px] border border-border bg-[radial-gradient(circle_at_left,rgba(6,182,212,0.16),transparent_22%),radial-gradient(circle_at_right,rgba(16,185,129,0.14),transparent_24%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-card sm:p-8">
-          <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-accent-green/20 bg-accent-green/10 px-3 py-1 text-xs font-medium text-accent-green">
                 <ShieldCheck size={12} />
@@ -85,7 +85,7 @@ export function Documents() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="space-y-5">
             <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">
               <h2 className="mb-4 text-sm font-semibold text-text-primary">Upload Document</h2>

@@ -70,7 +70,7 @@ class WSEvent(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    qdrant: str
+    pinecone: str
     nvidia: str
     version: str = "1.0.0"
 

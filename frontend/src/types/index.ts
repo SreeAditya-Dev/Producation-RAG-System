@@ -47,14 +47,14 @@ export interface StatsResponse {
   index_stats: {
     total_vector_count?: number;
     dimension?: number;
-    status?: string;
-    hnsw?: { m: number; ef_construct: number; ef: number };
+    index_fullness?: number;
+    namespaces?: Record<string, number>;
   };
 }
 
 export interface HealthResponse {
   status: string;
-  qdrant: string;
+  pinecone: string;
   nvidia: string;
   version: string;
 }

@@ -45,9 +45,9 @@ const STAGES: StageNode[] = [
     glowClass: 'node-glow',
   },
   {
-    id: 'qdrant',
-    label: 'Qdrant',
-    sublabel: 'HNSW Search',
+    id: 'pinecone',
+    label: 'Pinecone',
+    sublabel: 'ANN Search',
     icon: Database,
     color: '#F4831F',
     rgb: '244,131,31',
@@ -101,7 +101,7 @@ function getNodeStatus(nodeId: string, current: QueryStage): NodeStatus {
   switch (nodeId) {
     case 'query':    return cp >= 1 ? 'active' : 'idle';
     case 'embed':    return cp === 1 ? 'active' : cp > 1 ? 'complete' : 'idle';
-    case 'qdrant':   return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
+    case 'pinecone':   return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
     case 'retrieve': return cp === 2 ? 'active' : cp > 2 ? 'complete' : 'idle';
     case 'rerank':   return cp === 3 ? 'active' : cp > 3 ? 'complete' : 'idle';
     case 'llm':      return cp === 4 ? 'active' : cp > 4 ? 'complete' : 'idle';
@@ -332,17 +332,17 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
       )}
 
       {/* Horizontal pipeline flow */}
-      <div className="px-4 pt-5 pb-3 shrink-0">
-        <div className="flex items-start">
+      <div className="px-4 pt-5 pb-3 shrink-0 overflow-x-auto">
+        <div className="flex items-start min-w-max">
           {STAGES.map((stageNode, i) => {
             const nodeStatus = getNodeStatus(stageNode.id, stage);
             const connStatus = getConnectorStatus(stageNode.id, stage);
 
             return (
-              <div key={stageNode.id} className="flex items-center flex-1 min-w-0">
+              <div key={stageNode.id} className="flex items-center flex-shrink-0">
                 <NodeCard stage={stageNode} status={nodeStatus} />
                 {i < STAGES.length - 1 && (
-                  <div className="flex-1 min-w-0 mt-[-18px]">
+                  <div className="flex-shrink-0 mt-[-18px] w-8 sm:w-12">
                     <Connector status={connStatus} color={stageNode.color} rgb={stageNode.rgb} />
                   </div>
                 )}
@@ -395,7 +395,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
                   <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#3b82f6' }} />
                 </span>
                 <p className="text-[11px] font-medium" style={{ color: '#3b82f6' }}>
-                  Qdrant HNSW search · m=16 · ef=128 · over-fetching candidates…
+                  Pinecone ANN search · cosine similarity · over-fetching candidates…
                 </p>
               </div>
             </motion.div>

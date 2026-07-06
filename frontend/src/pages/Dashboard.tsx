@@ -82,7 +82,7 @@ export function Dashboard() {
 
   const recentEvents = eventLog.slice(0, 8);
   const activeCount = [pipeline.stage !== 'idle', queryState.stage !== 'idle' && queryState.stage !== 'complete'].filter(Boolean).length;
-  const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.qdrant === 'connected' ? 20 : 0)) : 28;
+  const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.pinecone === 'connected' ? 20 : 0)) : 28;
   const architectureLayers = [
     { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-accent-primary/20 to-accent-primary/5' },
     { label: 'Processing Layer', detail: 'Parsing, chunking, and embedding progression.', icon: Workflow, tone: 'from-accent-primary/20 to-accent-primary/5' },
@@ -93,16 +93,16 @@ export function Dashboard() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_30%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-card sm:p-8">
-          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent-blue/8 blur-3xl" />
-          <div className="relative grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        <section className="relative overflow-hidden rounded-[28px] border border-border bg-bg-card p-6 shadow-card sm:p-8">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent-primary/8 blur-3xl" />
+          <div className="relative grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
             <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent-indigo/30 bg-accent-indigo/10 px-3 py-1 text-xs font-medium text-accent-indigo-light">
+              <div className="inline-flex items-center gap-2 rounded-full border border-accent-primary/30 bg-accent-primary/10 px-3 py-1 text-xs font-medium text-accent-primary">
                 <Activity size={12} />
                 Live retrieval command surface
               </div>
               <div>
-                <h2 className="max-w-3xl text-3xl font-semibold tracking-tight text-text-primary sm:text-5xl">
+                <h2 className="max-w-3xl text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl lg:text-4xl xl:text-5xl">
                   Dynamic RAG dashboard with every layer visible.
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-text-secondary sm:text-base">
@@ -111,17 +111,17 @@ export function Dashboard() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border bg-black/20 p-4">
+                <div className="rounded-2xl border border-border bg-bg-card/50 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Readiness</p>
                   <p className="mt-2 text-2xl font-semibold text-text-primary">{readiness}%</p>
                   <p className="mt-1 text-xs text-text-secondary">Knowledge base and services aligned.</p>
                 </div>
-                <div className="rounded-2xl border border-border bg-black/20 p-4">
+                <div className="rounded-2xl border border-border bg-bg-card/50 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Active Flows</p>
                   <p className="mt-2 text-2xl font-semibold text-text-primary">{activeCount}</p>
                   <p className="mt-1 text-xs text-text-secondary">Pipelines currently moving through steps.</p>
                 </div>
-                <div className="rounded-2xl border border-border bg-black/20 p-4">
+                <div className="rounded-2xl border border-border bg-bg-card/50 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Event Stream</p>
                   <p className="mt-2 text-2xl font-semibold text-text-primary">{eventLog.length}</p>
                   <p className="mt-1 text-xs text-text-secondary">Recent signals captured for diagnosis.</p>
@@ -129,13 +129,13 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-border bg-black/20 p-5">
+            <div className="rounded-[24px] border border-border bg-bg-card/50 p-5 mt-4 lg:mt-0">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-text-muted">System Pulse</p>
                   <h3 className="mt-2 text-lg font-semibold text-text-primary">Mission control snapshot</h3>
                 </div>
-                <TimerReset size={18} className="text-accent-purple" />
+                <TimerReset size={18} className="text-accent-primary" />
               </div>
               <div className="mt-5 space-y-3">
                 {[
@@ -153,16 +153,16 @@ export function Dashboard() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard icon={FileText} label="Documents" value={stats?.total_documents ?? '—'} sub="indexed & ready" color="bg-accent-purple" />
-          <StatCard icon={Layers} label="Vector Chunks" value={stats?.total_chunks ?? '—'} sub="available for retrieval" color="bg-accent-blue" />
-          <StatCard icon={MessageSquare} label="Queries Run" value={stats?.total_queries ?? '—'} sub="conversation depth" color="bg-accent-orange" />
+        <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon={FileText} label="Documents" value={stats?.total_documents ?? '—'} sub="indexed & ready" color="bg-accent-primary" />
+          <StatCard icon={Layers} label="Vector Chunks" value={stats?.total_chunks ?? '—'} sub="available for retrieval" color="bg-accent-primary" />
+          <StatCard icon={MessageSquare} label="Queries Run" value={stats?.total_queries ?? '—'} sub="conversation depth" color="bg-accent-primary" />
           <StatCard
             icon={Database}
             label="Index Vectors"
             value={stats?.index_stats?.total_vector_count ?? '—'}
             sub={`dim: ${stats?.index_stats?.dimension ?? '—'}`}
-            color="bg-accent-green"
+            color="bg-accent-primary"
           />
         </div>
 
@@ -182,7 +182,7 @@ export function Dashboard() {
             <TrendingUp size={16} className="text-accent-indigo-light shrink-0" />
           </div>
 
-          <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-px bg-border grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {/* ── Latency ── */}
             <div className="bg-bg-card p-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -401,9 +401,9 @@ export function Dashboard() {
                   tag: health === undefined ? 'Checking…' : health.status === 'ok' ? 'Online' : 'Offline',
                 },
                 {
-                  label: 'Qdrant Vector DB',
-                  ok: health?.qdrant === 'connected',
-                  tag: health === undefined ? 'Checking…' : health.qdrant === 'connected' ? 'Connected' : 'Not Connected',
+                  label: 'Pinecone Vector DB',
+                  ok: health?.pinecone === 'connected',
+                  tag: health === undefined ? 'Checking…' : health.pinecone === 'connected' ? 'Connected' : 'Not Connected',
                 },
                 {
                   label: 'NVIDIA NIM API',

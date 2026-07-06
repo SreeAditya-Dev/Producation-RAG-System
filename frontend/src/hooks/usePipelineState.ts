@@ -101,7 +101,7 @@ export function usePipelineState() {
 
         case 'storing_started':
           setPipeline((p) => ({ ...p, stage: 'storing' }));
-          addLog(makeLogEntry(event, `Storing ${(data as Record<string, number>).vector_count} vectors in Qdrant...`, 'info'));
+          addLog(makeLogEntry(event, `Storing ${(data as Record<string, number>).vector_count} vectors in Pinecone...`, 'info'));
           break;
 
         case 'storing_completed':
@@ -137,7 +137,7 @@ export function usePipelineState() {
 
         case 'query_embedded':
           setQueryState((q) => ({ ...q, stage: 'retrieving' }));
-          addLog(makeLogEntry(event, 'Query embedded — searching Qdrant HNSW index...', 'info'));
+          addLog(makeLogEntry(event, 'Query embedded — searching Pinecone index...', 'info'));
           break;
 
         case 'chunks_retrieved': {

@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from app.config import settings
 from app.services.embedding_service import embedding_service
-from app.services.qdrant_service import qdrant_service
+from app.services.pinecone_service import pinecone_service
 from app.services.reranker_service import reranker_service
 from app.services.llm_service import llm_service
 from app.ws_manager import manager
@@ -84,7 +84,7 @@ async def retrieve_and_generate(
 
         raw_matches = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: qdrant_service.query(vector=query_vector, top_k=candidates_k),
+            lambda: pinecone_service.query(vector=query_vector, top_k=candidates_k),
         )
         qm["retrieve_ms"] = _ms(t)
 

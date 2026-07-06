@@ -190,7 +190,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
 
       <div className="px-5 py-5">
         {/* ── Steps row ── */}
-        <div className="flex items-center">
+        <div className="flex items-center overflow-x-auto pb-2 -mx-2 px-2">
           {STEPS.map((step, i) => {
             const st = status(step.id, stage);
             const Icon = step.icon;
@@ -271,7 +271,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
           })}
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 grid-cols-1 xs:grid-cols-3">
           <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
             <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Current step</p>
             <p className="mt-2 text-sm font-semibold capitalize text-text-primary">{stage}</p>

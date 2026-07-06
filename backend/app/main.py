@@ -38,7 +38,7 @@ from app.models import (
 )
 from app.pipeline.ingestion import ingest_document
 from app.pipeline.retrieval import retrieve_and_generate
-from app.services.qdrant_service import qdrant_service
+from app.services.pinecone_service import pinecone_service
 from app.services.llm_service import llm_service
 from app.services.storage_service import storage_service, CONTENT_TYPES
 from app.utils.file_parsers import detect_file_type
@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="RAG System API",
-    description="Production-ready RAG with NVIDIA NIM + Qdrant HNSW + full observability",
+    description="Production-ready RAG with NVIDIA NIM + Pinecone + full observability",
     version="2.1.0",
 )
 
@@ -93,12 +93,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    qdrant_ok = await asyncio.get_event_loop().run_in_executor(
-        None, qdrant_service.test_connection
+    pinecone_ok = await asyncio.get_event_loop().run_in_executor(
+        None, pinecone_service.test_connection
     )
     return HealthResponse(
         status="ok",
-        qdrant="connected" if qdrant_ok else "error",
+        pinecone="connected" if pinecone_ok else "error",
         nvidia="configured" if settings.nvidia_api_key else "not configured",
     )
 
@@ -218,7 +218,7 @@ async def delete_document(doc_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, qdrant_service.delete_by_document, doc_id
+            None, pinecone_service.delete_by_document, doc_id
         )
     except Exception as e:
         logger.warning("Could not delete vectors for %s: %s", doc_id, e)
@@ -312,7 +312,7 @@ async def get_stats(db: Session = Depends(get_db)):
     ).count()
 
     index_stats = await asyncio.get_event_loop().run_in_executor(
-        None, qdrant_service.get_stats
+        None, pinecone_service.get_stats
     )
 
     return StatsResponse(

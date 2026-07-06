@@ -109,7 +109,7 @@ export function Layout() {
                   <h1 className="truncate text-lg font-semibold text-text-primary sm:text-2xl">
                     {pageMeta.title}
                   </h1>
-                  <p className="hidden truncate text-sm text-text-secondary sm:block">
+                  <p className="truncate text-sm text-text-secondary max-w-[200px] xs:max-w-[300px] sm:max-w-none">
                     {pageMeta.subtitle}
                   </p>
                 </div>

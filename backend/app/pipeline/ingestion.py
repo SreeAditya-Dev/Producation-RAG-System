@@ -10,7 +10,7 @@ from app.config import settings
 from app.utils.file_parsers import parse_file
 from app.utils.chunking import RecursiveTextSplitter
 from app.services.embedding_service import embedding_service
-from app.services.qdrant_service import qdrant_service
+from app.services.pinecone_service import pinecone_service
 from app.services.storage_service import storage_service
 from app.ws_manager import manager
 
@@ -30,7 +30,7 @@ async def ingest_document(
     db_session,
 ) -> int:
     """
-    Full ingestion pipeline: download → parse → chunk → embed → upsert to Qdrant.
+    Full ingestion pipeline: download → parse → chunk → embed → upsert to Pinecone.
     Records per-stage latency, token usage, and failure info in IngestionMetrics.
     Returns the number of chunks created.
     """
@@ -157,7 +157,7 @@ async def ingest_document(
         await emit("storing_started", {"vector_count": len(vectors_to_upsert)})
         t = time.perf_counter()
         upserted = await asyncio.get_event_loop().run_in_executor(
-            None, qdrant_service.upsert_vectors, vectors_to_upsert
+            None, pinecone_service.upsert_vectors, vectors_to_upsert
         )
         metrics["store_ms"] = _ms(t)
         await emit("storing_completed", {
