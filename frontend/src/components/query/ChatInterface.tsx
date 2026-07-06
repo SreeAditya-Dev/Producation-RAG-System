@@ -22,9 +22,9 @@ interface Props {
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  embedding: 'Embedding query…',
-  retrieving: 'Searching knowledge base…',
-  generating: 'Generating answer…',
+  embedding: 'Embedding query vector...',
+  retrieving: 'Querying vector database...',
+  generating: 'Synthesizing response...',
 };
 
 function AssistantMessage({ content }: { content: string }) {
@@ -32,15 +32,19 @@ function AssistantMessage({ content }: { content: string }) {
     <div className="space-y-3 break-words">
       <ReactMarkdown
         components={{
-          h1: ({ children }) => <h3 className="text-base font-semibold text-white">{children}</h3>,
-          h2: ({ children }) => <h3 className="text-base font-semibold text-white">{children}</h3>,
-          h3: ({ children }) => <h4 className="text-sm font-semibold text-white">{children}</h4>,
-          p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#a1a1aa]">{children}</p>,
-          ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 text-sm text-[#a1a1aa]">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 text-sm text-[#a1a1aa]">{children}</ol>,
+          h1: ({ children }) => <h3 className="text-sm font-semibold text-zinc-100">{children}</h3>,
+          h2: ({ children }) => <h3 className="text-sm font-semibold text-zinc-100">{children}</h3>,
+          h3: ({ children }) => <h4 className="text-xs font-semibold text-zinc-200">{children}</h4>,
+          p: ({ children }) => <p className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-300">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc space-y-1 pl-4 text-xs text-zinc-300">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal space-y-1 pl-4 text-xs text-zinc-300">{children}</ol>,
           li: ({ children }) => <li className="leading-relaxed">{children}</li>,
           strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
-          code: ({ children }) => <code className="rounded bg-black/30 px-1.5 py-0.5 text-xs text-orange-500">{children}</code>,
+          code: ({ children }) => (
+            <code className="rounded bg-zinc-900 border border-zinc-800/80 px-1 py-0.5 text-xs text-zinc-200 font-mono">
+              {children}
+            </code>
+          ),
         }}
       >
         {content}
@@ -125,16 +129,16 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
 
   return (
     <div className="flex flex-col h-full bg-[#09090b]">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* Messages Stream */}
+      <div className="flex-1 overflow-y-auto divide-y divide-zinc-800/40">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-[#121215] border border-[#1c1c1f] flex items-center justify-center mb-4">
-              <Zap size={28} className="text-orange-500" />
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+            <div className="w-10 h-10 rounded-lg bg-zinc-900/50 border border-zinc-800 flex items-center justify-center mb-4 text-zinc-400">
+              <Zap size={16} />
             </div>
-            <h3 className="text-white font-semibold mb-2">Ask your documents anything</h3>
-            <p className="text-[#71717a] text-xs max-w-sm">
-              Upload documents first, then query them with natural language. The AI will find relevant passages and generate a grounded answer.
+            <h3 className="text-zinc-200 font-semibold text-sm">Query Grounded Workspace</h3>
+            <p className="text-zinc-500 text-xs max-w-sm mt-1 leading-normal font-mono">
+              Input a natural language query. The engine will retrieve candidate slices from vector inventory and synthesize context-backed responses.
             </p>
           </div>
         )}
@@ -143,81 +147,92 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className={clsx('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}
+              className="flex gap-4 p-5 hover:bg-zinc-900/5 transition-colors"
             >
-              {msg.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot size={15} className="text-orange-500" />
-                </div>
-              )}
+              {/* Avatar Column */}
+              <div className="w-7 h-7 rounded border border-zinc-800 bg-zinc-900/50 flex items-center justify-center text-zinc-400 shrink-0 select-none mt-0.5">
+                {msg.role === 'assistant' ? <Bot size={13} /> : <User size={13} />}
+              </div>
 
-              <div className={clsx('max-w-[80%] space-y-2', msg.role === 'user' ? 'items-end flex flex-col' : '')}>
-                <div
-                  className={clsx(
-                    'px-4 py-3 rounded-2xl text-sm leading-relaxed',
-                    msg.role === 'user'
-                      ? 'bg-[#1c1c1f] border border-[#27272a] text-white rounded-tr-sm'
-                      : 'bg-[#0c0c0e] border border-[#1c1c1f] text-white rounded-tl-sm'
+              {/* Content Column */}
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400">
+                    {msg.role === 'assistant' ? 'Assistant' : 'User'}
+                  </span>
+                  {msg.processingTime !== undefined && (
+                    <span className="text-[9px] font-mono text-zinc-600">
+                      &middot; {msg.processingTime.toFixed(2)}s latency
+                    </span>
                   )}
-                >
+                </div>
+
+                <div className="text-zinc-300">
                   {msg.content ? (
-                    msg.role === 'assistant' ? <AssistantMessage content={msg.content} /> : <p className="whitespace-pre-wrap">{msg.content}</p>
+                    msg.role === 'assistant' ? (
+                      <AssistantMessage content={msg.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-300 font-medium">
+                        {msg.content}
+                      </p>
+                    )
                   ) : (
-                    <div className="flex items-center gap-2 text-[#71717a]">
-                      <Loader2 size={13} className="animate-spin" />
-                      <span className="text-xs">{STAGE_LABELS[stage] || 'Thinking…'}</span>
+                    <div className="flex items-center gap-2 text-zinc-500">
+                      <Loader2 size={11} className="animate-spin text-zinc-400" />
+                      <span className="text-[11px] font-mono">
+                        {STAGE_LABELS[stage] || 'Searching knowledge base...'}
+                      </span>
                     </div>
                   )}
                   {msg.isStreaming && msg.content && (
-                    <span className="inline-block w-0.5 h-4 bg-orange-500 animate-pulse ml-1 align-text-bottom" />
+                    <span className="inline-block w-1 h-3 bg-zinc-300 animate-pulse ml-1 align-middle" />
                   )}
                 </div>
 
-                {/* Sources */}
+                {/* Citations */}
                 {msg.sources && msg.sources.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-[#71717a] text-[10px] uppercase font-bold tracking-wider px-1">Sources</p>
-                    {msg.sources.map((s, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-2 px-3 py-2 bg-[#121215] border border-[#1c1c1f] rounded-lg text-xs"
-                      >
-                        <span className="text-orange-500 font-mono font-semibold flex-shrink-0">[{i + 1}]</span>
-                        <div className="min-w-0">
-                          <p className="text-white font-medium truncate">{s.original_name}</p>
-                          <p className="text-[#71717a] mt-0.5 line-clamp-2">{s.text}</p>
-                          <p className="text-[#52525b] mt-0.5 text-[10px]">
-                            Score: <span className="text-orange-500 font-mono">{(s.score * 100).toFixed(1)}%</span>
-                          </p>
+                  <div className="pt-2 space-y-2">
+                    <p className="text-zinc-500 text-[9px] uppercase tracking-wider font-mono">
+                      Retrieved Contexts
+                    </p>
+                    <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
+                      {msg.sources.map((s, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-2.5 p-3 bg-zinc-950 border border-zinc-850 rounded-lg text-xs"
+                        >
+                          <span className="text-zinc-500 font-mono font-bold flex-shrink-0">
+                            [{String(i + 1).padStart(2, '0')}]
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-zinc-200 font-semibold truncate" title={s.original_name}>
+                              {s.original_name}
+                            </p>
+                            <p className="text-zinc-500 text-[10px] line-clamp-2 mt-1 leading-relaxed">
+                              {s.text}
+                            </p>
+                            <p className="text-zinc-600 text-[9px] font-mono mt-1">
+                              Cosine Similarity:{' '}
+                              <span className="text-zinc-400 font-semibold">{(s.score * 100).toFixed(0)}%</span>
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
-
-                {msg.processingTime !== undefined && (
-                  <p className="text-[#71717a] text-[10px] px-1">
-                    Generated in {msg.processingTime.toFixed(2)}s
-                  </p>
-                )}
               </div>
-
-              {msg.role === 'user' && (
-                <div className="w-8 h-8 rounded-lg bg-[#121215] border border-[#1c1c1f] flex items-center justify-center flex-shrink-0 mt-1">
-                  <User size={15} className="text-[#a1a1aa]" />
-                </div>
-              )}
             </motion.div>
           ))}
         </AnimatePresence>
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-[#1c1c1f] px-4 py-3 bg-[#0c0c0e]">
-        <div className="flex items-end gap-2">
+      {/* Input panel */}
+      <div className="border-t border-zinc-800/80 px-4 py-3 bg-[#0c0c0e]">
+        <div className="flex items-end gap-2.5 max-w-[800px] mx-auto w-full">
           <div className="flex-1 relative">
             <textarea
               ref={inputRef}
@@ -227,32 +242,34 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
               placeholder="Ask a question about your documents…"
               rows={1}
               disabled={isLoading}
-              className="w-full bg-[#121215] border border-[#1c1c1f] rounded-xl px-4 py-3 text-xs text-white placeholder-[#52525b] resize-none focus:outline-none focus:border-[#272730] transition-colors disabled:opacity-50"
+              className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 focus:border-zinc-500 rounded-lg px-4 py-3 text-xs text-white placeholder-zinc-500 resize-none focus:outline-none transition-all disabled:opacity-50 font-mono"
               style={{ maxHeight: '120px', overflowY: 'auto' }}
             />
           </div>
 
-          <div className="flex items-center gap-2 pb-1">
+          <div className="flex items-center gap-2 pb-1 shrink-0">
             <select
               value={topK}
               onChange={(e) => setTopK(Number(e.target.value))}
-              className="bg-[#121215] border border-[#1c1c1f] rounded-lg px-2 py-2 text-xs text-[#a1a1aa] focus:outline-none"
+              className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-lg px-2.5 py-2.5 text-xs text-zinc-400 focus:outline-none transition-colors font-mono"
               title="Number of source chunks to retrieve"
             >
               {[3, 5, 8, 10].map((k) => (
-                <option key={k} value={k}>top {k}</option>
+                <option key={k} value={k}>
+                  top {k}
+                </option>
               ))}
             </select>
 
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className="w-10 h-10 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-lg bg-white hover:bg-zinc-200 text-black disabled:bg-zinc-900 disabled:text-zinc-600 disabled:cursor-not-allowed flex items-center justify-center transition-colors border border-zinc-850"
             >
               {isLoading ? (
-                <Loader2 size={16} className="animate-spin text-white" />
+                <Loader2 size={14} className="animate-spin" />
               ) : (
-                <Send size={16} className="text-white" />
+                <Send size={14} />
               )}
             </button>
           </div>

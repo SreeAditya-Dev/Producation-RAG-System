@@ -31,8 +31,8 @@ const STAGES: StageNode[] = [
     label: 'Query',
     sublabel: 'User Input',
     icon: MessageSquare,
-    color: '#e2e8f0',
-    rgb: '226,232,240',
+    color: '#ffffff',
+    rgb: '255,255,255',
     glowClass: '',
   },
   {
@@ -40,54 +40,54 @@ const STAGES: StageNode[] = [
     label: 'Embed',
     sublabel: 'NV-EmbedQA',
     icon: Cpu,
-    color: '#F4831F',
-    rgb: '244,131,31',
-    glowClass: 'node-glow',
+    color: '#ffffff',
+    rgb: '255,255,255',
+    glowClass: '',
   },
   {
     id: 'pinecone',
     label: 'Pinecone',
     sublabel: 'ANN Search',
     icon: Database,
-    color: '#F4831F',
-    rgb: '244,131,31',
-    glowClass: 'node-glow',
+    color: '#ffffff',
+    rgb: '255,255,255',
+    glowClass: '',
   },
   {
     id: 'retrieve',
     label: 'Retrieve',
     sublabel: 'Top-K Chunks',
     icon: Layers,
-    color: '#F4831F',
-    rgb: '244,131,31',
-    glowClass: 'node-glow',
+    color: '#ffffff',
+    rgb: '255,255,255',
+    glowClass: '',
   },
   {
     id: 'rerank',
     label: 'Rerank',
     sublabel: 'NIM Reranker',
     icon: SlidersHorizontal,
-    color: '#F4831F',
-    rgb: '244,131,31',
-    glowClass: 'node-glow',
+    color: '#ffffff',
+    rgb: '255,255,255',
+    glowClass: '',
   },
   {
     id: 'llm',
     label: 'LLM',
     sublabel: 'Llama-3.3-70B',
     icon: Sparkles,
-    color: '#F4831F',
-    rgb: '244,131,31',
-    glowClass: 'node-glow',
+    color: '#ffffff',
+    rgb: '255,255,255',
+    glowClass: '',
   },
   {
     id: 'answer',
     label: 'Answer',
     sublabel: 'Response Ready',
     icon: CheckCircle2,
-    color: '#F4831F',
-    rgb: '244,131,31',
-    glowClass: 'node-glow',
+    color: '#ffffff',
+    rgb: '255,255,255',
+    glowClass: '',
   },
 ];
 
@@ -116,56 +116,20 @@ function getConnectorStatus(fromNodeId: string, current: QueryStage): NodeStatus
 
 interface ConnectorProps {
   status: NodeStatus;
-  color: string;
-  rgb: string;
 }
 
-function Connector({ status, color, rgb }: ConnectorProps) {
+function Connector({ status }: ConnectorProps) {
   const isLit = status === 'active' || status === 'complete';
 
   return (
-    <div className="relative flex h-px flex-1 items-center overflow-hidden bg-border mx-1.5">
+    <div className="relative flex h-[1px] flex-1 items-center overflow-hidden bg-zinc-800/80 mx-1">
       {isLit && (
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{ background: `linear-gradient(90deg, transparent, ${color}cc, ${color})` }}
+          className="absolute inset-y-0 left-0 bg-zinc-400"
           initial={{ width: '0%' }}
           animate={{ width: '100%' }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         />
-      )}
-      {status === 'active' && (
-        <>
-          <div
-            className="particle"
-            style={{
-              background: color,
-              boxShadow: `0 0 8px rgba(${rgb}, 0.9), 0 0 16px rgba(${rgb}, 0.4)`,
-              width: '5px',
-              height: '5px',
-            }}
-          />
-          <div
-            className="particle particle-delayed-1"
-            style={{
-              background: color,
-              boxShadow: `0 0 6px rgba(${rgb}, 0.7)`,
-              width: '4px',
-              height: '4px',
-              opacity: 0.8,
-            }}
-          />
-          <div
-            className="particle particle-delayed-2"
-            style={{
-              background: color,
-              boxShadow: `0 0 4px rgba(${rgb}, 0.5)`,
-              width: '3px',
-              height: '3px',
-              opacity: 0.6,
-            }}
-          />
-        </>
       )}
     </div>
   );
@@ -184,92 +148,39 @@ function NodeCard({ stage, status }: NodeCardProps) {
   const isIdle = status === 'idle';
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1.5">
       <div className="relative">
-        {isActive && (
-          <>
-            <div
-              className="ring-expand absolute inset-0 rounded-2xl border"
-              style={{ borderColor: `rgba(${stage.rgb}, 0.5)` }}
-            />
-            <div
-              className="ring-expand-delay absolute inset-0 rounded-2xl border"
-              style={{ borderColor: `rgba(${stage.rgb}, 0.3)` }}
-            />
-          </>
-        )}
-
         <motion.div
           key={`${stage.id}-${status}`}
-          initial={isActive ? { scale: 0.72, opacity: 0 } : { scale: 1, opacity: 1 }}
-          animate={
-            isActive
-              ? { scale: [1, 1.07, 1], opacity: 1 }
-              : { scale: 1, opacity: 1 }
-          }
-          transition={
-            isActive
-              ? { duration: 1.7, repeat: Infinity, ease: 'easeInOut' }
-              : { duration: 0.25 }
-          }
+          initial={{ scale: 1 }}
           className={clsx(
-            'relative flex h-11 w-11 items-center justify-center rounded-2xl border-2 transition-colors duration-300',
-            isIdle && 'border-border bg-bg-hover',
-            isError && 'border-red-500/50 bg-red-500/10',
+            'relative flex h-9 w-9 items-center justify-center rounded-lg border transition-all duration-300',
+            isIdle && 'border-zinc-900 bg-zinc-950 text-zinc-655',
+            isActive && 'border-zinc-300 bg-zinc-900 text-zinc-100 shadow-[0_0_8px_rgba(255,255,255,0.05)]',
+            isComplete && 'border-zinc-700 bg-zinc-900/30 text-zinc-450',
+            isError && 'border-red-500 bg-red-500/5 text-red-400'
           )}
-          style={
-            isActive
-              ? {
-                  borderColor: stage.color,
-                  background: `rgba(${stage.rgb}, 0.14)`,
-                }
-              : isComplete
-              ? {
-                  borderColor: `rgba(${stage.rgb}, 0.5)`,
-                  background: `rgba(${stage.rgb}, 0.07)`,
-                }
-              : undefined
-          }
         >
-          {isActive && (
-            <div
-              className="absolute inset-0 rounded-2xl"
-              style={{
-                boxShadow: `0 0 18px rgba(${stage.rgb}, 0.45), 0 0 36px rgba(${stage.rgb}, 0.18), inset 0 0 10px rgba(${stage.rgb}, 0.06)`,
-              }}
-            />
-          )}
-
           {isActive ? (
-            <Loader2
-              size={17}
-              className="animate-spin relative z-10"
-              style={{ color: stage.color }}
-            />
+            <Loader2 size={13} className="animate-spin text-zinc-300" />
           ) : isComplete ? (
-            <CheckCircle2 size={17} style={{ color: stage.color }} className="relative z-10" />
+            <CheckCircle2 size={13} className="text-zinc-450" />
           ) : isError ? (
-            <AlertCircle size={17} className="text-red-400 relative z-10" />
+            <AlertCircle size={13} className="text-red-400" />
           ) : (
-            <Icon size={17} className="text-text-muted relative z-10" />
+            <Icon size={13} className="text-zinc-650" />
           )}
         </motion.div>
       </div>
 
       <div className="text-center">
         <p
-          className="text-[10px] font-semibold leading-none whitespace-nowrap"
-          style={
-            isActive
-              ? { color: stage.color }
-              : isComplete
-              ? { color: `rgba(${stage.rgb}, 0.7)` }
-              : undefined
-          }
+          className={clsx(
+            'text-[9px] font-mono leading-none tracking-tight uppercase',
+            isActive ? 'text-zinc-200' : isComplete ? 'text-zinc-400' : 'text-zinc-600'
+          )}
         >
-          <span className={clsx(!isActive && !isComplete && 'text-text-muted')}>
-            {stage.label}
-          </span>
+          {stage.label}
         </p>
       </div>
     </div>
@@ -277,9 +188,9 @@ function NodeCard({ stage, status }: NodeCardProps) {
 }
 
 const DETAIL_VARIANTS = {
-  initial: { opacity: 0, y: 6, scale: 0.97 },
-  animate: { opacity: 1, y: 0, scale: 1 },
-  exit: { opacity: 0, y: -6, scale: 0.97 },
+  initial: { opacity: 0, y: 3 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -3 },
 };
 
 interface Props {
@@ -291,49 +202,43 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
   const { stage, question, sources, streamingAnswer, processingTime } = state;
 
   return (
-    <div className="flex flex-col h-full rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] overflow-hidden">
+    <div className="flex flex-col h-full rounded-lg border border-zinc-800 bg-[#0c0c0e] overflow-hidden">
       {/* Header */}
       {!hideHeader && (
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#1c1c1f] shrink-0">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-text-primary">RAG Pipeline</h3>
-          <p className="text-[11px] text-text-muted mt-0.5 truncate max-w-[220px]">
-            {question
-              ? `"${question.slice(0, 48)}${question.length > 48 ? '…' : ''}"`
-              : 'Awaiting query…'}
-          </p>
-        </div>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-xs font-semibold text-zinc-300 font-mono uppercase tracking-wider">Pipeline telemetry</h3>
+            <p className="text-[10px] text-zinc-500 mt-1 truncate max-w-[220px] font-mono">
+              {question ? `"${question}"` : 'Awaiting prompt...'}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {processingTime && stage === 'complete' && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1 font-mono text-[11px] text-emerald-400"
-            >
-              <Clock size={10} />
-              {processingTime.toFixed(2)}s
-            </motion.span>
-          )}
-          <span
-            className={clsx(
-              'rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-              stage === 'idle' && 'border-[#1c1c1f] text-[#71717a] bg-[#121215]',
-              stage === 'complete' && 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
-              stage === 'error' && 'border-red-500/20 bg-red-500/5 text-red-400',
-              ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
-                'border-orange-500/20 bg-orange-500/10 text-orange-500',
+          <div className="flex items-center gap-2 shrink-0">
+            {processingTime && stage === 'complete' && (
+              <span className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 px-2 py-0.5 font-mono text-[10px] text-zinc-450">
+                <Clock size={10} />
+                {processingTime.toFixed(2)}s
+              </span>
             )}
-          >
-            {stage}
-          </span>
+            <span
+              className={clsx(
+                'rounded-md border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider',
+                stage === 'idle' && 'border-zinc-900 text-zinc-655 bg-zinc-950',
+                stage === 'complete' && 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
+                stage === 'error' && 'border-red-500/20 bg-red-500/5 text-red-400',
+                ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
+                  'border-zinc-700 bg-zinc-900/50 text-zinc-300'
+              )}
+            >
+              {stage}
+            </span>
+          </div>
         </div>
-      </div>
       )}
 
-      {/* Horizontal pipeline flow */}
-      <div className="px-4 pt-5 pb-3 shrink-0 overflow-x-auto">
-        <div className="flex items-start min-w-max">
+      {/* Stepper Grid */}
+      <div className="px-4 py-4 shrink-0 overflow-x-auto border-b border-zinc-800/40 bg-[#09090b]/20">
+        <div className="flex items-start min-w-max justify-between">
           {STAGES.map((stageNode, i) => {
             const nodeStatus = getNodeStatus(stageNode.id, stage);
             const connStatus = getConnectorStatus(stageNode.id, stage);
@@ -342,8 +247,8 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               <div key={stageNode.id} className="flex items-center flex-shrink-0">
                 <NodeCard stage={stageNode} status={nodeStatus} />
                 {i < STAGES.length - 1 && (
-                  <div className="flex-shrink-0 mt-[-18px] w-8 sm:w-12">
-                    <Connector status={connStatus} color={stageNode.color} rgb={stageNode.rgb} />
+                  <div className="flex-shrink-0 mt-[-16px] w-6 sm:w-8">
+                    <Connector status={connStatus} />
                   </div>
                 )}
               </div>
@@ -352,8 +257,8 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
         </div>
       </div>
 
-      {/* Stage detail card */}
-      <div className="px-4 pb-3 shrink-0">
+      {/* Stage detail box */}
+      <div className="px-4 py-3.5 shrink-0 border-b border-zinc-800/40">
         <AnimatePresence mode="wait">
           {stage === 'embedding' && (
             <motion.div
@@ -362,19 +267,12 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.18 }}
-              className="rounded-xl border px-3.5 py-2.5"
-              style={{ borderColor: 'rgba(244,131,31,0.3)', background: 'rgba(244,131,31,0.07)' }}
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-zinc-800 bg-zinc-900/10 px-3 py-2.5"
             >
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#F4831F' }} />
-                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#F4831F' }} />
-                </span>
-                <p className="text-[11px] font-medium" style={{ color: '#F4831F' }}>
-                  Vectorizing query · NVIDIA NV-EmbedQA-E5-v5
-                </p>
-              </div>
+              <p className="text-[10px] font-mono text-zinc-400">
+                Vectorizing prompt &middot; NVIDIA NV-EmbedQA-E5-v5
+              </p>
             </motion.div>
           )}
 
@@ -385,19 +283,12 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.18 }}
-              className="rounded-xl border px-3.5 py-2.5"
-              style={{ borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.07)' }}
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-zinc-800 bg-zinc-900/10 px-3 py-2.5"
             >
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#3b82f6' }} />
-                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#3b82f6' }} />
-                </span>
-                <p className="text-[11px] font-medium" style={{ color: '#3b82f6' }}>
-                  Pinecone ANN search · cosine similarity · over-fetching candidates…
-                </p>
-              </div>
+              <p className="text-[10px] font-mono text-zinc-400">
+                Pinecone ANN &middot; cosine similarity over-fetching candidate nodes
+              </p>
             </motion.div>
           )}
 
@@ -408,19 +299,12 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.18 }}
-              className="rounded-xl border px-3.5 py-2.5"
-              style={{ borderColor: 'rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.07)' }}
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-zinc-800 bg-zinc-900/10 px-3 py-2.5"
             >
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#f97316' }} />
-                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#f97316' }} />
-                </span>
-                <p className="text-[11px] font-medium" style={{ color: '#f97316' }}>
-                  NVIDIA llama-3.2-nv-rerankqa-1b-v2 · cross-encoder scoring…
-                </p>
-              </div>
+              <p className="text-[10px] font-mono text-zinc-400">
+                NVIDIA Llama Rerank &middot; cross-encoder sequence classification
+              </p>
             </motion.div>
           )}
 
@@ -431,26 +315,16 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.18 }}
-              className="rounded-xl border px-3.5 py-2.5 space-y-2"
-              style={{ borderColor: 'rgba(236,72,153,0.3)', background: 'rgba(236,72,153,0.07)' }}
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-zinc-800 bg-zinc-900/10 px-3 py-2.5 space-y-2"
             >
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#ec4899' }} />
-                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#ec4899' }} />
-                </span>
-                <p className="text-[11px] font-medium" style={{ color: '#ec4899' }}>
-                  Llama-3.3-70B synthesizing response…
-                </p>
-              </div>
+              <p className="text-[10px] font-mono text-zinc-400">
+                Llama-3.3-70B Nim synthesizing response streams...
+              </p>
               {streamingAnswer && (
-                <p className="text-[11px] leading-relaxed text-text-secondary line-clamp-2 pl-4">
+                <p className="text-[10px] leading-relaxed text-zinc-500 font-mono line-clamp-2 pl-2">
                   {streamingAnswer.slice(0, 120)}
-                  <span
-                    className="inline-block w-0.5 h-3 ml-0.5 animate-pulse align-text-bottom rounded-full"
-                    style={{ background: '#ec4899' }}
-                  />
+                  <span className="inline-block w-1 h-3 ml-0.5 animate-pulse bg-zinc-400" />
                 </p>
               )}
             </motion.div>
@@ -463,22 +337,19 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.18 }}
-              className="rounded-xl border border-accent-green/25 bg-accent-green/7 px-3.5 py-2.5"
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-zinc-800 bg-zinc-900/10 px-3 py-2.5"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={12} className="text-accent-green" />
-                  <p className="text-[11px] font-semibold text-accent-green">Pipeline complete</p>
-                </div>
-                <div className="flex items-center gap-3 font-mono text-[10px] text-text-muted">
+              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                <span className="font-semibold text-zinc-300">Pipeline execution ready</span>
+                <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <Hash size={9} />
+                    <Hash size={10} />
                     {sources.length} sources
                   </span>
                   {processingTime && (
                     <span className="flex items-center gap-1">
-                      <Clock size={9} />
+                      <Clock size={10} />
                       {processingTime.toFixed(2)}s
                     </span>
                   )}
@@ -494,86 +365,79 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.18 }}
-              className="rounded-xl border border-red-500/25 bg-red-500/7 px-3.5 py-2.5"
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5"
             >
-              <div className="flex items-center gap-2">
-                <AlertCircle size={12} className="text-red-400" />
-                <p className="text-[11px] font-medium text-red-400">Pipeline error — please retry</p>
-              </div>
+              <p className="text-[10px] font-mono text-red-400">
+                Pipeline execution error &middot; reset UI and retry
+              </p>
+            </motion.div>
+          )}
+
+          {stage === 'idle' && (
+            <motion.div
+              key="idle-detail"
+              variants={DETAIL_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.15 }}
+              className="rounded-lg border border-zinc-900 bg-zinc-950 px-3 py-2.5 text-center"
+            >
+              <p className="text-[10px] font-mono text-zinc-650">Awaiting user query parameters...</p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Metrics row */}
-      <div className="grid grid-cols-3 gap-2 px-4 pb-3 shrink-0">
+      {/* Metrics Row */}
+      <div className="grid grid-cols-3 gap-2 px-4 py-3 shrink-0 bg-[#09090b]/10">
         {[
-          { label: 'Stage', value: stage, mono: false },
-          { label: 'Sources', value: String(sources.length), mono: true },
-          { label: 'Latency', value: processingTime ? `${processingTime.toFixed(2)}s` : '—', mono: true },
-        ].map(({ label, value, mono }) => (
-          <div key={label} className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-2.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#71717a]">{label}</p>
-            <p
-              className={clsx(
-                'mt-1.5 text-xs font-semibold capitalize text-white',
-                mono && 'font-mono text-[11px]',
-              )}
-            >
-              {value}
-            </p>
+          { label: 'Latency', value: processingTime ? `${processingTime.toFixed(2)}s` : '—' },
+          { label: 'Sources', value: String(sources.length) },
+          { label: 'Stage', value: stage },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-3 py-2">
+            <p className="text-[9px] font-mono uppercase tracking-wider text-zinc-500">{label}</p>
+            <p className="mt-1 text-xs font-mono font-semibold text-zinc-300 truncate capitalize">{value}</p>
           </div>
         ))}
       </div>
 
       {/* Sources list */}
-      <AnimatePresence>
-        {sources.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex-1 overflow-y-auto px-4 pb-4 min-h-0"
-          >
-            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.22em] text-[#71717a]">
-              Retrieved Sources
-            </p>
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+        {sources.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-[9px] font-mono uppercase tracking-wider text-zinc-500 mb-3">Retrieved candidate segments</p>
             <div className="space-y-1.5">
               {sources.map((s, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3 rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-2"
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="flex items-center gap-3 rounded-lg border border-zinc-850 bg-zinc-950/30 px-3 py-2 hover:border-zinc-800 transition-colors"
                 >
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-orange-500/10 border border-orange-500/20">
-                    <span className="font-mono text-[9px] font-bold text-orange-500">{i + 1}</span>
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-900 border border-zinc-800">
+                    <span className="font-mono text-[9px] text-zinc-400">{i + 1}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-white">{s.original_name}</p>
-                    <p className="line-clamp-1 text-[10px] text-[#71717a]">{s.text?.slice(0, 65)}…</p>
+                    <p className="truncate text-xs font-semibold text-zinc-200">{s.original_name}</p>
+                    <p className="line-clamp-1 text-[10px] text-zinc-500 mt-0.5 leading-relaxed">{s.text}</p>
                   </div>
-                  <div
-                    className="shrink-0 font-mono text-[10px] font-bold"
-                    style={{
-                      color:
-                        s.score > 0.8
-                          ? '#10b981'
-                          : s.score > 0.6
-                          ? '#f59e0b'
-                          : '#71717a',
-                    }}
-                  >
+                  <div className="shrink-0 font-mono text-[10px] text-zinc-400">
                     {(s.score * 100).toFixed(0)}%
                   </div>
                 </motion.div>
               ))}
             </div>
-          </motion.div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full py-8 text-center">
+            <p className="text-[10px] font-mono text-zinc-650">No vector source candidates loaded</p>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
