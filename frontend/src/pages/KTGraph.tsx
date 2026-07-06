@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu,
   Brain,
@@ -14,7 +15,9 @@ import {
   Eye,
   Info,
   ChevronRight,
-  Maximize2
+  Maximize2,
+  Minimize2,
+  X
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { systemApi, queryApi, documentsApi } from '../services/api';
@@ -44,6 +47,7 @@ interface GraphEdge {
 }
 
 export function KTGraph() {
+  const pageRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -54,6 +58,54 @@ export function KTGraph() {
   const [rotationSpeed, setRotationSpeed] = useState<number>(0.2);
   const [showStars, setShowStars] = useState<boolean>(true);
   const [zoomLevel, setZoomLevel] = useState<number>(50);
+  const [showLeftPanel, setShowLeftPanel] = useState<boolean>(true);
+  const [showRightPanel, setShowRightPanel] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  const toggleFullscreen = () => {
+    if (!pageRef.current) return;
+    if (!document.fullscreenElement) {
+      pageRef.current.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(err => {
+        console.error("Error attempting to enable fullscreen:", err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch(err => {
+        console.error("Error exiting fullscreen:", err);
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile) {
+        setShowLeftPanel(false);
+        setShowRightPanel(false);
+      } else {
+        setShowLeftPanel(true);
+        setShowRightPanel(true);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // API Queries to seed the graph
   const { data: stats } = useQuery({
@@ -617,136 +669,215 @@ export function KTGraph() {
   const IconComponent = selectedNode ? getNodeIcon(selectedNode.type) : Cpu;
 
   return (
-    <div className="flex h-[calc(100vh-65px)] overflow-hidden bg-black text-slate-100 font-sans relative">
+    <div ref={pageRef} className="flex h-[calc(100vh-65px)] w-full overflow-hidden bg-black text-slate-100 font-sans relative">
       
       {/* ── Background Glow Overlay ── */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-950/20 via-black to-black pointer-events-none z-0" />
       
-      {/* ── Left Sidebar: Floating Interactive Settings ── */}
-      <div className="absolute left-6 top-6 bottom-6 w-[320px] flex flex-col gap-5 z-10 pointer-events-none">
+      {/* ── Floating Controls Toolbar ── */}
+      <div className="absolute top-6 left-6 z-20 pointer-events-auto flex gap-2">
+        <button
+          onClick={() => setShowLeftPanel(!showLeftPanel)}
+          className={clsx(
+            "p-3 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-center shadow-lg backdrop-blur-xl",
+            showLeftPanel
+              ? "bg-orange-500/10 border-orange-500/30 text-orange-500"
+              : "bg-[#09090b]/80 border-white/5 text-[#8b8b9f] hover:text-white hover:border-white/10"
+          )}
+          title="Toggle Controls Panel"
+        >
+          <Filter size={16} />
+        </button>
         
-        {/* Memory Type filter (Glassmorphic) */}
-        <div className="pointer-events-auto rounded-2xl border border-white/5 bg-[#09090b]/80 backdrop-blur-xl p-5 shadow-2xl shadow-black/90 flex flex-col gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#71717a] uppercase tracking-wider">
-            <Filter size={14} className="text-orange-500" />
-            <span>Filter Memory Nodes</span>
-          </div>
+        {selectedNode && (
+          <button
+            onClick={() => setShowRightPanel(!showRightPanel)}
+            className={clsx(
+              "p-3 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-center shadow-lg backdrop-blur-xl",
+              showRightPanel
+                ? "bg-orange-500/10 border-orange-500/30 text-orange-500"
+                : "bg-[#09090b]/80 border-white/5 text-[#8b8b9f] hover:text-white hover:border-white/10"
+            )}
+            title="Toggle Node Inspector"
+          >
+            <Info size={16} />
+          </button>
+        )}
 
-          <div className="space-y-1">
-            {[
-              { id: 'all', label: 'All Memory Layers' },
-              { id: 'pillars', label: 'Primary Pillars Only' },
-              { id: 'parametric', label: 'Parametric Memory' },
-              { id: 'external', label: 'External (Pinecone)' },
-              { id: 'episodic', label: 'Episodic (Chat DB)' },
-              { id: 'procedural', label: 'Procedural Rules' },
-              { id: 'working', label: 'Working Context' }
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilterType(f.id)}
-                className={clsx(
-                  "w-full text-left px-3 py-2 text-xs font-medium rounded-xl border transition-all duration-200",
-                  filterType === f.id
-                    ? "bg-orange-500/10 border-orange-500/30 text-white shadow-lg shadow-orange-500/5"
-                    : "bg-transparent border-transparent text-[#8b8b9f] hover:bg-white/5 hover:text-white"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            lookAtTargetRef.current.set(0, 0, 0);
+          }}
+          className="p-3 rounded-xl border bg-[#09090b]/80 border-white/5 text-[#8b8b9f] hover:text-white hover:border-white/10 transition-all duration-200 cursor-pointer flex items-center justify-center shadow-lg backdrop-blur-xl"
+          title="Recenter Camera Target"
+        >
+          <Eye size={16} />
+        </button>
 
-        {/* Dynamic Simulation Tweak Controls */}
-        <div className="pointer-events-auto rounded-2xl border border-white/5 bg-[#09090b]/80 backdrop-blur-xl p-5 shadow-2xl shadow-black/90 flex flex-col gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#71717a] uppercase tracking-wider">
-            <Settings size={14} className="text-orange-500" />
-            <span>Simulation Parameters</span>
-          </div>
-
-          <div className="space-y-4">
-            {/* Speed */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-[#8b8b9f]">
-                <span>Orbital Speed</span>
-                <span className="text-white font-semibold">{rotationSpeed}x</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={rotationSpeed}
-                onChange={(e) => setRotationSpeed(parseFloat(e.target.value))}
-                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
-              />
-            </div>
-
-            {/* Zoom */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-[#8b8b9f]">
-                <span>Distance Factor</span>
-                <span className="text-white font-semibold">{zoomLevel}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={zoomLevel}
-                onChange={(e) => setZoomLevel(parseInt(e.target.value))}
-                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
-              />
-            </div>
-
-            {/* Toggle Ambient Stars */}
-            <button
-              onClick={() => setShowStars(!showStars)}
-              className={clsx(
-                "w-full flex items-center justify-between text-xs font-medium px-3 py-2.5 rounded-xl border transition-all duration-200",
-                showStars 
-                  ? "bg-white/5 border-white/10 text-white" 
-                  : "bg-transparent border-transparent text-[#8b8b9f] hover:bg-white/5"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Eye size={13} className="text-orange-500" />
-                <span>Ambient Stars</span>
-              </div>
-              <span className="text-[10px] font-bold text-orange-500 uppercase">{showStars ? 'Active' : 'Muted'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* System Node Indicator */}
-        <div className="pointer-events-auto rounded-2xl border border-white/5 bg-[#09090b]/80 backdrop-blur-xl p-4 shadow-2xl shadow-black/90 mt-auto">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-xs font-bold text-orange-500">
-              3D
-            </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-bold text-white truncate">Perspective View</h4>
-              <p className="text-[10px] text-[#71717a] truncate">Drag mouse to orbit. Hover nodes to view.</p>
-            </div>
-          </div>
-        </div>
-
+        <button
+          onClick={toggleFullscreen}
+          className={clsx(
+            "p-3 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-center shadow-lg backdrop-blur-xl",
+            isFullscreen
+              ? "bg-orange-500/10 border-orange-500/30 text-orange-500"
+              : "bg-[#09090b]/80 border-white/5 text-[#8b8b9f] hover:text-white hover:border-white/10"
+          )}
+          title="Toggle Fullscreen Mode"
+        >
+          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
       </div>
+
+      {/* ── Left Sidebar: Floating Interactive Settings ── */}
+      <AnimatePresence>
+        {showLeftPanel && (
+          <motion.div
+            initial={{ x: -340, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -340, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className={clsx(
+              "absolute left-6 top-20 bottom-6 w-[310px] flex flex-col gap-4 z-10 pointer-events-none",
+              isMobile && "top-20 bottom-20 w-[calc(100vw-48px)] max-w-[320px]"
+            )}
+          >
+            {/* Memory Type filter (Glassmorphic) */}
+            <div className="pointer-events-auto rounded-2xl border border-white/5 bg-[#09090b]/85 backdrop-blur-xl p-5 shadow-2xl shadow-black/90 flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                  <Filter size={12} className="text-orange-500" />
+                  <span>Filter Memory Nodes</span>
+                </div>
+                {isMobile && (
+                  <button onClick={() => setShowLeftPanel(false)} className="pointer-events-auto text-zinc-500 hover:text-white cursor-pointer">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1 max-h-[220px] overflow-y-auto no-scrollbar">
+                {[
+                  { id: 'all', label: 'All Memory Layers' },
+                  { id: 'pillars', label: 'Primary Pillars Only' },
+                  { id: 'parametric', label: 'Parametric Memory' },
+                  { id: 'external', label: 'External (Pinecone)' },
+                  { id: 'episodic', label: 'Episodic (Chat DB)' },
+                  { id: 'procedural', label: 'Procedural Rules' },
+                  { id: 'working', label: 'Working Context' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilterType(f.id)}
+                    className={clsx(
+                      "w-full text-left px-3 py-2 text-xs font-medium rounded-xl border transition-all duration-200 cursor-pointer",
+                      filterType === f.id
+                        ? "bg-orange-500/10 border-orange-500/30 text-white shadow-lg shadow-orange-500/5"
+                        : "bg-transparent border-transparent text-[#8b8b9f] hover:bg-white/5 hover:text-white"
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dynamic Simulation Tweak Controls */}
+            <div className="pointer-events-auto rounded-2xl border border-white/5 bg-[#09090b]/85 backdrop-blur-xl p-5 shadow-2xl shadow-black/90 flex flex-col gap-4">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                <Settings size={12} className="text-orange-500" />
+                <span>Simulation Parameters</span>
+              </div>
+
+              <div className="space-y-4">
+                {/* Speed */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-[#8b8b9f]">
+                    <span>Orbital Speed</span>
+                    <span className="text-white font-semibold">{rotationSpeed}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={rotationSpeed}
+                    onChange={(e) => setRotationSpeed(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500 pointer-events-auto"
+                  />
+                </div>
+
+                {/* Zoom */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-[#8b8b9f]">
+                    <span>Distance Factor</span>
+                    <span className="text-white font-semibold">{zoomLevel}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={zoomLevel}
+                    onChange={(e) => setZoomLevel(parseInt(e.target.value))}
+                    className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500 pointer-events-auto"
+                  />
+                </div>
+
+                {/* Toggle Ambient Stars */}
+                <button
+                  onClick={() => setShowStars(!showStars)}
+                  className={clsx(
+                    "w-full flex items-center justify-between text-xs font-medium px-3 py-2 rounded-xl border transition-all duration-200 cursor-pointer pointer-events-auto",
+                    showStars 
+                      ? "bg-white/5 border-white/10 text-white" 
+                      : "bg-transparent border-transparent text-[#8b8b9f] hover:bg-white/5"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Eye size={13} className="text-orange-500" />
+                    <span>Ambient Stars</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-orange-500 uppercase">{showStars ? 'Active' : 'Muted'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* System Node Indicator */}
+            {!isMobile && (
+              <div className="pointer-events-auto rounded-2xl border border-white/5 bg-[#09090b]/85 backdrop-blur-xl p-4 shadow-2xl shadow-black/90 mt-auto">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-xs font-bold text-orange-500">
+                    3D
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs font-bold text-white truncate">Perspective View</h4>
+                    <p className="text-[10px] text-[#71717a] truncate">Drag mouse to orbit. Scroll to zoom.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Main Canvas Viewport ── */}
       <div ref={containerRef} className="flex-1 h-full w-full relative z-0">
         <canvas ref={canvasRef} className="h-full w-full block cursor-grab active:cursor-grabbing" />
         
         {/* Floating instructions layer */}
-        <div className="absolute top-6 left-[340px] pointer-events-none bg-black/40 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-white/5 text-[10px] text-[#71717a] flex items-center gap-1.5">
-          <Info size={11} className="text-orange-500" />
-          <span>Left-click: Select node | Click + Drag: Rotate | Scroll: Zoom</span>
-        </div>
+        {!isMobile && (
+          <div className="absolute top-6 left-[210px] pointer-events-none bg-black/40 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-white/5 text-[10px] text-[#71717a] flex items-center gap-1.5">
+            <Info size={11} className="text-orange-500" />
+            <span>Left-click: Select | Drag: Rotate | Scroll: Zoom</span>
+          </div>
+        )}
 
-        {/* Floating Hover Card (follows hover) */}
+        {/* Floating Hover Card */}
         {hoveredNode && (
           <div 
-            className="absolute bottom-28 left-[340px] pointer-events-none bg-zinc-950/90 border border-orange-500/20 backdrop-blur-xl px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-fade-in animate-duration-150"
+            className={clsx(
+              "absolute pointer-events-none bg-zinc-950/90 border border-orange-500/20 backdrop-blur-xl px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3",
+              isMobile ? "bottom-6 left-6 right-6" : "bottom-6 left-6"
+            )}
           >
             <div 
               className="h-8 w-8 rounded-lg border flex items-center justify-center text-white shadow-md shrink-0"
@@ -768,103 +899,121 @@ export function KTGraph() {
       </div>
 
       {/* ── Right Sidebar: Memory Node Details Inspector ── */}
-      {selectedNode && (
-        <div className="w-[380px] border-l border-zinc-900 bg-[#09090b]/90 backdrop-blur-xl p-6 flex flex-col gap-6 relative z-10 shadow-2xl shadow-black/80 h-full overflow-y-auto no-scrollbar">
-          
-          {/* Header */}
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
-              Node Inspector
-            </span>
-            <div className="flex items-center gap-3 mt-1">
-              <div 
-                className="h-10 w-10 rounded-xl border flex items-center justify-center text-white shrink-0"
-                style={{ backgroundColor: `${selectedNode.color}15`, borderColor: selectedNode.color }}
-              >
-                <IconComponent size={18} style={{ color: selectedNode.color }} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-base font-bold text-white truncate leading-tight">
-                  {selectedNode.label}
-                </h3>
-                <span className="text-[9px] uppercase tracking-wider font-extrabold mt-0.5 block" style={{ color: selectedNode.color }}>
-                  {selectedNode.type} memory layer
+      <AnimatePresence>
+        {selectedNode && showRightPanel && (
+          <motion.div
+            initial={{ x: 400, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 400, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className={clsx(
+              "absolute right-6 top-6 bottom-6 w-[360px] rounded-2xl border border-white/5 bg-[#09090b]/85 backdrop-blur-xl p-6 flex flex-col gap-5 z-20 shadow-2xl shadow-black/90 overflow-y-auto no-scrollbar",
+              isMobile && "top-20 bottom-20 w-[calc(100vw-48px)] max-w-[360px]"
+            )}
+          >
+            {/* Header */}
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-start">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-orange-500">
+                  Node Inspector
                 </span>
+                <button
+                  onClick={() => setShowRightPanel(false)}
+                  className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                  title="Close Inspector"
+                >
+                  <X size={15} />
+                </button>
               </div>
-            </div>
-          </div>
-
-          <hr className="border-zinc-900" />
-
-          {/* Description */}
-          <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
-              Functional Description
-            </span>
-            <p className="text-xs text-[#8b8b9f] leading-relaxed">
-              {selectedNode.description}
-            </p>
-          </div>
-
-          {/* Meta Details List */}
-          <div className="flex flex-col gap-3">
-            <span className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
-              Metadata Properties
-            </span>
-
-            <div className="bg-[#0f0f13] border border-white/5 rounded-xl p-4 space-y-3">
-              {Object.entries(selectedNode.metadata).map(([key, val]) => (
-                <div key={key} className="flex justify-between items-center text-xs">
-                  <span className="text-[#52525b] font-medium">{key}</span>
-                  <span className="text-slate-100 font-bold">{val}</span>
+              <div className="flex items-center gap-3 mt-1">
+                <div 
+                  className="h-10 w-10 rounded-xl border flex items-center justify-center text-white shrink-0"
+                  style={{ backgroundColor: `${selectedNode.color}15`, borderColor: selectedNode.color }}
+                >
+                  <IconComponent size={18} style={{ color: selectedNode.color }} />
                 </div>
-              ))}
-              <div className="flex justify-between items-center text-xs pt-1 border-t border-zinc-900">
-                <span className="text-[#52525b] font-medium">Node ID</span>
-                <code className="text-[10px] text-zinc-500 font-mono select-all truncate max-w-[150px]" title={selectedNode.id}>
-                  {selectedNode.id}
-                </code>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-white truncate leading-tight">
+                    {selectedNode.label}
+                  </h3>
+                  <span className="text-[9px] uppercase tracking-wider font-extrabold mt-0.5 block" style={{ color: selectedNode.color }}>
+                    {selectedNode.type}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Connection List */}
-          <div className="flex flex-col gap-3 mt-auto">
-            <span className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
-              Network Connections
-            </span>
+            <hr className="border-zinc-900" />
 
-            <div className="space-y-1.5">
-              {graphData.edges
-                .filter(e => e.source === selectedNode.id || e.target === selectedNode.id)
-                .map((edge, idx) => {
-                  const targetId = edge.source === selectedNode.id ? edge.target : edge.source;
-                  const targetNode = graphData.nodes.find(n => n.id === targetId);
-
-                  if (!targetNode) return null;
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedNode(targetNode);
-                        lookAtTargetRef.current.set(targetNode.x, targetNode.y, targetNode.z);
-                      }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl bg-zinc-950/50 hover:bg-[#121216] border border-zinc-900 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <LinkIcon size={12} className="text-[#71717a]" />
-                        <span className="text-[#8b8b9f] font-medium truncate max-w-[200px]">{targetNode.label}</span>
-                      </div>
-                      <ChevronRight size={12} className="text-zinc-600" />
-                    </button>
-                  );
-                })}
+            {/* Description */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
+                Description
+              </span>
+              <p className="text-xs text-[#8b8b9f] leading-relaxed">
+                {selectedNode.description}
+              </p>
             </div>
-          </div>
 
-        </div>
-      )}
+            {/* Meta Details List */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
+                Properties
+              </span>
+
+              <div className="bg-black/40 border border-white/5 rounded-xl p-3.5 space-y-2.5">
+                {Object.entries(selectedNode.metadata).map(([key, val]) => (
+                  <div key={key} className="flex justify-between items-center text-xs">
+                    <span className="text-[#52525b] font-medium">{key}</span>
+                    <span className="text-slate-200 font-semibold">{val}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-zinc-900">
+                  <span className="text-[#52525b] font-medium">Node ID</span>
+                  <code className="text-[10px] text-zinc-600 font-mono select-all truncate max-w-[150px]" title={selectedNode.id}>
+                    {selectedNode.id}
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            {/* Connection List */}
+            <div className="flex flex-col gap-2 mt-auto">
+              <span className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider">
+                Connections
+              </span>
+
+              <div className="space-y-1 max-h-[120px] overflow-y-auto no-scrollbar">
+                {graphData.edges
+                  .filter(e => e.source === selectedNode.id || e.target === selectedNode.id)
+                  .map((edge, idx) => {
+                    const targetId = edge.source === selectedNode.id ? edge.target : edge.source;
+                    const targetNode = graphData.nodes.find(n => n.id === targetId);
+
+                    if (!targetNode) return null;
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setSelectedNode(targetNode);
+                          lookAtTargetRef.current.set(targetNode.x, targetNode.y, targetNode.z);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-1.5 text-xs rounded-xl bg-black/40 hover:bg-[#121216] border border-zinc-900 hover:border-zinc-800 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <LinkIcon size={11} className="text-[#71717a]" />
+                          <span className="text-[#8b8b9f] font-medium truncate max-w-[180px]">{targetNode.label}</span>
+                        </div>
+                        <ChevronRight size={11} className="text-zinc-600" />
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
