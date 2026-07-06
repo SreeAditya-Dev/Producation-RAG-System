@@ -84,8 +84,8 @@ export function Dashboard() {
   const activeCount = [pipeline.stage !== 'idle', queryState.stage !== 'idle' && queryState.stage !== 'complete'].filter(Boolean).length;
   const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.qdrant === 'connected' ? 20 : 0)) : 28;
   const architectureLayers = [
-    { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-blue-500/20 to-blue-500/5' },
-    { label: 'Processing Layer', detail: 'Parsing, chunking, and embedding progression.', icon: Workflow, tone: 'from-purple-500/20 to-purple-500/5' },
+    { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-accent-primary/20 to-accent-primary/5' },
+    { label: 'Processing Layer', detail: 'Parsing, chunking, and embedding progression.', icon: Workflow, tone: 'from-accent-primary/20 to-accent-primary/5' },
     { label: 'Retrieval Layer', detail: 'Vector lookup, ranking, and grounded recall.', icon: Radar, tone: 'from-emerald-500/20 to-emerald-500/5' },
     { label: 'Response Layer', detail: 'Answer synthesis with live traceability.', icon: Zap, tone: 'from-amber-500/20 to-amber-500/5' },
   ];
@@ -457,8 +457,8 @@ export function Dashboard() {
         <div className="space-y-6">
 
           {/* ══ Row 01 · Ingestion Pipeline ══ */}
-          <div className="overflow-hidden rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.05] via-transparent to-transparent shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_8px_48px_rgba(59,130,246,0.07)]">
-            <div className="relative overflow-hidden border-b border-blue-500/15 bg-gradient-to-r from-blue-500/10 via-blue-400/5 to-transparent px-6 py-4">
+          <div className="overflow-hidden rounded-[28px] border border-accent-primary/20 bg-accent-primary/5 shadow-card">
+            <div className="relative overflow-hidden border-b border-accent-primary/15 bg-accent-primary/10 px-6 py-4">
               <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-400/8 blur-2xl" />
               <div className="relative flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -488,8 +488,8 @@ export function Dashboard() {
           </div>
 
           {/* ══ Row 02 · Query Pipeline ══ */}
-          <div className="overflow-hidden rounded-[28px] border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.05] via-transparent to-transparent shadow-[0_0_0_1px_rgba(168,85,247,0.06),0_8px_48px_rgba(168,85,247,0.07)]">
-            <div className="relative overflow-hidden border-b border-purple-500/15 bg-gradient-to-r from-purple-500/10 via-purple-400/5 to-transparent px-6 py-4">
+          <div className="overflow-hidden rounded-[28px] border border-accent-primary/20 bg-accent-primary/5 shadow-card">
+            <div className="relative overflow-hidden border-b border-accent-primary/15 bg-accent-primary/10 px-6 py-4">
               <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-purple-400/8 blur-2xl" />
               <div className="relative flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

@@ -60,7 +60,7 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={24} className="text-accent-purple animate-spin" />
+        <Loader2 size={24} className="text-accent-primary animate-spin" />
       </div>
     );
   }
@@ -94,7 +94,7 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
             >
               {/* File type icon */}
               <div className="w-9 h-9 rounded-lg bg-bg-hover border border-border flex items-center justify-center flex-shrink-0">
-                <TypeIcon size={17} className="text-accent-purple-light" />
+                <TypeIcon size={17} className="text-accent-primary" />
               </div>
 
               {/* Info */}

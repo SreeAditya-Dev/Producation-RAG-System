@@ -31,10 +31,10 @@ const STEPS: StepConfig[] = [
     sublabel: 'File intake',
     tech: 'drag + validate',
     icon: Upload,
-    color: '#3b82f6',
-    activeClass: 'step-active-blue',
-    iconBg: 'bg-blue-500/15',
-    iconText: 'text-blue-400',
+    color: '#F4831F',
+    activeClass: 'step-active',
+    iconBg: 'bg-accent-primary/15',
+    iconText: 'text-accent-primary',
   },
   {
     id: 'parsing',
@@ -42,10 +42,10 @@ const STEPS: StepConfig[] = [
     sublabel: 'Text extract',
     tech: 'pdfplumber / docx',
     icon: FileSearch,
-    color: '#a855f7',
-    activeClass: 'step-active-purple',
-    iconBg: 'bg-purple-500/15',
-    iconText: 'text-purple-400',
+    color: '#F4831F',
+    activeClass: 'step-active',
+    iconBg: 'bg-accent-primary/15',
+    iconText: 'text-accent-primary',
   },
   {
     id: 'chunking',
@@ -53,10 +53,10 @@ const STEPS: StepConfig[] = [
     sublabel: 'Segment text',
     tech: 'recursive split',
     icon: Scissors,
-    color: '#f59e0b',
-    activeClass: 'step-active-amber',
-    iconBg: 'bg-amber-500/15',
-    iconText: 'text-amber-400',
+    color: '#F4831F',
+    activeClass: 'step-active',
+    iconBg: 'bg-accent-primary/15',
+    iconText: 'text-accent-primary',
   },
   {
     id: 'embedding',
@@ -64,10 +64,10 @@ const STEPS: StepConfig[] = [
     sublabel: 'Vector encode',
     tech: 'nv-embedqa-e5-v5',
     icon: Cpu,
-    color: '#8b5cf6',
-    activeClass: 'step-active-violet',
-    iconBg: 'bg-violet-500/15',
-    iconText: 'text-violet-400',
+    color: '#F4831F',
+    activeClass: 'step-active',
+    iconBg: 'bg-accent-primary/15',
+    iconText: 'text-accent-primary',
   },
   {
     id: 'storing',
@@ -75,10 +75,10 @@ const STEPS: StepConfig[] = [
     sublabel: 'Index vectors',
     tech: 'Pinecone upsert',
     icon: Database,
-    color: '#10b981',
-    activeClass: 'step-active-emerald',
-    iconBg: 'bg-emerald-500/15',
-    iconText: 'text-emerald-400',
+    color: '#F4831F',
+    activeClass: 'step-active',
+    iconBg: 'bg-accent-primary/15',
+    iconText: 'text-accent-primary',
   },
 ];
 
@@ -154,9 +154,9 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
     <div className="glass-card overflow-hidden rounded-2xl">
       {!hideHeader && <div className="flex items-center justify-between border-b border-border/50 px-5 pb-4 pt-5">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-accent-blue/20 bg-gradient-to-br from-accent-blue/30 to-accent-purple/20">
-            <Upload size={13} className="text-accent-blue" />
-            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent-blue animate-pulse" />}
+          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-accent-primary/20 bg-accent-primary/10">
+            <Upload size={13} className="text-accent-primary" />
+            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent-primary animate-pulse" />}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-text-primary">Ingestion Pipeline</h3>
@@ -168,13 +168,13 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
 
         <div className="flex shrink-0 items-center gap-2">
           {isActive && !isDone && !isError && (
-            <span className="flex items-center gap-1.5 rounded-full border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-xs text-amber-400">
+            <span className="flex items-center gap-1.5 rounded-full border border-accent-primary/20 bg-accent-primary/10 px-2.5 py-1 text-xs text-accent-primary">
               <Loader2 size={11} className="animate-spin" />
               Running
             </span>
           )}
           {isDone && (
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-400">
+            <span className="flex items-center gap-1.5 rounded-full border border-accent-primary/20 bg-accent-primary/10 px-2.5 py-1 text-xs text-accent-primary">
               <CheckCircle2 size={11} />
               Complete
             </span>
@@ -205,7 +205,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                     className={clsx(
                       'relative flex w-full cursor-default flex-col items-center gap-2 rounded-2xl border px-2 pb-3 pt-4 transition-all duration-500',
                       isStepActive && step.activeClass,
-                      isStepDone && 'border-emerald-500/30 bg-emerald-500/5',
+                      isStepDone && 'border-accent-primary/30 bg-accent-primary/5',
                       st === 'idle' && 'border-border/60 bg-white/[0.025]',
                       st === 'error' && 'border-red-500/30 bg-red-500/5',
                     )}
@@ -235,13 +235,13 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                     <div
                       className={clsx(
                         'flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300',
-                        isStepActive ? step.iconBg : isStepDone ? 'bg-emerald-500/10' : 'bg-white/[0.04]',
+                        isStepActive ? step.iconBg : isStepDone ? 'bg-accent-primary/10' : 'bg-white/[0.04]',
                       )}
                     >
                       {isStepActive ? (
                         <Loader2 size={18} className={clsx(step.iconText, 'animate-spin')} />
                       ) : isStepDone ? (
-                        <CheckCircle2 size={18} className="text-emerald-400" />
+                        <CheckCircle2 size={18} className="text-accent-primary" />
                       ) : st === 'error' ? (
                         <AlertCircle size={18} className="text-red-400" />
                       ) : (
@@ -251,7 +251,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
 
                     {/* Label */}
                     <div className="text-center">
-                      <p className={clsx('text-xs font-semibold leading-tight', isStepActive ? 'text-text-primary' : isStepDone ? 'text-emerald-400' : 'text-text-muted')}>
+                      <p className={clsx('text-xs font-semibold leading-tight', isStepActive ? 'text-text-primary' : isStepDone ? 'text-accent-primary' : 'text-text-muted')}>
                         {step.label}
                       </p>
                       <p className="mt-0.5 text-[10px] leading-tight text-text-muted">{step.sublabel}</p>
@@ -296,28 +296,16 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
               className="overflow-hidden"
             >
-              <div className="space-y-3 rounded-xl border border-violet-500/20 bg-violet-500/8 p-4">
+              <div className="space-y-3 rounded-xl border border-accent-primary/20 bg-accent-primary/8 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-violet-300">Embedding chunks</span>
-                  <span className="text-xs font-mono text-violet-400">
+                  <span className="text-xs font-medium text-accent-primary">Embedding chunks</span>
+                  <span className="text-xs font-mono text-accent-primary">
                     {embedded_chunks} <span className="text-text-muted">/</span> {total_chunks}
                   </span>
                 </div>
                 <div className="relative h-2 overflow-hidden rounded-full bg-black/40">
-                  <div
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.1) 50%, transparent 100%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'shimmer 2s linear infinite',
-                    }}
-                  />
                   <motion.div
-                    className="absolute inset-y-0 left-0 rounded-full"
-                    style={{
-                      background: 'linear-gradient(90deg, #7c3aed, #a855f7, #8b5cf6)',
-                      boxShadow: '0 0 12px rgba(139,92,246,0.6)',
-                    }}
+                    className="absolute inset-y-0 left-0 rounded-full bg-accent-primary"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ ease: 'easeOut', duration: 0.3 }}
@@ -329,13 +317,13 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                       <motion.div
                         key={i}
                         className="h-3 w-1.5 rounded-full"
-                        style={{ background: i < Math.ceil((embedded_chunks / total_chunks) * 6) ? '#8b5cf6' : '#1e1e3a' }}
+                        style={{ background: i < Math.ceil((embedded_chunks / total_chunks) * 6) ? '#F4831F' : 'rgba(244, 131, 31, 0.2)' }}
                         animate={i === Math.ceil((embedded_chunks / total_chunks) * 6) - 1 ? { scale: [1, 1.3, 1] } : {}}
                         transition={{ duration: 0.3 }}
                       />
                     ))}
                   </div>
-                  <span className="text-xs font-mono font-bold text-violet-400">{progress.toFixed(1)}%</span>
+                  <span className="text-xs font-mono font-bold text-accent-primary">{progress.toFixed(1)}%</span>
                 </div>
               </div>
             </motion.div>
@@ -348,11 +336,11 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/8 px-4 py-3"
+              className="mt-4 flex items-center gap-3 rounded-xl border border-accent-primary/25 bg-accent-primary/8 px-4 py-3"
             >
-              <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+              <CheckCircle2 size={16} className="shrink-0 text-accent-primary" />
               <div>
-                <p className="text-xs font-semibold text-emerald-400">Ingestion complete</p>
+                <p className="text-xs font-semibold text-accent-primary">Ingestion complete</p>
                 <p className="text-xs text-text-muted">{total_chunks} chunks embedded and stored in Pinecone</p>
               </div>
             </motion.div>

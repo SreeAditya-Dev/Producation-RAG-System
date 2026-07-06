@@ -77,7 +77,7 @@ export function Documents() {
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-accent-purple to-accent-violet px-4 py-2.5 text-sm font-medium text-white"
+              className="flex items-center gap-2 rounded-2xl bg-accent-primary px-4 py-2.5 text-sm font-medium text-white"
             >
               <RotateCcw size={14} />
               Reload UI

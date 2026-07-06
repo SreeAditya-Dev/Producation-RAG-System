@@ -58,9 +58,8 @@ export function Layout() {
     <PipelineCtx.Provider value={state}>
       <div className="relative flex min-h-screen overflow-hidden bg-bg-primary">
         <div className="pointer-events-none absolute inset-0 bg-noise opacity-60" />
-        <div className="pointer-events-none absolute -left-24 top-16 h-72 w-72 rounded-full bg-accent-blue/8 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-accent-purple/12 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-accent-indigo/6 blur-3xl" />
+        {/* Minimal background effects */}
+        <div className="pointer-events-none absolute right-0 bottom-0 h-96 w-96 rounded-full bg-accent-primary/5 blur-3xl" />
 
         <div className="fixed inset-y-0 left-0 z-20 hidden lg:block">
           <Sidebar connected={state.connected} />
@@ -104,7 +103,7 @@ export function Layout() {
                 </button>
 
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent-indigo-light">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-accent-primary">
                     Control Layer
                   </p>
                   <h1 className="truncate text-lg font-semibold text-text-primary sm:text-2xl">

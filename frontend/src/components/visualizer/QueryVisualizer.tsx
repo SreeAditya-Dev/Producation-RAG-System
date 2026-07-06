@@ -40,54 +40,54 @@ const STAGES: StageNode[] = [
     label: 'Embed',
     sublabel: 'NV-EmbedQA',
     icon: Cpu,
-    color: '#a855f7',
-    rgb: '168,85,247',
-    glowClass: 'node-glow-purple',
+    color: '#F4831F',
+    rgb: '244,131,31',
+    glowClass: 'node-glow',
   },
   {
     id: 'qdrant',
     label: 'Qdrant',
     sublabel: 'HNSW Search',
     icon: Database,
-    color: '#3b82f6',
-    rgb: '59,130,246',
-    glowClass: 'node-glow-blue',
+    color: '#F4831F',
+    rgb: '244,131,31',
+    glowClass: 'node-glow',
   },
   {
     id: 'retrieve',
     label: 'Retrieve',
     sublabel: 'Top-K Chunks',
     icon: Layers,
-    color: '#f59e0b',
-    rgb: '245,158,11',
-    glowClass: 'node-glow-amber',
+    color: '#F4831F',
+    rgb: '244,131,31',
+    glowClass: 'node-glow',
   },
   {
     id: 'rerank',
     label: 'Rerank',
     sublabel: 'NIM Reranker',
     icon: SlidersHorizontal,
-    color: '#f97316',
-    rgb: '249,115,22',
-    glowClass: 'node-glow-orange',
+    color: '#F4831F',
+    rgb: '244,131,31',
+    glowClass: 'node-glow',
   },
   {
     id: 'llm',
     label: 'LLM',
     sublabel: 'Llama-3.3-70B',
     icon: Sparkles,
-    color: '#ec4899',
-    rgb: '236,72,153',
-    glowClass: 'node-glow-pink',
+    color: '#F4831F',
+    rgb: '244,131,31',
+    glowClass: 'node-glow',
   },
   {
     id: 'answer',
     label: 'Answer',
     sublabel: 'Response Ready',
     icon: CheckCircle2,
-    color: '#10b981',
-    rgb: '16,185,129',
-    glowClass: 'node-glow-emerald',
+    color: '#F4831F',
+    rgb: '244,131,31',
+    glowClass: 'node-glow',
   },
 ];
 
@@ -322,7 +322,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               stage === 'complete' && 'border-accent-green/30 bg-accent-green/10 text-accent-green',
               stage === 'error' && 'border-red-500/30 bg-red-500/10 text-red-400',
               ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
-                'border-accent-purple/30 bg-accent-purple/10 text-accent-purple-light',
+                'border-accent-primary/30 bg-accent-primary/10 text-accent-primary',
             )}
           >
             {stage}
@@ -364,14 +364,14 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               exit="exit"
               transition={{ duration: 0.18 }}
               className="rounded-xl border px-3.5 py-2.5"
-              style={{ borderColor: 'rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.07)' }}
+              style={{ borderColor: 'rgba(244,131,31,0.3)', background: 'rgba(244,131,31,0.07)' }}
             >
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#a855f7' }} />
-                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#a855f7' }} />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: '#F4831F' }} />
+                  <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: '#F4831F' }} />
                 </span>
-                <p className="text-[11px] font-medium" style={{ color: '#a855f7' }}>
+                <p className="text-[11px] font-medium" style={{ color: '#F4831F' }}>
                   Vectorizing query · NVIDIA NV-EmbedQA-E5-v5
                 </p>
               </div>
@@ -548,8 +548,8 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
                   transition={{ delay: i * 0.05 }}
                   className="flex items-center gap-3 rounded-xl border border-border bg-bg-hover px-3 py-2"
                 >
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-accent-purple/20">
-                    <span className="font-mono text-[9px] font-bold text-accent-purple-light">{i + 1}</span>
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-accent-primary/20">
+                    <span className="font-mono text-[9px] font-bold text-accent-primary">{i + 1}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-medium text-text-secondary">{s.original_name}</p>

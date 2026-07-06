@@ -61,8 +61,8 @@ export function Visualizer() {
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             {[
-              { label: 'Documents', sub: 'PDF, DOCX, TXT, MD', color: 'from-blue-500/20 to-blue-600/20 border-blue-500/30' },
-              { label: 'FastAPI', sub: 'Python backend', color: 'from-accent-purple/20 to-accent-purple/10 border-accent-purple/30', arrow: true },
+              { label: 'Documents', sub: 'PDF, DOCX, TXT, MD', color: 'from-accent-primary/20 to-accent-primary/20 border-accent-primary/30' },
+              { label: 'FastAPI', sub: 'Python backend', color: 'from-accent-primary/20 to-accent-primary/10 border-accent-primary/30', arrow: true },
               { label: 'NVIDIA NIM', sub: 'Llama-3.3-70B\nnv-embedqa-e5-v5', color: 'from-green-500/20 to-green-600/20 border-green-500/30', arrow: true },
               { label: 'Pinecone', sub: 'Vector DB\n1024-dim cosine', color: 'from-accent-blue/20 to-accent-blue/10 border-accent-blue/30', arrow: true },
               { label: 'React UI', sub: 'TypeScript\nTailwindCSS', color: 'from-orange-500/20 to-orange-600/20 border-orange-500/30', arrow: true },
@@ -85,10 +85,10 @@ export function Visualizer() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="overflow-hidden rounded-[28px] border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.05] via-transparent to-transparent shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_8px_48px_rgba(59,130,246,0.08)]"
+          className="overflow-hidden rounded-[28px] border border-accent-primary/20 bg-accent-primary/5 shadow-card"
         >
           {/* Banner header */}
-          <div className="relative overflow-hidden border-b border-blue-500/15 bg-gradient-to-r from-blue-500/10 via-blue-400/5 to-transparent px-6 py-5">
+          <div className="relative overflow-hidden border-b border-accent-primary/15 bg-accent-primary/10 px-6 py-5">
             <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-400/8 blur-2xl" />
             <div className="relative flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -125,7 +125,7 @@ export function Visualizer() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="overflow-hidden rounded-[28px] border border-purple-500/20 bg-gradient-to-br from-purple-500/[0.05] via-transparent to-transparent shadow-[0_0_0_1px_rgba(168,85,247,0.06),0_8px_48px_rgba(168,85,247,0.08)]"
+          className="overflow-hidden rounded-[28px] border border-accent-primary/20 bg-accent-primary/5 shadow-card"
         >
           {/* Banner header */}
           <div className="relative overflow-hidden border-b border-purple-500/15 bg-gradient-to-r from-purple-500/10 via-purple-400/5 to-transparent px-6 py-5">

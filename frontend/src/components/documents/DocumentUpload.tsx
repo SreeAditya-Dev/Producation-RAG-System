@@ -65,12 +65,12 @@ export function DocumentUpload({ onUploaded }: Props) {
         className={clsx(
           'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
           isDragActive
-            ? 'border-accent-purple bg-accent-purple/10 scale-[1.01]'
+            ? 'border-accent-primary bg-accent-primary/10 scale-[1.01]'
             : state === 'success'
             ? 'border-accent-green/50 bg-accent-green/5'
             : state === 'error'
             ? 'border-accent-red/50 bg-accent-red/5'
-            : 'border-border hover:border-accent-purple/60 hover:bg-bg-hover',
+            : 'border-border hover:border-accent-primary/60 hover:bg-bg-hover',
           state === 'uploading' && 'pointer-events-none'
         )}
       >
@@ -86,7 +86,7 @@ export function DocumentUpload({ onUploaded }: Props) {
               className="space-y-3"
             >
               <div className="w-14 h-14 mx-auto rounded-xl bg-bg-card border border-border flex items-center justify-center">
-                <Upload size={24} className={isDragActive ? 'text-accent-purple' : 'text-text-muted'} />
+                <Upload size={24} className={isDragActive ? 'text-accent-primary' : 'text-text-muted'} />
               </div>
               <div>
                 <p className="text-text-primary font-medium text-sm">
@@ -105,14 +105,14 @@ export function DocumentUpload({ onUploaded }: Props) {
               exit={{ opacity: 0 }}
               className="space-y-4"
             >
-              <Loader2 size={28} className="mx-auto text-accent-purple animate-spin" />
+              <Loader2 size={28} className="mx-auto text-accent-primary animate-spin" />
               <div>
                 <p className="text-text-primary text-sm font-medium truncate max-w-xs mx-auto">{fileName}</p>
                 <p className="text-text-muted text-xs mt-1">Uploading…</p>
               </div>
               <div className="w-full bg-border rounded-full h-1.5">
                 <motion.div
-                  className="h-1.5 rounded-full bg-gradient-to-r from-accent-purple to-accent-indigo"
+                  className="h-1.5 rounded-full bg-accent-primary"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ ease: 'linear' }}
