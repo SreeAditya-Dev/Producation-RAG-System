@@ -14,7 +14,8 @@ from app.services.reranker_service import reranker_service
 from app.services.llm_service import llm_service
 from app.ws_manager import manager
 from app.services.query_translator import QueryTranslator
-from app.services.diversity_filter import MaximalMarginalRelevanceFilter
+from app.services.query_decomposer import query_decomposer
+from app.services.context_compressor import context_compressor
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +40,90 @@ def _faithfulness(sources: List[Dict]) -> Optional[float]:
     return round(1.0 / (1.0 + math.exp(-mean_logit)), 4)
 
 
+async def _embed_and_retrieve_subqueries(
+    translated_queries: List[str],
+    top_k: int,
+    qm: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Embed sub-queries in parallel and retrieve candidate matches from Pinecone."""
+    async def _retrieve_single(t_q: str) -> List[Dict[str, Any]]:
+        t = time.perf_counter()
+        q_vector, embed_tokens = await asyncio.get_event_loop().run_in_executor(
+            None, embedding_service.embed_query_tracked, t_q
+        )
+        qm["embed_ms"] = qm.get("embed_ms", 0.0) + _ms(t)
+        qm["embed_tokens"] = qm.get("embed_tokens", 0) + embed_tokens
+        
+        candidates_k = max(20, top_k * settings.reranker_candidates_multiplier)
+        t = time.perf_counter()
+        raw_matches = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: pinecone_service.query(
+                vector=q_vector,
+                top_k=candidates_k,
+                include_values=False,
+            ),
+        )
+        qm["retrieve_ms"] = qm.get("retrieve_ms", 0.0) + _ms(t)
+        return raw_matches
+
+    tasks = [_retrieve_single(q) for q in translated_queries]
+    retrieval_results = await asyncio.gather(*tasks)
+
+    # Merge and deduplicate candidates by unique vector ID
+    seen_chunk_ids = set()
+    merged_candidates = []
+    for raw_matches in retrieval_results:
+        for m in raw_matches:
+            chunk_id = m["id"]
+            if chunk_id not in seen_chunk_ids:
+                seen_chunk_ids.add(chunk_id)
+                merged_candidates.append(m)
+    return merged_candidates
+
+
+def _verify_active_documents(db_session, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Verify document active status in the database to ensure zero stale chunks."""
+    from app.database import Document
+    active_docs = {
+        doc_id[0] for doc_id in db_session.query(Document.id).filter(Document.status == "ready").all()
+    }
+    
+    filtered = [
+        m for m in candidates
+        if m["score"] >= 0.25 and m["metadata"].get("doc_id") in active_docs
+    ]
+    
+    # Fallback to keep at least some chunks from ready documents if filtered is empty
+    if not filtered and candidates:
+        filtered = [
+            m for m in candidates
+            if m["metadata"].get("doc_id") in active_docs
+        ][:5]
+
+    return [
+        {
+            "doc_id": m["metadata"].get("doc_id", ""),
+            "original_name": m["metadata"].get("original_name", "Unknown"),
+            "chunk_index": m["metadata"].get("chunk_index", 0),
+            "text": m["metadata"].get("text", ""),
+            "score": round(m["score"], 4),
+            "file_type": m["metadata"].get("file_type", ""),
+            "char_start": m["metadata"].get("char_start"),
+            "char_end": m["metadata"].get("char_end"),
+            "boundary_level": m["metadata"].get("boundary_level"),
+        }
+        for m in filtered
+    ]
+
+
 async def retrieve_and_generate(
     question: str,
     top_k: int,
     db_session,
 ) -> Dict[str, Any]:
     """
-    Full RAG pipeline: embed → HNSW search → rerank → generate.
+    Full RAG pipeline: Decompose → Parallel Embed/Retrieve → DB Filter → Rerank → Compress → Generate.
     Tracks per-stage latency, token usage, retrieval scores, and faithfulness.
     Persists both successful AND failed queries to QueryHistory + QueryMetrics.
     """
@@ -58,83 +136,40 @@ async def retrieve_and_generate(
     async def emit(event: str, data: Any = None):
         await manager.broadcast(event=event, data=data, query_id=query_id)
 
-    # Accumulated metrics — written on both success and failure
+    # Accumulated metrics
     qm: Dict[str, Any] = {"status": "success", "failure_stage": None, "error_type": None}
 
     try:
         await emit("query_started", {"query_id": query_id, "question": question})
 
-        # ── 1. Translate Query (Code-mixed handling) ──────────────────────────
+        # ── 1. Decompose Query (Multi-document support) ──────────────────────────
         await emit("query_embedding_started", {"question": question})
+        sub_queries = await query_decomposer.decompose(question)
+        if not sub_queries:
+            sub_queries = [question]
+
+        # ── 2. Translate Sub-queries ──────────────────────────────────────────
         translator = QueryTranslator()
-        search_query = await translator.translate_query(question)
-        
-        # ── 2. Embed translated query ─────────────────────────────────────────
-        t = time.perf_counter()
-        query_vector, embed_tokens = await asyncio.get_event_loop().run_in_executor(
-            None, embedding_service.embed_query_tracked, search_query
-        )
-        qm["embed_ms"] = _ms(t)
-        qm["embed_tokens"] = embed_tokens
-        await emit("query_embedded", {
-            "dimension": len(query_vector),
-            "elapsed_ms": qm["embed_ms"],
-            "tokens": embed_tokens,
-        })
+        translated_queries = []
+        for sq in sub_queries:
+            t_sq = await translator.translate_query(sq)
+            translated_queries.append(t_sq)
 
-        # ── 3. HNSW search (over-fetch with vectors) ──────────────────────────
+        # ── 3. Embed & Retrieve in Parallel ──────────────────────────────────
+        raw_candidates = await _embed_and_retrieve_subqueries(translated_queries, top_k, qm)
+
+        # ── 4. Verify Active Documents (No stale chunks) ──────────────────────
         current_stage = "retrieve"
-        candidates_k = top_k * settings.reranker_candidates_multiplier
-        await emit("retrieval_started", {"top_k": candidates_k})
-        t = time.perf_counter()
+        candidates = _verify_active_documents(db_session, raw_candidates)
 
-        raw_matches = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: pinecone_service.query(
-                vector=query_vector,
-                top_k=candidates_k,
-                include_values=True,
-            ),
-        )
-        qm["retrieve_ms"] = _ms(t)
-
-        filtered = [m for m in raw_matches if m["score"] >= 0.3]
-        if not filtered and raw_matches:
-            filtered = raw_matches[:3]
-
-        candidates = [
-            {
-                "doc_id": m["metadata"].get("doc_id", ""),
-                "original_name": m["metadata"].get("original_name", "Unknown"),
-                "chunk_index": m["metadata"].get("chunk_index", 0),
-                "text": m["metadata"].get("text", ""),
-                "score": round(m["score"], 4),
-                "file_type": m["metadata"].get("file_type", ""),
-                "char_start": m["metadata"].get("char_start"),
-                "char_end": m["metadata"].get("char_end"),
-                "boundary_level": m["metadata"].get("boundary_level"),
-                "values": m.get("values"),
-            }
-            for m in filtered
-        ]
-
-        # ── 4. Diversity Filter (MMR) ─────────────────────────────────────────
-        mmr_filter = MaximalMarginalRelevanceFilter(lambda_mult=0.5)
-        # Select up to top_k * 2 diverse candidates from the raw pool
-        diverse_candidates = mmr_filter.filter_candidates(
-            query_vector,
-            candidates,
-            top_k * 2,
-        )
-
-        scores = [c["score"] for c in diverse_candidates]
-        qm["candidate_count"] = len(diverse_candidates)
+        qm["candidate_count"] = len(candidates)
+        scores = [c["score"] for c in candidates]
         qm["retrieval_score_mean"] = _safe_mean(scores)
         qm["retrieval_score_max"] = round(max(scores), 4) if scores else None
 
         await emit("chunks_retrieved", {
-            "count": len(diverse_candidates),
-            "elapsed_ms": qm["retrieve_ms"],
+            "count": len(candidates),
+            "elapsed_ms": qm.get("retrieve_ms", 0.0),
             "score_mean": qm["retrieval_score_mean"],
             "sources": [
                 {
@@ -142,23 +177,33 @@ async def retrieve_and_generate(
                     "score": s["score"],
                     "preview": s["text"][:100] + "..." if len(s["text"]) > 100 else s["text"],
                 }
-                for s in diverse_candidates
+                for s in candidates
             ],
         })
 
         # ── 5. Rerank ─────────────────────────────────────────────────────────
         current_stage = "rerank"
-        await emit("reranking_started", {"candidate_count": len(diverse_candidates)})
+        await emit("reranking_started", {"candidate_count": len(candidates)})
         t = time.perf_counter()
-        sources = await asyncio.get_event_loop().run_in_executor(
+        
+        # Rerank against original question to pull exact target match (e.g. chunk #12)
+        reranked_sources = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: reranker_service.rerank(search_query, diverse_candidates, top_k=top_k),
+            lambda: reranker_service.rerank(question, candidates, top_k=top_k * 2),
         )
         qm["rerank_ms"] = _ms(t)
+
+        # ── 6. Context Compression ────────────────────────────────────────────
+        # Extract only the relevant sentences to fit into the context window
+        compressed_sources = context_compressor.compress_chunks(
+            reranked_sources,
+            translated_queries,
+            max_chunk_tokens=settings.max_chunk_size // 2,
+        )
+        sources = compressed_sources[:top_k]
+
         qm["returned_count"] = len(sources)
         qm["rerank_score_top"] = sources[0].get("rerank_score") if sources else None
-
-        # Faithfulness proxy from rerank logits
         qm["faithfulness_score"] = _faithfulness(sources)
 
         await emit("reranking_completed", {
@@ -168,7 +213,7 @@ async def retrieve_and_generate(
             "faithfulness": qm["faithfulness_score"],
         })
 
-        # ── 4. LLM generation ─────────────────────────────────────────────────
+        # ── 7. LLM generation ─────────────────────────────────────────────────
         current_stage = "llm"
         await emit("generation_started", {"model": settings.llm_model})
         t = time.perf_counter()
@@ -205,7 +250,7 @@ async def retrieve_and_generate(
             },
         })
 
-        # ── 5. Persist ────────────────────────────────────────────────────────
+        # ── 8. Persist ────────────────────────────────────────────────────────
         history = QueryHistory(
             id=query_id,
             question=question,
@@ -222,7 +267,7 @@ async def retrieve_and_generate(
         logger.info(
             "Query %s: %.0f ms total | embed %.0f | retrieve %.0f | rerank %.0f | llm %.0f | faith=%.2f",
             query_id[:8],
-            qm["total_ms"], qm["embed_ms"], qm["retrieve_ms"],
+            qm["total_ms"], qm.get("embed_ms", 0), qm.get("retrieve_ms", 0),
             qm["rerank_ms"], qm["llm_ms"],
             qm["faithfulness_score"] or 0,
         )
@@ -250,7 +295,6 @@ async def retrieve_and_generate(
             "error_type": type(exc).__name__,
         })
 
-        # Persist failed query so it appears in failure stats
         try:
             history = QueryHistory(
                 id=query_id,

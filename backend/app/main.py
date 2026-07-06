@@ -121,6 +121,23 @@ async def upload_document(
     doc_id = str(uuid.uuid4())
     s3_key = f"{doc_id}.{file_type}"
     original_name = file.filename or s3_key
+
+    # Purge any existing document with same name to handle 5-minute live updates idempotently
+    existing_doc = db.query(Document).filter(Document.original_name == original_name).first()
+    if existing_doc:
+        logger.info("Found existing document '%s' (%s). Purging stale data.", original_name, existing_doc.id)
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, pinecone_service.delete_by_document, existing_doc.id
+            )
+        except Exception as exc:
+            logger.warning("Failed to delete stale Pinecone vectors for %s: %s", existing_doc.id, exc)
+        await asyncio.get_event_loop().run_in_executor(
+            None, storage_service.delete, existing_doc.filename
+        )
+        db.delete(existing_doc)
+        db.commit()
+
     content = await file.read()
     file_size = len(content)
 
