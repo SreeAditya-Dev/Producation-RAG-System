@@ -89,9 +89,9 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
       <div className="flex justify-between items-center px-4 py-3 bg-[#0c0c0f]/80 border-b border-zinc-800/80">
         <div className="flex items-center gap-2">
           <span className="flex gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
-            <span className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
-            <span className="w-2.5 h-2.5 rounded-full bg-zinc-800" />
+            <span className="w-2 h-2 rounded-full bg-zinc-800" />
+            <span className="w-2 h-2 rounded-full bg-zinc-800" />
+            <span className="w-2 h-2 rounded-full bg-zinc-800" />
           </span>
           <span className="text-zinc-400 text-[10px] ml-1.5 flex items-center gap-1.5 font-medium">
             <Code size={11} className="text-orange-500" />
@@ -100,7 +100,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
         </div>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] border border-zinc-800 bg-[#0c0c0f] text-zinc-400 hover:border-zinc-700 hover:text-white rounded-md transition-all duration-200 cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] border border-zinc-850 bg-[#0c0c0f] text-zinc-400 hover:border-zinc-750 hover:text-white rounded-md transition-all duration-200 cursor-pointer"
         >
           {copied ? (
             <>
@@ -110,7 +110,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
           ) : (
             <>
               <FileCode size={11} className="text-zinc-500" />
-              <span>Copy snippet</span>
+              <span>Copy</span>
             </>
           )}
         </button>
@@ -125,7 +125,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
           ))}
         </div>
         {/* Tokenized Output */}
-        <pre className="pl-4 text-zinc-350 select-text whitespace-pre flex-1 font-mono">
+        <pre className="pl-4 text-zinc-350 select-text whitespace-pre flex-1 font-mono text-[11.5px]">
           {tokens.map((token, i) => {
             let className = '';
             if (token.type === 'comment') className = 'text-zinc-550 italic';
@@ -135,7 +135,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
             else if (token.type === 'type') className = 'text-blue-400';
             else if (token.type === 'number') className = 'text-yellow-500/90';
             else if (token.type === 'decorator') className = 'text-violet-400';
-            else if (token.type === 'operator') className = 'text-zinc-400';
+            else if (token.type === 'operator') className = 'text-zinc-450';
             else if (token.type === 'punctuation') className = 'text-zinc-600';
             
             return (
@@ -387,48 +387,48 @@ sources = reranker_service.rerank(
   ];
 
   return (
-    <div className="px-6 py-6 mx-auto w-full max-w-[1600px] font-sans text-zinc-300 relative">
+    <div className="px-6 py-8 mx-auto w-full max-w-[1600px] font-sans text-zinc-200 relative leading-relaxed antialiased">
       {/* Visual Ambient Glows */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-500/3 rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="absolute top-[30vh] right-1/4 w-[600px] h-[600px] bg-blue-500/2 rounded-full blur-[140px] pointer-events-none -z-10" />
       
       <div className="space-y-8">
         {/* Header Section */}
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-6 backdrop-blur-md shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-8 backdrop-blur-md shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
-              <h1 className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-zinc-400">
+              <h1 className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-zinc-450">
                 System Core Specs
               </h1>
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">
+            <h2 className="text-3xl font-bold tracking-tight text-white">
               Production RAG System Architecture
             </h2>
-            <p className="text-zinc-400 text-sm max-w-xl">
+            <p className="text-zinc-400 text-sm sm:text-base max-w-2xl leading-relaxed">
               Technical documentation, active parameters, schemas, and live simulator for our dual-stage retrieval augmented completion pipeline.
             </p>
           </div>
 
           {/* Quick specs grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 shrink-0">
-            <div className="flex flex-col gap-1 p-3 rounded-xl border border-zinc-900 bg-black/60 shadow-inner">
-              <span className="text-[10px] font-mono text-zinc-550 uppercase">LLM Engine</span>
-              <span className="text-xs font-bold text-orange-400 font-mono flex items-center gap-1.5 mt-0.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 shrink-0">
+            <div className="flex flex-col gap-1 p-3.5 rounded-xl border border-zinc-900 bg-black/60 shadow-inner">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-semibold">LLM Engine</span>
+              <span className="text-xs font-bold text-orange-400 font-mono flex items-center gap-1.5 mt-1">
                 <Cpu size={12} className="text-orange-500 shrink-0" />
                 Llama-3.3-70B NIM
               </span>
             </div>
-            <div className="flex flex-col gap-1 p-3 rounded-xl border border-zinc-900 bg-black/60 shadow-inner">
-              <span className="text-[10px] font-mono text-zinc-550 uppercase">Vector Index</span>
-              <span className="text-xs font-bold text-blue-400 font-mono flex items-center gap-1.5 mt-0.5">
+            <div className="flex flex-col gap-1 p-3.5 rounded-xl border border-zinc-900 bg-black/60 shadow-inner">
+              <span className="text-[10px] font-mono text-zinc-550 uppercase tracking-wider font-semibold">Vector Index</span>
+              <span className="text-xs font-bold text-blue-400 font-mono flex items-center gap-1.5 mt-1">
                 <Database size={12} className="text-blue-500 shrink-0" />
                 Pinecone Server
               </span>
             </div>
-            <div className="flex flex-col gap-1 p-3 rounded-xl border border-zinc-900 bg-black/60 col-span-2 sm:col-span-1 shadow-inner">
-              <span className="text-[10px] font-mono text-zinc-550 uppercase">Vector Size</span>
-              <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1.5 mt-0.5">
+            <div className="flex flex-col gap-1 p-3.5 rounded-xl border border-zinc-900 bg-black/60 col-span-2 sm:col-span-1 shadow-inner">
+              <span className="text-[10px] font-mono text-zinc-550 uppercase tracking-wider font-semibold">Vector Size</span>
+              <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1.5 mt-1">
                 <Activity size={12} className="text-emerald-500 shrink-0" />
                 1024 Dimensions
               </span>
@@ -451,13 +451,13 @@ sources = reranker_service.rerank(
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={clsx(
-                  "relative flex items-center gap-2 px-5 py-3 text-xs font-mono font-semibold transition-all border-b-2 -mb-px cursor-pointer whitespace-nowrap outline-none",
+                  "relative flex items-center gap-2 px-5 py-3 text-sm font-sans font-semibold transition-all border-b-2 -mb-px cursor-pointer whitespace-nowrap outline-none",
                   active 
                     ? "border-orange-500 text-white bg-zinc-900/10" 
-                    : "border-transparent text-zinc-555 hover:text-zinc-300 hover:bg-zinc-900/5"
+                    : "border-transparent text-zinc-450 hover:text-zinc-200 hover:bg-zinc-900/5"
                 )}
               >
-                <Icon size={13} className={clsx(active ? "text-orange-500" : "text-zinc-600")} />
+                <Icon size={14} className={clsx(active ? "text-orange-500" : "text-zinc-500")} />
                 {tab.label}
                 {active && (
                   <motion.div
@@ -491,12 +491,12 @@ sources = reranker_service.rerank(
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/2 rounded-full blur-[80px] pointer-events-none" />
                     
                     {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-850 pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-855 pb-4">
                       <div>
                         <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                           Pipeline Simulator
                         </h3>
-                        <h4 className="text-sm font-bold text-white mt-1">
+                        <h4 className="text-base font-bold text-white mt-1">
                           Interactive RAG Dataflow Node Map
                         </h4>
                       </div>
@@ -572,12 +572,12 @@ sources = reranker_service.rerank(
                               <div className="space-y-0.5">
                                 <span className={clsx(
                                   "font-mono text-[9px] block tracking-wider",
-                                  isActive ? "text-orange-400 font-bold" : "text-zinc-650"
+                                  isActive ? "text-orange-400 font-bold" : "text-zinc-600"
                                 )}>
                                   STAGE 0{idx}
                                 </span>
                                 <span className={clsx(
-                                  "text-[10px] font-bold tracking-tight block transition-colors duration-200 truncate max-w-[120px] md:max-w-none",
+                                  "text-[11px] font-sans font-bold tracking-tight block transition-colors duration-200 truncate max-w-[120px] md:max-w-none",
                                   isActive ? "text-white" : isPassed ? "text-zinc-400" : "text-zinc-500 group-hover:text-zinc-400"
                                 )}>
                                   {step.title.split(' ')[0]} {step.title.split(' ')[1] || ''}
@@ -590,9 +590,9 @@ sources = reranker_service.rerank(
                     </div>
 
                     {/* Stage Details Drawer */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-stretch pt-4 border-t border-zinc-850">
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-stretch pt-4 border-t border-zinc-855">
                       {/* Left: Prose details */}
-                      <div className="rounded-xl border border-zinc-850 bg-black/40 p-5 flex flex-col justify-between space-y-4">
+                      <div className="rounded-xl border border-zinc-855 bg-black/40 p-5 flex flex-col justify-between space-y-4">
                         <div className="space-y-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-mono text-[9px] bg-orange-950/50 border border-orange-800/40 text-orange-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
@@ -602,10 +602,10 @@ sources = reranker_service.rerank(
                               {pipelineSteps[activeStep].service}
                             </span>
                           </div>
-                          <h4 className="text-base font-bold text-white font-mono">
+                          <h4 className="text-base font-bold text-white font-sans">
                             {pipelineSteps[activeStep].title}
                           </h4>
-                          <p className="text-zinc-400 text-xs leading-relaxed font-mono">
+                          <p className="text-zinc-400 text-sm leading-relaxed font-sans">
                             {pipelineSteps[activeStep].desc}
                           </p>
                         </div>
@@ -619,7 +619,7 @@ sources = reranker_service.rerank(
                       </div>
 
                       {/* Right: Live log output terminal */}
-                      <div className="rounded-xl border border-zinc-850 bg-black/90 p-4 font-mono text-[10px] flex flex-col justify-between h-[160px] lg:h-auto shadow-inner relative">
+                      <div className="rounded-xl border border-zinc-855 bg-black/90 p-4 font-mono text-[10px] flex flex-col justify-between h-[160px] lg:h-auto shadow-inner relative">
                         <div className="absolute top-3 right-3 flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-bold">Telemetry Live Feed</span>
@@ -638,7 +638,7 @@ sources = reranker_service.rerank(
                             );
                           })}
                         </div>
-                        <div className="text-[8px] text-zinc-600 border-t border-zinc-900 pt-2 flex justify-between items-center mt-3">
+                        <div className="text-[8px] text-zinc-650 border-t border-zinc-900 pt-2 flex justify-between items-center mt-3">
                           <span>CONSOLE // READY</span>
                           <span>SYS_TIME: {new Date().toLocaleTimeString()}</span>
                         </div>
@@ -653,11 +653,11 @@ sources = reranker_service.rerank(
                       <div className="h-9 w-9 rounded-xl bg-orange-950/40 border border-orange-850 flex items-center justify-center text-orange-500 group-hover:shadow-[0_0_12px_rgba(244,131,31,0.15)] transition-shadow">
                         <Server size={16} />
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-white font-mono">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-bold text-white font-sans">
                           FastAPI & SQLite Core
                         </h4>
-                        <p className="text-[11px] text-zinc-450 leading-relaxed font-mono">
+                        <p className="text-xs text-zinc-450 leading-relaxed font-sans">
                           Uvicorn drives an asynchronous API backend. Status tracking and latency metrics are logged directly into SQLite schemas via SQLAlchemy.
                         </p>
                       </div>
@@ -672,11 +672,11 @@ sources = reranker_service.rerank(
                       <div className="h-9 w-9 rounded-xl bg-blue-950/40 border border-blue-850 flex items-center justify-center text-blue-500 group-hover:shadow-[0_0_12px_rgba(59,130,246,0.15)] transition-shadow">
                         <SlidersHorizontal size={16} />
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-white font-mono">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-bold text-white font-sans">
                           Multi-Stage Reranking
                         </h4>
-                        <p className="text-[11px] text-zinc-450 leading-relaxed font-mono">
+                        <p className="text-xs text-zinc-450 leading-relaxed font-sans">
                           Resolves vector semantic retrieval gaps. Over-fetches candidate pools (K=20), then re-scores precision down to Top-5 contexts via a neural Cross-Encoder.
                         </p>
                       </div>
@@ -691,11 +691,11 @@ sources = reranker_service.rerank(
                       <div className="h-9 w-9 rounded-xl bg-emerald-950/40 border border-emerald-850 flex items-center justify-center text-emerald-500 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.15)] transition-shadow">
                         <Activity size={16} />
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-white font-mono">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-bold text-white font-sans">
                           Reactive Telemetry
                         </h4>
-                        <p className="text-[11px] text-zinc-450 leading-relaxed font-mono">
+                        <p className="text-xs text-zinc-450 leading-relaxed font-sans">
                           Maintains active streams. Ingestion logs and metrics are broadcasted to the client dynamically via WebSockets, rendering status tables in real-time.
                         </p>
                       </div>
@@ -725,12 +725,12 @@ sources = reranker_service.rerank(
                           <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                           1. Ingestion Pipeline
                         </h4>
-                        <ul className="space-y-2 text-[10px] text-zinc-455 font-mono">
-                          <li className="flex items-start gap-1">&bull; <span>Read and extract raw file bytes (S3/local)</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>OCR layer parsing for scans (pytesseract)</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Recursive structural split (512 limit)</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Generate 1024d vectors via NVIDIA NIM</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Upsert embeddings alongside metadata envelope</span></li>
+                        <ul className="space-y-2 text-xs text-zinc-450 font-sans leading-relaxed">
+                          <li className="flex items-start gap-1.5">&bull; <span>Read and extract raw file bytes (S3/local)</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>OCR layer parsing for scans (pytesseract)</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Recursive structural split (512 limit)</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Generate 1024d vectors via NVIDIA NIM</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Upsert embeddings alongside metadata envelope</span></li>
                         </ul>
                       </div>
 
@@ -743,12 +743,12 @@ sources = reranker_service.rerank(
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                           2. Retrieval Layer
                         </h4>
-                        <ul className="space-y-2 text-[10px] text-zinc-455 font-mono">
-                          <li className="flex items-start gap-1">&bull; <span>Convert incoming query to 1024d embedding</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>HNSW Cosine query in Pinecone (K=20)</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Filter out similarities below threshold (0.3)</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Rerank candidates using Cross-Encoder NIM</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Feed Top-5 high-precision matches to Prompt</span></li>
+                        <ul className="space-y-2 text-xs text-zinc-450 font-sans leading-relaxed">
+                          <li className="flex items-start gap-1.5">&bull; <span>Convert incoming query to 1024d embedding</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>HNSW Cosine query in Pinecone (K=20)</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Filter out similarities below threshold (0.3)</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Rerank candidates using Cross-Encoder NIM</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Feed Top-5 high-precision matches to Prompt</span></li>
                         </ul>
                       </div>
 
@@ -758,12 +758,12 @@ sources = reranker_service.rerank(
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           3. Generation Core
                         </h4>
-                        <ul className="space-y-2 text-[10px] text-zinc-455 font-mono">
-                          <li className="flex items-start gap-1">&bull; <span>Format system templates with context chunks</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Dispatch request to Llama-3.3-70b-instruct</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Stream completion tokens via Server-Sent Events</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Evaluate Rerank score Sigmoid faithfulness</span></li>
-                          <li className="flex items-start gap-1">&bull; <span>Persist latency audit traces in SQL database</span></li>
+                        <ul className="space-y-2 text-xs text-zinc-450 font-sans leading-relaxed">
+                          <li className="flex items-start gap-1.5">&bull; <span>Format system templates with context chunks</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Dispatch request to Llama-3.3-70b-instruct</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Stream completion tokens via Server-Sent Events</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Evaluate Rerank score Sigmoid faithfulness</span></li>
+                          <li className="flex items-start gap-1.5">&bull; <span>Persist latency audit traces in SQL database</span></li>
                         </ul>
                       </div>
                     </div>
@@ -776,63 +776,63 @@ sources = reranker_service.rerank(
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-8 items-start">
                   {/* Left Column: Descriptive prose */}
                   <div className="space-y-6">
-                    <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5 font-mono text-[11px] leading-relaxed">
+                    <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5">
                       <div className="flex items-center gap-2 pb-3 border-b border-zinc-855">
                         <div className="h-2 w-2 rounded-full bg-orange-500" />
-                        <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                        <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                           Ingestion Protocols
                         </h3>
                       </div>
                       
-                      <div className="space-y-5">
-                        <div className="space-y-2">
-                          <h4 className="text-white font-bold text-xs flex items-center gap-1.5">
-                            <span className="text-orange-500">01 /</span>
+                      <div className="space-y-5 text-sm leading-relaxed text-zinc-350">
+                        <div className="space-y-2 font-sans">
+                          <h4 className="text-white font-bold text-sm flex items-center gap-1.5">
+                            <span className="text-orange-500 font-mono">01 /</span>
                             Content Extraction Engine
                           </h4>
-                          <p className="text-zinc-400">
-                            Raw file bytes uploaded to storage are analyzed and parsed inside <code className="text-orange-400 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-850 font-semibold">app/utils/file_parsers.py</code>:
+                          <p className="text-zinc-455">
+                            Raw file bytes uploaded to storage are analyzed and parsed inside <code className="text-orange-400 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-850 font-mono font-semibold">app/utils/file_parsers.py</code>:
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                             <div className="p-3 rounded-xl border border-zinc-855 bg-black/40">
-                              <span className="text-white font-bold block text-[10px]">PDF Layouts</span>
-                              <span className="text-zinc-500 mt-1 block">pdfplumber (tables & formatting)</span>
+                              <span className="text-white font-bold block text-[11px] font-sans">PDF Layouts</span>
+                              <span className="text-zinc-500 mt-1 block text-xs">pdfplumber (tables & formatting)</span>
                             </div>
                             <div className="p-3 rounded-xl border border-zinc-855 bg-black/40">
-                              <span className="text-white font-bold block text-[10px]">Word Docs</span>
-                              <span className="text-zinc-500 mt-1 block">python-docx parser</span>
+                              <span className="text-white font-bold block text-[11px] font-sans">Word Docs</span>
+                              <span className="text-zinc-500 mt-1 block text-xs">python-docx parser</span>
                             </div>
                             <div className="p-3 rounded-xl border border-zinc-855 bg-black/40">
-                              <span className="text-white font-bold block text-[10px]">Scanned Image</span>
-                              <span className="text-zinc-500 mt-1 block">pytesseract OCR engine</span>
+                              <span className="text-white font-bold block text-[11px] font-sans">Scanned Image</span>
+                              <span className="text-zinc-500 mt-1 block text-xs">pytesseract OCR engine</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <h4 className="text-white font-bold text-xs flex items-center gap-1.5">
-                            <span className="text-orange-500">02 /</span>
+                        <div className="space-y-2 font-sans">
+                          <h4 className="text-white font-bold text-sm flex items-center gap-1.5">
+                            <span className="text-orange-500 font-mono">02 /</span>
                             Recursive Semantic Chunking
                           </h4>
-                          <p className="text-zinc-400">
+                          <p className="text-zinc-455">
                             Splits text based on paragraph boundaries, sentences, and words rather than strict character counts. This guarantees that each chunk holds a complete semantic context.
                           </p>
                           <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-start gap-3">
                             <Sliders size={14} className="text-orange-500 shrink-0 mt-0.5" />
-                            <div>
-                              <span className="text-zinc-300 font-bold block text-[10px]">Settings Matrix</span>
-                              <span className="text-zinc-500 mt-0.5 block">chunk_size = 512 chars (approx. 80-100 words)<br />chunk_overlap = 50 chars (prevents loss of sentence-edge context)</span>
+                            <div className="text-xs">
+                              <span className="text-zinc-300 font-bold block font-sans">Settings Matrix</span>
+                              <span className="text-zinc-500 mt-0.5 block leading-normal">chunk_size = 512 chars (approx. 80-100 words)<br />chunk_overlap = 50 chars (prevents loss of sentence-edge context)</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <h4 className="text-white font-bold text-xs flex items-center gap-1.5">
-                            <span className="text-orange-500">03 /</span>
+                        <div className="space-y-2 font-sans">
+                          <h4 className="text-white font-bold text-sm flex items-center gap-1.5">
+                            <span className="text-orange-500 font-mono">03 /</span>
                             NVIDIA NIM Embedding Sync
                           </h4>
-                          <p className="text-zinc-400">
-                            Dispatches chunk arrays to the <code className="text-orange-400 font-semibold">nvidia/nv-embedqa-e5-v5</code> endpoint. The model encodes texts into dense 1024d float arrays. Vectors are stored in Pinecone serverless containing metadata envelopes for lookup.
+                          <p className="text-zinc-455">
+                            Dispatches chunk arrays to the <code className="text-orange-400 font-semibold font-mono">nvidia/nv-embedqa-e5-v5</code> endpoint. The model encodes texts into dense 1024d float arrays. Vectors are stored in Pinecone serverless containing metadata envelopes for lookup.
                           </p>
                         </div>
                       </div>
@@ -848,7 +848,7 @@ sources = reranker_service.rerank(
                         <span className="text-[8px] font-mono text-zinc-550 uppercase">Schema Layout</span>
                       </div>
                       
-                      <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 font-mono text-[10.5px] text-zinc-400 overflow-x-auto whitespace-pre">
+                      <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 font-mono text-[11px] text-zinc-400 overflow-x-auto whitespace-pre">
 {`{
   "doc_id": "doc_9b1deb4d",
   "original_name": "annual_financial_report_2025.pdf",
@@ -870,10 +870,10 @@ sources = reranker_service.rerank(
                       language="python" 
                     />
 
-                    <div className="rounded-xl border border-zinc-855 bg-zinc-950/40 p-4 flex items-start gap-3 font-mono text-[10.5px] text-zinc-450">
+                    <div className="rounded-xl border border-zinc-855 bg-zinc-950/40 p-4 flex items-start gap-3 font-sans text-xs text-zinc-450 leading-relaxed">
                       <Info size={16} className="text-orange-500 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">
-                        <strong className="text-zinc-300">Splitting Edge Case:</strong> If the text does not contain any of the registered separators, the algorithm splits the text at exactly <code className="text-orange-400">chunk_size</code> characters to ensure the pipeline doesn't overflow.
+                      <span>
+                        <strong className="text-zinc-300">Splitting Edge Case:</strong> If the text does not contain any of the registered separators, the algorithm splits the text at exactly <code className="text-orange-400 font-mono">chunk_size</code> characters to ensure the pipeline doesn't overflow.
                       </span>
                     </div>
                   </div>
@@ -886,38 +886,38 @@ sources = reranker_service.rerank(
                   
                   {/* Left Column: Retrieval Explanation */}
                   <div className="space-y-6">
-                    <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5 font-mono text-[11px] leading-relaxed">
+                    <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5">
                       <div className="flex items-center gap-2 pb-3 border-b border-zinc-855">
                         <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                        <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                           Retrieval Architecture
                         </h3>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <h4 className="text-white font-bold text-xs">
+                      <div className="space-y-4 text-sm leading-relaxed text-zinc-350">
+                        <div className="space-y-1 font-sans">
+                          <h4 className="text-white font-bold text-sm">
                             Stage 1: HNSW Dense Retrieval
                           </h4>
-                          <p className="text-zinc-400">
-                            User queries are converted into 1024d embedding vectors. Pinecone processes cosine distance metrics against document vectors. We over-fetch using a multiplier of 4 (<code className="text-blue-400">K = 20</code>) to capture complex semantic scopes.
+                          <p className="text-zinc-455">
+                            User queries are converted into 1024d embedding vectors. Pinecone processes cosine distance metrics against document vectors. We over-fetch using a multiplier of 4 (<code className="text-blue-400 font-mono">K = 20</code>) to capture complex semantic scopes.
                           </p>
                         </div>
 
-                        <div className="space-y-1">
-                          <h4 className="text-white font-bold text-xs">
+                        <div className="space-y-1 font-sans">
+                          <h4 className="text-white font-bold text-sm">
                             Stage 2: Cross-Encoder Reranking
                           </h4>
-                          <p className="text-zinc-400">
-                            The candidate vector array is re-scored alongside the query using <code className="text-blue-400">nvidia/llama-3.2-nv-rerankqa-1b-v2</code>. Unlike dual-encoders, Cross-Encoders evaluate text-query tokens simultaneously, scoring exact relevance and discarding false matches.
+                          <p className="text-zinc-455">
+                            The candidate vector array is re-scored alongside the query using <code className="text-blue-400 font-mono">nvidia/llama-3.2-nv-rerankqa-1b-v2</code>. Unlike dual-encoders, Cross-Encoders evaluate text-query tokens simultaneously, scoring exact relevance and discarding false matches.
                           </p>
                         </div>
 
-                        <div className="space-y-1">
-                          <h4 className="text-white font-bold text-xs">
+                        <div className="space-y-1 font-sans">
+                          <h4 className="text-white font-bold text-sm">
                             Stage 3: Proxy Faithfulness Score
                           </h4>
-                          <p className="text-zinc-400">
+                          <p className="text-zinc-455">
                             RAG systems can hallucinate if contexts are weakly related to the query. We evaluate this by calculating the sigmoid of the average logit score output by the reranker: <code className="text-emerald-400 font-semibold font-mono">sigmoid(mean_logit)</code>.
                           </p>
                         </div>
@@ -931,16 +931,16 @@ sources = reranker_service.rerank(
                           <h4 className="text-xs font-mono font-bold text-white">
                             Faithfulness Calculator
                           </h4>
-                          <span className="text-[9px] font-mono text-zinc-500">Interactive Mathematical Sim</span>
+                          <span className="text-[9px] font-mono text-zinc-550">Interactive Mathematical Sim</span>
                         </div>
-                        <span className="text-[8px] font-mono text-zinc-550 uppercase">Live Model</span>
+                        <span className="text-[8px] font-mono text-zinc-600 uppercase">Live Model</span>
                       </div>
 
                       {/* Slider Input */}
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center text-xs font-mono">
+                      <div className="space-y-3 font-sans">
+                        <div className="flex justify-between items-center text-xs font-semibold">
                           <span className="text-zinc-400">Reranker Logit (x)</span>
-                          <span className="text-orange-400 font-bold">{logitVal.toFixed(1)}</span>
+                          <span className="text-orange-400 font-mono font-bold">{logitVal.toFixed(1)}</span>
                         </div>
                         <input 
                           type="range" 
@@ -951,7 +951,7 @@ sources = reranker_service.rerank(
                           onChange={(e) => setLogitVal(parseFloat(e.target.value))}
                           className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500 animate-pulse-slow"
                         />
-                        <div className="flex justify-between text-[8px] text-zinc-650 font-mono">
+                        <div className="flex justify-between text-[9px] text-zinc-500 font-mono">
                           <span>-3.0 (Irrelevant)</span>
                           <span>0.0 (Neutral)</span>
                           <span>3.0 (Perfect Match)</span>
@@ -959,7 +959,7 @@ sources = reranker_service.rerank(
                       </div>
 
                       {/* Formula Visual Card */}
-                      <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 font-mono text-[10.5px] space-y-2">
+                      <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 font-mono text-[11px] space-y-2">
                         <div className="flex justify-between">
                           <span className="text-zinc-550">Sigmoid Formula:</span>
                           <span className="text-zinc-350">1 / (1 + e^-x)</span>
@@ -980,7 +980,7 @@ sources = reranker_service.rerank(
 
                       {/* Indicator Badge */}
                       <div className={clsx(
-                        "p-3 rounded-xl border font-mono text-[10px] text-center font-bold transition-all duration-300",
+                        "p-3 rounded-xl border font-sans text-xs text-center font-bold transition-all duration-300",
                         faithfulnessScore >= 0.8 
                           ? "bg-emerald-950/20 border-emerald-900/50 text-emerald-400" 
                           : faithfulnessScore >= 0.5 
@@ -1025,7 +1025,7 @@ sources = reranker_service.rerank(
                         <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                           Configuration Registry
                         </h3>
-                        <h4 className="text-sm font-bold text-white mt-1">
+                        <h4 className="text-base font-bold text-white mt-1">
                           System Environment Variables
                         </h4>
                       </div>
@@ -1046,7 +1046,7 @@ sources = reranker_service.rerank(
                         <select
                           value={paramFilter}
                           onChange={(e) => setParamFilter(e.target.value as any)}
-                          className="bg-black border border-zinc-850 rounded-xl text-xs text-zinc-400 py-1.5 px-3 focus:outline-none font-mono cursor-pointer font-semibold"
+                          className="bg-black border border-zinc-850 rounded-xl text-xs text-zinc-400 py-1.5 px-3 focus:outline-none font-sans font-semibold cursor-pointer"
                         >
                           <option value="all">All Modules</option>
                           <option value="llm">LLM Models</option>
@@ -1059,56 +1059,56 @@ sources = reranker_service.rerank(
                     </div>
 
                     {/* Params Table grid */}
-                    <div className="overflow-x-auto rounded-xl border border-zinc-850 bg-black/20">
-                      <table className="w-full text-left border-collapse font-mono text-xs">
+                    <div className="overflow-x-auto rounded-xl border border-zinc-855 bg-black/20">
+                      <table className="w-full text-left border-collapse font-sans text-xs sm:text-sm">
                         <thead>
-                          <tr className="border-b border-zinc-855 bg-zinc-950/60 text-zinc-400 font-bold">
-                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider">Parameter Key</th>
-                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider">Component Provider</th>
-                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider">Data Type</th>
-                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider">Active Value</th>
-                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider text-right">Details</th>
+                          <tr className="border-b border-zinc-855 bg-zinc-950/60 text-zinc-400 font-bold font-mono">
+                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Parameter Key</th>
+                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Component Provider</th>
+                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Data Type</th>
+                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Active Value</th>
+                            <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold text-right">Details</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-900 text-zinc-400 bg-black/35">
+                        <tbody className="divide-y divide-zinc-900 text-zinc-400 bg-black/35 font-mono text-[11px] sm:text-xs">
                           {filteredParams.length > 0 ? (
                             filteredParams.map((param, index) => {
                               const isExpanded = expandedParam === param.name;
                               return (
-                                <optgroup key={index} className="contents">
+                                <optgroup key={index} className="contents font-sans">
                                   <tr 
                                     onClick={() => setExpandedParam(isExpanded ? null : param.name)}
-                                    className="hover:bg-zinc-950/80 cursor-pointer transition-colors group"
+                                    className="hover:bg-zinc-950/80 cursor-pointer transition-colors group font-mono"
                                   >
                                     <td className="px-5 py-3.5 font-bold text-zinc-200 group-hover:text-orange-400 transition-colors">
                                       {param.name}
                                     </td>
-                                    <td className="px-5 py-3.5 text-zinc-500">{param.provider}</td>
-                                    <td className="px-5 py-3.5 text-zinc-600">{param.type}</td>
+                                    <td className="px-5 py-3.5 text-zinc-450 font-sans">{param.provider}</td>
+                                    <td className="px-5 py-3.5 text-zinc-550">{param.type}</td>
                                     <td className="px-5 py-3.5 font-semibold text-orange-500/90">{param.value}</td>
-                                    <td className="px-5 py-3.5 text-right">
-                                      <button className="text-[10px] text-zinc-500 hover:text-zinc-350 bg-zinc-900 border border-zinc-850 px-2 py-0.5 rounded transition-colors font-mono">
+                                    <td className="px-5 py-3.5 text-right font-sans">
+                                      <button className="text-[10px] text-zinc-500 hover:text-zinc-350 bg-zinc-900 border border-zinc-850 px-2.5 py-0.5 rounded transition-colors font-sans font-semibold">
                                         {isExpanded ? 'Hide' : 'Show'}
                                       </button>
                                     </td>
                                   </tr>
                                   
                                   {isExpanded && (
-                                    <tr>
+                                    <tr className="font-sans">
                                       <td colSpan={5} className="px-5 py-4 bg-zinc-950/80 border-t border-zinc-900">
-                                        <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 text-xs font-mono leading-relaxed">
+                                        <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 text-xs sm:text-sm leading-relaxed font-sans">
                                           <div className="space-y-1 border-r border-zinc-900 pr-2">
-                                            <span className="text-[8px] text-zinc-550 block font-bold uppercase tracking-wider">ENV Variable</span>
-                                            <span className="text-zinc-300 font-bold block overflow-x-auto select-all">{param.envVar}</span>
+                                            <span className="text-[8px] text-zinc-500 font-mono block font-bold uppercase tracking-wider">ENV Variable</span>
+                                            <span className="text-zinc-300 font-mono font-bold block overflow-x-auto select-all">{param.envVar}</span>
                                           </div>
-                                          <div className="space-y-2">
+                                          <div className="space-y-3 font-sans">
                                             <div>
-                                              <span className="text-[8px] text-zinc-550 block font-bold uppercase tracking-wider">Functional Description</span>
-                                              <p className="text-zinc-350 text-[11px] mt-0.5">{param.desc}</p>
+                                              <span className="text-[8px] text-zinc-500 font-mono block font-bold uppercase tracking-wider">Functional Description</span>
+                                              <p className="text-zinc-350 text-xs sm:text-sm mt-0.5">{param.desc}</p>
                                             </div>
                                             <div>
-                                              <span className="text-[8px] text-zinc-550 block font-bold uppercase tracking-wider">Performance Impact</span>
-                                              <p className="text-zinc-450 text-[10.5px] mt-0.5">{param.impact}</p>
+                                              <span className="text-[8px] text-zinc-500 font-mono block font-bold uppercase tracking-wider">Performance Impact</span>
+                                              <p className="text-zinc-450 text-[11px] sm:text-xs mt-0.5">{param.impact}</p>
                                             </div>
                                           </div>
                                         </div>
@@ -1120,7 +1120,7 @@ sources = reranker_service.rerank(
                             })
                           ) : (
                             <tr>
-                              <td colSpan={5} className="text-center py-8 text-zinc-500 font-mono text-[10px]">
+                              <td colSpan={5} className="text-center py-8 text-zinc-500 font-sans text-xs">
                                 No parameters found matching "{paramSearch}"
                               </td>
                             </tr>
@@ -1139,7 +1139,7 @@ sources = reranker_service.rerank(
                           <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                             Relational Database Schema
                           </h3>
-                          <h4 className="text-sm font-bold text-white mt-1">
+                          <h4 className="text-base font-bold text-white mt-1">
                             SQLite SQLAlchemy Models
                           </h4>
                         </div>
@@ -1150,23 +1150,23 @@ sources = reranker_service.rerank(
                         {dbModels.map((model, idx) => (
                           <div key={idx} className="rounded-xl border border-zinc-855 bg-black/30 p-4 space-y-3">
                             <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
-                              <span className="font-bold text-zinc-100 font-mono text-xs flex items-center gap-1.5">
+                              <span className="font-bold text-zinc-100 font-sans text-sm flex items-center gap-1.5">
                                 <Database size={13} className="text-orange-500" />
                                 {model.name}
                               </span>
                               <span className="text-[8px] font-mono text-zinc-550 uppercase">Table Class</span>
                             </div>
-                            <p className="text-[10px] text-zinc-450 leading-relaxed font-mono">
+                            <p className="text-xs text-zinc-450 leading-relaxed font-sans">
                               {model.description}
                             </p>
                             
                             {/* Table fields */}
                             <div className="overflow-x-auto">
-                              <table className="w-full text-left font-mono text-[10px]">
+                              <table className="w-full text-left font-mono text-[10px] sm:text-xs">
                                 <thead>
-                                  <tr className="text-zinc-500 border-b border-zinc-900">
+                                  <tr className="text-zinc-550 border-b border-zinc-900">
                                     <th className="py-1">Field Name</th>
-                                    <th className="py-1">Type</th>
+                                    <th className="py-1 font-sans">Type</th>
                                     <th className="py-1">Mapping Constraints</th>
                                   </tr>
                                 </thead>
@@ -1174,8 +1174,8 @@ sources = reranker_service.rerank(
                                   {model.fields.map((f, fidx) => (
                                     <tr key={fidx} className="hover:bg-zinc-900/10">
                                       <td className="py-1.5 font-bold text-zinc-300">{f.name}</td>
-                                      <td className="py-1.5 text-zinc-500">{f.type}</td>
-                                      <td className="py-1.5 text-orange-400/80 text-[9px]">{f.key}</td>
+                                      <td className="py-1.5 text-zinc-500 font-sans">{f.type}</td>
+                                      <td className="py-1.5 text-orange-400/80 text-[10px]">{f.key}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -1193,21 +1193,21 @@ sources = reranker_service.rerank(
                           <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                             Infrastructure Specs
                           </h3>
-                          <h4 className="text-sm font-bold text-white mt-1">
+                          <h4 className="text-base font-bold text-white mt-1">
                             Hosting & Service Layer
                           </h4>
                         </div>
                         <span className="text-[9px] font-mono text-zinc-500 uppercase">Infrastructure</span>
                       </div>
 
-                      <div className="space-y-4 font-mono text-[10.5px] text-zinc-450">
+                      <div className="space-y-4 font-sans text-xs sm:text-sm text-zinc-450 leading-relaxed">
                         <div className="p-4 rounded-xl border border-zinc-855 bg-black/40 space-y-1.5">
                           <h5 className="font-bold text-white flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                             NVIDIA NIM Gateway
                           </h5>
                           <p className="leading-relaxed">
-                            Hosts high-performance inference APIs. Links back to <code className="text-orange-400">integrate.api.nvidia.com/v1</code> for embedding, completions, and neural rerank steps.
+                            Hosts high-performance inference APIs. Links back to <code className="text-orange-400 font-mono text-xs">integrate.api.nvidia.com/v1</code> for embedding, completions, and neural rerank steps.
                           </p>
                         </div>
 
