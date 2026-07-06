@@ -128,28 +128,7 @@ export function Sidebar({
 
       {/* Footer / Profile */}
       <div className="p-3 border-t border-[#1e1e24] bg-[#09090b] space-y-4">
-        {/* Connection status */}
-        {!isCollapsed ? (
-          <div
-            className={clsx(
-              'flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-medium transition-all duration-500',
-              connected ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' : 'border-red-500/20 bg-red-500/5 text-red-400'
-            )}
-          >
-            <div className="relative shrink-0">
-              <div className={clsx('h-1.5 w-1.5 rounded-full', connected ? 'bg-emerald-400' : 'bg-red-400')} />
-              {connected && <div className="absolute inset-0 rounded-full bg-emerald-400 opacity-60 animate-ping" />}
-            </div>
-            <span>Live System Link</span>
-          </div>
-        ) : (
-          <div className="flex justify-center" title={connected ? 'Live System Link Established' : 'Connection Interrupted'}>
-            <div className="relative">
-              <div className={clsx('h-2 w-2 rounded-full', connected ? 'bg-emerald-400' : 'bg-red-400')} />
-              {connected && <div className="absolute inset-0 rounded-full bg-emerald-400 opacity-60 animate-ping" />}
-            </div>
-          </div>
-        )}
+
 
         {/* Collapse action button */}
         {onToggleCollapse && (
