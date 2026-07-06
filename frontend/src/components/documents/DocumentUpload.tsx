@@ -65,12 +65,12 @@ export function DocumentUpload({ onUploaded }: Props) {
         className={clsx(
           'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
           isDragActive
-            ? 'border-accent-primary bg-accent-primary/10 scale-[1.01]'
+            ? 'border-orange-500 bg-orange-500/5 scale-[1.01]'
             : state === 'success'
-            ? 'border-accent-green/50 bg-accent-green/5'
+            ? 'border-emerald-500/50 bg-emerald-500/5'
             : state === 'error'
-            ? 'border-accent-red/50 bg-accent-red/5'
-            : 'border-border hover:border-accent-primary/60 hover:bg-bg-hover',
+            ? 'border-red-500/50 bg-red-500/5'
+            : 'border-[#1c1c1f] hover:border-[#27272a] hover:bg-[#121215]',
           state === 'uploading' && 'pointer-events-none'
         )}
       >
@@ -85,14 +85,14 @@ export function DocumentUpload({ onUploaded }: Props) {
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
-              <div className="w-14 h-14 mx-auto rounded-xl bg-bg-card border border-border flex items-center justify-center">
-                <Upload size={24} className={isDragActive ? 'text-accent-primary' : 'text-text-muted'} />
+              <div className="w-14 h-14 mx-auto rounded-xl bg-[#121215] border border-[#1c1c1f] flex items-center justify-center">
+                <Upload size={24} className={isDragActive ? 'text-orange-500' : 'text-[#71717a]'} />
               </div>
               <div>
-                <p className="text-text-primary font-medium text-sm">
+                <p className="text-white font-medium text-sm">
                   {isDragActive ? 'Drop your file here' : 'Drag & drop or click to upload'}
                 </p>
-                <p className="text-text-muted text-xs mt-1">PDF, DOCX, TXT, MD — up to 50MB</p>
+                <p className="text-[#71717a] text-xs mt-1">PDF, DOCX, TXT, MD — up to 50MB</p>
               </div>
             </motion.div>
           )}

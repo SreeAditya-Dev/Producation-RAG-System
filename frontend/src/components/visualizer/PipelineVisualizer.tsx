@@ -151,12 +151,12 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
   const isError = stage === 'error';
 
   return (
-    <div className="glass-card overflow-hidden rounded-2xl">
-      {!hideHeader && <div className="flex items-center justify-between border-b border-border/50 px-5 pb-4 pt-5">
+    <div className="bg-[#0c0c0e] overflow-hidden rounded-xl border border-[#1c1c1f]">
+      {!hideHeader && <div className="flex items-center justify-between border-b border-[#1c1c1f] px-5 pb-4 pt-5">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-accent-primary/20 bg-accent-primary/10">
-            <Upload size={13} className="text-accent-primary" />
-            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent-primary animate-pulse" />}
+          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-[#1c1c1f] bg-[#121215]">
+            <Upload size={13} className="text-orange-500" />
+            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-orange-500 animate-pulse" />}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-text-primary">Ingestion Pipeline</h3>
@@ -168,13 +168,13 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
 
         <div className="flex shrink-0 items-center gap-2">
           {isActive && !isDone && !isError && (
-            <span className="flex items-center gap-1.5 rounded-full border border-accent-primary/20 bg-accent-primary/10 px-2.5 py-1 text-xs text-accent-primary">
+            <span className="flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs text-orange-500">
               <Loader2 size={11} className="animate-spin" />
               Running
             </span>
           )}
           {isDone && (
-            <span className="flex items-center gap-1.5 rounded-full border border-accent-primary/20 bg-accent-primary/10 px-2.5 py-1 text-xs text-accent-primary">
+            <span className="flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs text-orange-500">
               <CheckCircle2 size={11} />
               Complete
             </span>
@@ -205,8 +205,8 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                     className={clsx(
                       'relative flex w-full cursor-default flex-col items-center gap-2 rounded-2xl border px-2 pb-3 pt-4 transition-all duration-500',
                       isStepActive && step.activeClass,
-                      isStepDone && 'border-accent-primary/30 bg-accent-primary/5',
-                      st === 'idle' && 'border-border/60 bg-white/[0.025]',
+                      isStepDone && 'border-orange-500/20 bg-orange-500/5',
+                      st === 'idle' && 'border-[#1c1c1f] bg-[#121215]/50',
                       st === 'error' && 'border-red-500/30 bg-red-500/5',
                     )}
                     animate={isStepActive ? { y: [-1, 1, -1] } : {}}
@@ -225,7 +225,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                       style={
                         isStepActive
                           ? { background: step.color, borderColor: 'transparent', color: '#fff' }
-                          : { borderColor: '#2a2a50', color: '#4a5568', background: 'var(--bg-primary, #0d0d1a)' }
+                          : { borderColor: '#1c1c1f', color: '#71717a', background: '#09090b' }
                       }
                     >
                       {String(i + 1).padStart(2, '0')}
@@ -235,31 +235,31 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                     <div
                       className={clsx(
                         'flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300',
-                        isStepActive ? step.iconBg : isStepDone ? 'bg-accent-primary/10' : 'bg-white/[0.04]',
+                        isStepActive ? step.iconBg : isStepDone ? 'bg-orange-500/10' : 'bg-white/[0.04]',
                       )}
                     >
                       {isStepActive ? (
                         <Loader2 size={18} className={clsx(step.iconText, 'animate-spin')} />
                       ) : isStepDone ? (
-                        <CheckCircle2 size={18} className="text-accent-primary" />
+                        <CheckCircle2 size={18} className="text-orange-500" />
                       ) : st === 'error' ? (
                         <AlertCircle size={18} className="text-red-400" />
                       ) : (
-                        <Icon size={18} className="text-text-muted" />
+                        <Icon size={18} className="text-[#71717a]" />
                       )}
                     </div>
 
                     {/* Label */}
                     <div className="text-center">
-                      <p className={clsx('text-xs font-semibold leading-tight', isStepActive ? 'text-text-primary' : isStepDone ? 'text-accent-primary' : 'text-text-muted')}>
+                      <p className={clsx('text-xs font-semibold leading-tight', isStepActive ? 'text-text-primary' : isStepDone ? 'text-orange-500' : 'text-[#71717a]')}>
                         {step.label}
                       </p>
-                      <p className="mt-0.5 text-[10px] leading-tight text-text-muted">{step.sublabel}</p>
+                      <p className="mt-0.5 text-[10px] leading-tight text-[#71717a]">{step.sublabel}</p>
                     </div>
                   </motion.div>
 
                   {/* Tech label */}
-                  <p className="mt-2 w-full truncate px-1 text-center text-[10px] text-text-muted">{step.tech}</p>
+                  <p className="mt-2 w-full truncate px-1 text-center text-[10px] text-[#71717a]">{step.tech}</p>
                 </div>
 
                 {/* Connector (between steps only) */}
@@ -272,19 +272,19 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
         </div>
 
         <div className="mt-4 grid gap-3 grid-cols-1 xs:grid-cols-3">
-          <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Current step</p>
-            <p className="mt-2 text-sm font-semibold capitalize text-text-primary">{stage}</p>
+          <div className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[#71717a]">Current step</p>
+            <p className="mt-2 text-sm font-semibold capitalize text-white">{stage}</p>
           </div>
-          <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Chunks</p>
-            <p className="mt-2 text-sm font-semibold text-text-primary">
+          <div className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[#71717a]">Chunks</p>
+            <p className="mt-2 text-sm font-semibold text-white">
               {embedded_chunks} / {total_chunks || 0}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-black/10 px-3 py-3">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Progress</p>
-            <p className="mt-2 text-sm font-semibold text-text-primary">{progress.toFixed(1)}%</p>
+          <div className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-[#71717a]">Progress</p>
+            <p className="mt-2 text-sm font-semibold text-white">{progress.toFixed(1)}%</p>
           </div>
         </div>
 

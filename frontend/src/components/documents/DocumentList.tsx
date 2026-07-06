@@ -29,9 +29,9 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 };
 
 const STATUS_CONFIG = {
-  processing: { icon: Loader2, color: 'text-accent-orange', label: 'Processing', spin: true },
-  ready: { icon: CheckCircle2, color: 'text-accent-green', label: 'Ready', spin: false },
-  error: { icon: AlertCircle, color: 'text-accent-red', label: 'Error', spin: false },
+  processing: { icon: Loader2, color: 'text-orange-500', label: 'Processing', spin: true },
+  ready: { icon: CheckCircle2, color: 'text-emerald-400', label: 'Ready', spin: false },
+  error: { icon: AlertCircle, color: 'text-red-400', label: 'Error', spin: false },
 };
 
 interface Props {
@@ -60,7 +60,7 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={24} className="text-accent-primary animate-spin" />
+        <Loader2 size={24} className="text-orange-500 animate-spin" />
       </div>
     );
   }
@@ -68,9 +68,9 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
   if (!documents.length) {
     return (
       <div className="text-center py-16">
-        <FileText size={40} className="mx-auto text-text-muted opacity-40 mb-3" />
-        <p className="text-text-secondary text-sm">No documents yet</p>
-        <p className="text-text-muted text-xs mt-1">Upload a document to get started</p>
+        <FileText size={40} className="mx-auto text-[#52525b] opacity-40 mb-3" />
+        <p className="text-[#a1a1aa] text-xs">No documents yet</p>
+        <p className="text-[#71717a] text-[10px] mt-1">Upload a document to get started</p>
       </div>
     );
   }
@@ -90,38 +90,38 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex items-center gap-4 p-3.5 bg-bg-card border border-border rounded-xl hover:border-border-light transition-colors group"
+              className="flex items-center gap-4 p-3.5 bg-[#0c0c0e] border border-[#1c1c1f] rounded-xl hover:border-[#27272a] hover:bg-[#121215] transition-all duration-200 group"
             >
               {/* File type icon */}
-              <div className="w-9 h-9 rounded-lg bg-bg-hover border border-border flex items-center justify-center flex-shrink-0">
-                <TypeIcon size={17} className="text-accent-primary" />
+              <div className="w-9 h-9 rounded-lg bg-[#121215] border border-[#1c1c1f] flex items-center justify-center flex-shrink-0">
+                <TypeIcon size={17} className="text-orange-500" />
               </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-text-primary text-sm font-medium truncate">{doc.original_name}</p>
+                <p className="text-white text-xs font-semibold truncate">{doc.original_name}</p>
                 <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-text-muted text-xs uppercase tracking-wide">{doc.file_type}</span>
-                  <span className="text-text-muted text-xs">·</span>
-                  <span className="text-text-muted text-xs">{formatBytes(doc.file_size)}</span>
+                  <span className="text-[#71717a] text-[10px] uppercase tracking-wide font-mono">{doc.file_type}</span>
+                  <span className="text-[#52525b] text-[10px]">·</span>
+                  <span className="text-[#71717a] text-[10px]">{formatBytes(doc.file_size)}</span>
                   {doc.status === 'ready' && (
                     <>
-                      <span className="text-text-muted text-xs">·</span>
-                      <span className="text-text-muted text-xs">{doc.chunk_count} chunks</span>
+                      <span className="text-[#52525b] text-[10px]">·</span>
+                      <span className="text-[#71717a] text-[10px]">{doc.chunk_count} chunks</span>
                     </>
                   )}
                 </div>
               </div>
 
               {/* Status */}
-              <div className={clsx('flex items-center gap-1.5 text-xs font-medium', status.color)}>
-                <StatusIcon size={14} className={status.spin ? 'animate-spin' : ''} />
+              <div className={clsx('flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider', status.color)}>
+                <StatusIcon size={12} className={status.spin ? 'animate-spin' : ''} />
                 <span className="hidden sm:inline">{status.label}</span>
               </div>
 
               {/* Date */}
-              <div className="hidden md:flex items-center gap-1.5 text-xs text-text-muted">
-                <Clock size={12} />
+              <div className="hidden md:flex items-center gap-1.5 text-[10px] text-[#71717a]">
+                <Clock size={11} />
                 {formatDate(doc.created_at)}
               </div>
 
@@ -129,12 +129,12 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
               <button
                 onClick={() => handleDelete(doc)}
                 disabled={isDeleting || doc.status === 'processing'}
-                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-accent-red/10 hover:text-accent-red text-text-muted transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 text-[#71717a] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 {isDeleting ? (
-                  <Loader2 size={15} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Trash2 size={15} />
+                  <Trash2 size={14} />
                 )}
               </button>
             </motion.div>

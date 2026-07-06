@@ -291,10 +291,10 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
   const { stage, question, sources, streamingAnswer, processingTime } = state;
 
   return (
-    <div className="flex flex-col h-full rounded-2xl border border-border bg-bg-card overflow-hidden">
+    <div className="flex flex-col h-full rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] overflow-hidden">
       {/* Header */}
       {!hideHeader && (
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#1c1c1f] shrink-0">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-text-primary">RAG Pipeline</h3>
           <p className="text-[11px] text-text-muted mt-0.5 truncate max-w-[220px]">
@@ -309,7 +309,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
             <motion.span
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-1.5 rounded-lg border border-accent-green/25 bg-accent-green/10 px-2.5 py-1 font-mono text-[11px] text-accent-green"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1 font-mono text-[11px] text-emerald-400"
             >
               <Clock size={10} />
               {processingTime.toFixed(2)}s
@@ -318,11 +318,11 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
           <span
             className={clsx(
               'rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-              stage === 'idle' && 'border-border text-text-muted bg-bg-hover',
-              stage === 'complete' && 'border-accent-green/30 bg-accent-green/10 text-accent-green',
-              stage === 'error' && 'border-red-500/30 bg-red-500/10 text-red-400',
+              stage === 'idle' && 'border-[#1c1c1f] text-[#71717a] bg-[#121215]',
+              stage === 'complete' && 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
+              stage === 'error' && 'border-red-500/20 bg-red-500/5 text-red-400',
               ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
-                'border-accent-primary/30 bg-accent-primary/10 text-accent-primary',
+                'border-orange-500/20 bg-orange-500/10 text-orange-500',
             )}
           >
             {stage}
@@ -513,12 +513,12 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
           { label: 'Sources', value: String(sources.length), mono: true },
           { label: 'Latency', value: processingTime ? `${processingTime.toFixed(2)}s` : '—', mono: true },
         ].map(({ label, value, mono }) => (
-          <div key={label} className="rounded-xl border border-border bg-black/20 px-3 py-2.5">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-text-muted">{label}</p>
+          <div key={label} className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-2.5">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#71717a]">{label}</p>
             <p
               className={clsx(
-                'mt-1.5 text-sm font-semibold capitalize text-text-primary',
-                mono && 'font-mono text-xs',
+                'mt-1.5 text-xs font-semibold capitalize text-white',
+                mono && 'font-mono text-[11px]',
               )}
             >
               {value}
@@ -536,7 +536,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
             exit={{ opacity: 0, height: 0 }}
             className="flex-1 overflow-y-auto px-4 pb-4 min-h-0"
           >
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted">
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.22em] text-[#71717a]">
               Retrieved Sources
             </p>
             <div className="space-y-1.5">
@@ -546,24 +546,24 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-bg-hover px-3 py-2"
+                  className="flex items-center gap-3 rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-2"
                 >
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-accent-primary/20">
-                    <span className="font-mono text-[9px] font-bold text-accent-primary">{i + 1}</span>
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-orange-500/10 border border-orange-500/20">
+                    <span className="font-mono text-[9px] font-bold text-orange-500">{i + 1}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-medium text-text-secondary">{s.original_name}</p>
-                    <p className="line-clamp-1 text-[10px] text-text-muted">{s.text?.slice(0, 65)}…</p>
+                    <p className="truncate text-xs font-semibold text-white">{s.original_name}</p>
+                    <p className="line-clamp-1 text-[10px] text-[#71717a]">{s.text?.slice(0, 65)}…</p>
                   </div>
                   <div
-                    className="shrink-0 font-mono text-[11px] font-semibold"
+                    className="shrink-0 font-mono text-[10px] font-bold"
                     style={{
                       color:
                         s.score > 0.8
                           ? '#10b981'
                           : s.score > 0.6
                           ? '#f59e0b'
-                          : '#94a3b8',
+                          : '#71717a',
                     }}
                   >
                     {(s.score * 100).toFixed(0)}%

@@ -37,18 +37,18 @@ export function Documents() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <div className="space-y-8">
-        <section className="rounded-[28px] border border-border bg-[radial-gradient(circle_at_left,rgba(6,182,212,0.16),transparent_22%),radial-gradient(circle_at_right,rgba(16,185,129,0.14),transparent_24%),linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-card sm:p-8">
+        <section className="rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] p-6 shadow-card">
           <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent-green/20 bg-accent-green/10 px-3 py-1 text-xs font-medium text-accent-green">
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/5 px-3 py-1 text-xs font-medium text-orange-500">
                 <ShieldCheck size={12} />
-                Responsive ingestion workspace
+                Ingestion Workspace
               </div>
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-text-primary sm:text-4xl">
+              <h2 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
                 Manage every document from upload to vector storage.
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-text-secondary sm:text-base">
-                The screen now separates the workflow into upload, live pipeline progress, and knowledge-base inventory so the full path feels clear on both desktop and mobile.
+              <p className="mt-3 max-w-2xl text-xs leading-5 text-[#a1a1aa] sm:text-sm">
+                Upload files, track live pipeline progress, and manage the knowledge-base inventory. Live updates ensure visibility of each processing layer.
               </p>
             </div>
 
@@ -58,10 +58,10 @@ export function Documents() {
                 { icon: DatabaseZap, label: 'Pipeline stage', value: pipeline.stage },
                 { icon: RefreshCw, label: 'Auto refresh', value: '5s' },
               ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="rounded-2xl border border-border bg-black/20 p-4">
-                  <Icon size={16} className="text-accent-blue" />
-                  <p className="mt-3 text-xs uppercase tracking-[0.2em] text-text-muted">{label}</p>
-                  <p className="mt-1 text-lg font-semibold capitalize text-text-primary">{value}</p>
+                <div key={label} className="rounded-xl border border-[#1c1c1f] bg-[#121215] p-4">
+                  <Icon size={16} className="text-orange-500" />
+                  <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-[#71717a]">{label}</p>
+                  <p className="mt-1 text-base font-semibold capitalize text-white">{value}</p>
                 </div>
               ))}
             </div>
@@ -70,14 +70,14 @@ export function Documents() {
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 rounded-2xl border border-border bg-bg-card px-4 py-2.5 text-sm text-text-secondary transition hover:border-border-light hover:text-text-primary"
+              className="flex items-center gap-2 rounded-lg border border-[#1c1c1f] bg-[#121215] px-4 py-2 text-xs font-medium text-[#a1a1aa] transition hover:bg-[#18181b] hover:text-white"
             >
               <RefreshCw size={14} />
               Refresh documents
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-2 rounded-2xl bg-accent-primary px-4 py-2.5 text-sm font-medium text-white"
+              className="flex items-center gap-2 rounded-lg bg-orange-500 hover:bg-orange-600 px-4 py-2 text-xs font-medium text-white transition-colors"
             >
               <RotateCcw size={14} />
               Reload UI
@@ -87,22 +87,22 @@ export function Documents() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="space-y-5">
-            <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">
-              <h2 className="mb-4 text-sm font-semibold text-text-primary">Upload Document</h2>
+            <div className="rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] p-5 shadow-card">
+              <h2 className="mb-4 text-xs uppercase tracking-wider text-[#71717a] font-bold">Upload Document</h2>
               <DocumentUpload onUploaded={() => qc.invalidateQueries({ queryKey: ['documents'] })} />
             </div>
 
             <PipelineVisualizer state={pipeline} />
 
-            <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">
-              <p className="text-xs font-medium uppercase tracking-[0.22em] text-text-muted">Workflow steps</p>
+            <div className="rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] p-5 shadow-card">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#71717a]">Workflow steps</p>
               <div className="mt-4 space-y-3">
                 {[
                   '1. Upload the file and start ingestion immediately.',
                   '2. Watch parsing, chunking, embeddings, and storage update live.',
                   '3. Refresh the inventory or reload the UI if you want a hard visual reset.',
                 ].map((item) => (
-                  <div key={item} className="rounded-2xl border border-border bg-black/10 px-4 py-3 text-sm text-text-secondary">
+                  <div key={item} className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-4 py-3 text-xs text-[#a1a1aa]">
                     {item}
                   </div>
                 ))}
@@ -110,17 +110,17 @@ export function Documents() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">
+          <div className="rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] p-5 shadow-card">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold text-text-primary">
+              <h2 className="text-xs uppercase tracking-wider text-[#71717a] font-bold">
                 Knowledge Base
                 {data && (
-                  <span className="ml-2 text-xs font-normal text-text-muted">
-                    {data.total} document{data.total !== 1 ? 's' : ''}
+                  <span className="ml-2 text-xs font-normal text-[#52525b]">
+                    ({data.total} document{data.total !== 1 ? 's' : ''})
                   </span>
                 )}
               </h2>
-              <div className="rounded-full border border-border bg-black/10 px-3 py-1 text-xs text-text-secondary">
+              <div className="rounded-full border border-[#1c1c1f] bg-[#121215] px-3 py-1 text-[10px] text-[#a1a1aa]">
                 Syncs automatically after ingestion events
               </div>
             </div>

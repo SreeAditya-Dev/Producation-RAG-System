@@ -10,17 +10,17 @@ interface Props {
 }
 
 const TYPE_STYLES = {
-  info: 'text-text-secondary',
-  success: 'text-accent-green',
-  error: 'text-accent-red',
-  warning: 'text-accent-orange',
+  info: 'text-[#a1a1aa]',
+  success: 'text-emerald-400',
+  error: 'text-red-400',
+  warning: 'text-yellow-500',
 };
 
 const TYPE_DOT = {
-  info: 'bg-text-muted',
-  success: 'bg-accent-green',
-  error: 'bg-accent-red',
-  warning: 'bg-accent-orange',
+  info: 'bg-[#52525b]',
+  success: 'bg-emerald-400',
+  error: 'bg-red-400',
+  warning: 'bg-yellow-500',
 };
 
 function formatTime(iso: string) {
@@ -29,14 +29,14 @@ function formatTime(iso: string) {
 
 export function EventLog({ entries, onClear, connected }: Props) {
   return (
-    <div className="bg-bg-card border border-border rounded-2xl flex flex-col h-full">
+    <div className="bg-[#0c0c0e] border border-[#1c1c1f] rounded-xl flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1c1c1f]">
         <div className="flex items-center gap-2">
-          <Radio size={14} className={connected ? 'text-accent-green' : 'text-text-muted'} />
-          <span className="text-text-primary text-sm font-medium">Live Event Stream</span>
+          <Radio size={14} className={connected ? 'text-emerald-400 animate-pulse' : 'text-[#71717a]'} />
+          <span className="text-white text-xs font-bold uppercase tracking-wider">Live Event Stream</span>
           {entries.length > 0 && (
-            <span className="text-xs text-text-muted bg-bg-hover px-1.5 py-0.5 rounded">
+            <span className="text-[10px] text-[#a1a1aa] bg-[#121215] border border-[#1c1c1f] px-1.5 py-0.5 rounded font-mono">
               {entries.length}
             </span>
           )}
@@ -44,7 +44,7 @@ export function EventLog({ entries, onClear, connected }: Props) {
         {entries.length > 0 && (
           <button
             onClick={onClear}
-            className="p-1.5 rounded-lg hover:bg-bg-hover text-text-muted hover:text-text-secondary transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#121215] text-[#71717a] hover:text-white transition-colors"
           >
             <Trash2 size={13} />
           </button>
@@ -52,9 +52,9 @@ export function EventLog({ entries, onClear, connected }: Props) {
       </div>
 
       {/* Log */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1 font-mono text-xs">
+      <div className="flex-1 overflow-y-auto p-3 space-y-1 font-mono text-[10px] text-[#71717a]">
         {entries.length === 0 && (
-          <div className="flex items-center justify-center h-full text-text-muted py-8">
+          <div className="flex items-center justify-center h-full text-[#71717a] py-8">
             <div className="text-center">
               <Radio size={20} className="mx-auto mb-2 opacity-30" />
               <p>Waiting for events…</p>
@@ -69,7 +69,7 @@ export function EventLog({ entries, onClear, connected }: Props) {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-start gap-2 py-1"
             >
-              <span className="text-text-muted flex-shrink-0 mt-0.5">{formatTime(entry.timestamp)}</span>
+              <span className="text-[#52525b] flex-shrink-0 mt-0.5">{formatTime(entry.timestamp)}</span>
               <div className={clsx('w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0', TYPE_DOT[entry.type])} />
               <span className={clsx('flex-1 break-all', TYPE_STYLES[entry.type])}>
                 {entry.message}

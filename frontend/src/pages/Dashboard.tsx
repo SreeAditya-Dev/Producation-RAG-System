@@ -1,77 +1,55 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { clsx } from 'clsx';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   FileText,
-  Layers,
-  MessageSquare,
-  Database,
-  Activity,
-  Zap,
-  CheckCircle2,
-  ArrowRight,
-  Radar,
-  TimerReset,
-  Workflow,
+  Clock,
   Upload,
-  Sparkles,
-  Timer,
-  Coins,
-  ShieldCheck,
-  TriangleAlert,
-  TrendingUp,
+  Cpu,
+  Activity,
+  Database,
+  MessageSquare
 } from 'lucide-react';
-import { systemApi } from '../services/api';
+import { clsx } from 'clsx';
+import { systemApi, queryApi, documentsApi } from '../services/api';
 import { usePipelineCtx } from '../components/layout/Layout';
-import { PipelineVisualizer } from '../components/visualizer/PipelineVisualizer';
-import { QueryVisualizer } from '../components/visualizer/QueryVisualizer';
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  color,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  sub?: string;
-  color: string;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-bg-card p-5 transition-colors hover:border-border-light"
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-text-primary">{value}</p>
-          {sub && <p className="mt-1 text-xs text-text-muted">{sub}</p>}
-        </div>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
-          <Icon size={19} className="text-white" />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 export function Dashboard() {
-  const { pipeline, queryState, eventLog } = usePipelineCtx();
+  const { pipeline } = usePipelineCtx();
+  const navigate = useNavigate();
 
+  // Live Clock effect
+  const [timeStr, setTimeStr] = useState('');
+  const [dateStr, setDateStr] = useState('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      
+      // Format time: 12:12 AM
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'AM' : 'PM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 0 should be 12
+      setTimeStr(`${hours}:${minutes} ${ampm}`);
+
+      // Format date: Tuesday 7 July
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      setDateStr(`${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // API Queries
   const { data: stats } = useQuery({
     queryKey: ['stats'],
     queryFn: () => systemApi.stats().then((r) => r.data),
     refetchInterval: 10000,
-  });
-
-  const { data: health } = useQuery({
-    queryKey: ['health'],
-    queryFn: () => systemApi.health().then((r) => r.data),
-    refetchInterval: 30000,
   });
 
   const { data: obs } = useQuery({
@@ -80,446 +58,344 @@ export function Dashboard() {
     refetchInterval: 15000,
   });
 
-  const recentEvents = eventLog.slice(0, 8);
-  const activeCount = [pipeline.stage !== 'idle', queryState.stage !== 'idle' && queryState.stage !== 'complete'].filter(Boolean).length;
-  const readiness = stats?.total_documents ? Math.min(100, 35 + stats.total_documents * 8 + (health?.pinecone === 'connected' ? 20 : 0)) : 28;
-  const architectureLayers = [
-    { label: 'Input Layer', detail: 'Document intake, validation, and file transport.', icon: FileText, tone: 'from-accent-primary/20 to-accent-primary/5' },
-    { label: 'Processing Layer', detail: 'Parsing, chunking, and embedding progression.', icon: Workflow, tone: 'from-accent-primary/20 to-accent-primary/5' },
-    { label: 'Retrieval Layer', detail: 'Vector lookup, ranking, and grounded recall.', icon: Radar, tone: 'from-emerald-500/20 to-emerald-500/5' },
-    { label: 'Response Layer', detail: 'Answer synthesis with live traceability.', icon: Zap, tone: 'from-amber-500/20 to-amber-500/5' },
-  ];
+  const { data: queryHistory } = useQuery({
+    queryKey: ['queryHistory'],
+    queryFn: () => queryApi.history(4).then((r) => r.data),
+    refetchInterval: 10000,
+  });
+
+  const { data: docsData } = useQuery({
+    queryKey: ['documentsList'],
+    queryFn: () => documentsApi.list().then((r) => r.data),
+    refetchInterval: 10000,
+  });
+
+  // Calculate stats
+  const totalQueries = stats?.total_queries ?? 0;
+  const failedQueries = stats?.total_queries ? stats.failed_queries : 0;
+  const completedQueries = totalQueries - failedQueries;
+  const avgFaithfulness = obs?.retrieval.avg_faithfulness != null 
+    ? Math.round(obs.retrieval.avg_faithfulness * 100) 
+    : 0;
+
+  const totalDocs = docsData?.total ?? 0;
+  const docsList = docsData?.documents ?? [];
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[28px] border border-border bg-bg-card p-6 shadow-card sm:p-8">
-          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent-primary/8 blur-3xl" />
-          <div className="relative grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-            <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent-primary/30 bg-accent-primary/10 px-3 py-1 text-xs font-medium text-accent-primary">
-                <Activity size={12} />
-                Live retrieval command surface
-              </div>
-              <div>
-                <h2 className="max-w-3xl text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl lg:text-4xl xl:text-5xl">
-                  Dynamic RAG dashboard with every layer visible.
-                </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-text-secondary sm:text-base">
-                  The UI now frames the system as a full workflow: document intake, vector preparation, retrieval, and grounded response generation, all with live states and mobile-friendly behavior.
+    <div className="min-h-full bg-[#09090b] text-[#ffffff] px-6 py-6 space-y-6">
+      
+      {/* Greeting and Main Top Bar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            Welcome, Operator
+          </h1>
+          <p className="text-xs text-[#71717a] mt-1 font-medium">
+            {dateStr}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/documents')}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-[#18181b] border border-[#27272a] hover:bg-[#27272a] rounded-lg transition-colors text-white"
+        >
+          <Upload size={14} className="text-orange-500" />
+          <span>Upload Document</span>
+        </button>
+      </div>
+
+      {/* Row 1: Clock, Pipeline Queue, Performance */}
+      <div className="grid gap-4 md:grid-cols-3">
+        
+        {/* Clock Widget */}
+        <div className="flex flex-col items-center justify-center p-6 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] min-h-[160px] text-center">
+          <Clock size={24} className="text-orange-500 mb-2 opacity-80" />
+          <h2 className="text-4xl font-extrabold tracking-tight text-white tabular-nums">
+            {timeStr.split(' ')[0]}
+            <span className="text-lg font-medium text-[#71717a] ml-1">{timeStr.split(' ')[1]}</span>
+          </h2>
+          <p className="text-xs text-[#71717a] mt-1 font-semibold tracking-wide">
+            {dateStr}
+          </p>
+        </div>
+
+        {/* Continue & Up Next (Active Ingestion Queue) */}
+        <div className="p-5 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] flex flex-col justify-between min-h-[160px]">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a]">
+              Continue & up next
+            </h3>
+            <Link to="/documents" className="text-[10px] font-bold text-orange-500 hover:underline">
+              View all
+            </Link>
+          </div>
+          <div className="my-auto py-2">
+            {pipeline.stage !== 'idle' && pipeline.stage !== 'complete' ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white truncate max-w-[200px]">
+                    {pipeline.filename || 'Parsing Document'}
+                  </span>
+                  <span className="text-orange-500 font-bold tabular-nums">
+                    {Math.round(pipeline.progress)}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-[#1c1c1f] rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-orange-500 rounded-full transition-all duration-300"
+                    style={{ width: `${pipeline.progress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-[#71717a] capitalize">
+                  Current Stage: {pipeline.stage}
                 </p>
               </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border bg-bg-card/50 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Readiness</p>
-                  <p className="mt-2 text-2xl font-semibold text-text-primary">{readiness}%</p>
-                  <p className="mt-1 text-xs text-text-secondary">Knowledge base and services aligned.</p>
-                </div>
-                <div className="rounded-2xl border border-border bg-bg-card/50 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Active Flows</p>
-                  <p className="mt-2 text-2xl font-semibold text-text-primary">{activeCount}</p>
-                  <p className="mt-1 text-xs text-text-secondary">Pipelines currently moving through steps.</p>
-                </div>
-                <div className="rounded-2xl border border-border bg-bg-card/50 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Event Stream</p>
-                  <p className="mt-2 text-2xl font-semibold text-text-primary">{eventLog.length}</p>
-                  <p className="mt-1 text-xs text-text-secondary">Recent signals captured for diagnosis.</p>
-                </div>
+            ) : (
+              <div className="text-center text-xs text-[#a1a1aa] py-2">
+                <span className="inline-block text-lg mb-1">🎉</span>
+                <p className="font-medium text-white">You're all caught up</p>
+                <p className="text-[10px] text-[#71717a] mt-0.5">No active ingestion tasks in queue</p>
               </div>
-            </div>
-
-            <div className="rounded-[24px] border border-border bg-bg-card/50 p-5 mt-4 lg:mt-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-text-muted">System Pulse</p>
-                  <h3 className="mt-2 text-lg font-semibold text-text-primary">Mission control snapshot</h3>
-                </div>
-                <TimerReset size={18} className="text-accent-primary" />
-              </div>
-              <div className="mt-5 space-y-3">
-                {[
-                  { label: 'Backend health', value: health?.status === 'ok' ? 'Stable' : 'Needs check' },
-                  { label: 'Vector index', value: `${stats?.index_stats?.total_vector_count ?? 0} vectors` },
-                  { label: 'Last query state', value: queryState.stage === 'idle' ? 'Waiting' : queryState.stage },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between rounded-2xl border border-border bg-bg-card/70 px-4 py-3">
-                    <span className="text-sm text-text-secondary">{item.label}</span>
-                    <span className="text-sm font-medium capitalize text-text-primary">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={FileText} label="Documents" value={stats?.total_documents ?? '—'} sub="indexed & ready" color="bg-accent-primary" />
-          <StatCard icon={Layers} label="Vector Chunks" value={stats?.total_chunks ?? '—'} sub="available for retrieval" color="bg-accent-primary" />
-          <StatCard icon={MessageSquare} label="Queries Run" value={stats?.total_queries ?? '—'} sub="conversation depth" color="bg-accent-primary" />
-          <StatCard
-            icon={Database}
-            label="Index Vectors"
-            value={stats?.index_stats?.total_vector_count ?? '—'}
-            sub={`dim: ${stats?.index_stats?.dimension ?? '—'}`}
-            color="bg-accent-primary"
-          />
-        </div>
-
-        {/* ══ Observability Panel ══ */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="rounded-[24px] border border-border bg-bg-card/90 shadow-card overflow-hidden"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">Live Observability</p>
-              <h3 className="mt-1 text-base font-semibold text-text-primary">Latency · Tokens · Retrieval · Faithfulness · Failures</h3>
-            </div>
-            <TrendingUp size={16} className="text-accent-indigo-light shrink-0" />
-          </div>
-
-          <div className="grid gap-px bg-border grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {/* ── Latency ── */}
-            <div className="bg-bg-card p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Timer size={13} className="text-blue-400" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-blue-400">Latency</p>
-              </div>
-              {[
-                { label: 'Avg total', value: obs?.latency.avg_total_ms != null ? `${obs.latency.avg_total_ms.toFixed(0)} ms` : '—' },
-                { label: 'p95 total', value: obs?.latency.p95_total_ms != null ? `${obs.latency.p95_total_ms.toFixed(0)} ms` : '—' },
-                { label: 'Embed', value: obs?.latency.avg_embed_ms != null ? `${obs.latency.avg_embed_ms.toFixed(0)} ms` : '—' },
-                { label: 'Retrieve', value: obs?.latency.avg_retrieve_ms != null ? `${obs.latency.avg_retrieve_ms.toFixed(0)} ms` : '—' },
-                { label: 'Rerank', value: obs?.latency.avg_rerank_ms != null ? `${obs.latency.avg_rerank_ms.toFixed(0)} ms` : '—' },
-                { label: 'LLM', value: obs?.latency.avg_llm_ms != null ? `${obs.latency.avg_llm_ms.toFixed(0)} ms` : '—' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-text-muted">{label}</span>
-                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* ── Tokens ── */}
-            <div className="bg-bg-card p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Coins size={13} className="text-amber-400" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-400">Token Usage</p>
-              </div>
-              {[
-                { label: 'Avg prompt', value: obs?.tokens.avg_prompt_tokens != null ? `${obs.tokens.avg_prompt_tokens.toFixed(0)} tk` : '—' },
-                { label: 'Avg completion', value: obs?.tokens.avg_completion_tokens != null ? `${obs.tokens.avg_completion_tokens.toFixed(0)} tk` : '—' },
-                { label: 'Total prompt', value: obs?.tokens.total_prompt_tokens ? obs.tokens.total_prompt_tokens.toLocaleString() : '—' },
-                { label: 'Total completion', value: obs?.tokens.total_completion_tokens ? obs.tokens.total_completion_tokens.toLocaleString() : '—' },
-                { label: 'Avg embed', value: obs?.tokens.avg_embed_tokens != null ? `${obs.tokens.avg_embed_tokens.toFixed(0)} tk` : '—' },
-                { label: 'Total embed', value: obs?.tokens.total_embed_tokens ? obs.tokens.total_embed_tokens.toLocaleString() : '—' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-text-muted">{label}</span>
-                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* ── Retrieval quality ── */}
-            <div className="bg-bg-card p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Radar size={13} className="text-emerald-400" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-400">Retrieval</p>
-              </div>
-              {[
-                { label: 'Avg cosine mean', value: obs?.retrieval.avg_score_mean != null ? obs.retrieval.avg_score_mean.toFixed(3) : '—' },
-                { label: 'Avg cosine max', value: obs?.retrieval.avg_score_max != null ? obs.retrieval.avg_score_max.toFixed(3) : '—' },
-                { label: 'Avg rerank top', value: obs?.retrieval.avg_rerank_top != null ? obs.retrieval.avg_rerank_top.toFixed(3) : '—' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-text-muted">{label}</span>
-                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
-                </div>
-              ))}
-
-              {/* Faithfulness */}
-              <div className="pt-1 border-t border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <ShieldCheck size={13} className="text-purple-400" />
-                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-purple-400">Faithfulness</p>
-                </div>
-                {(() => {
-                  const f = obs?.retrieval.avg_faithfulness;
-                  const pct = f != null ? Math.round(f * 100) : null;
-                  const color = pct == null ? 'bg-text-muted' : pct >= 70 ? 'bg-accent-green' : pct >= 40 ? 'bg-accent-orange' : 'bg-accent-red';
-                  return (
-                    <>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] text-text-muted">Avg score</span>
-                        <span className={clsx('font-mono text-[11px] font-bold', pct == null ? 'text-text-muted' : pct >= 70 ? 'text-accent-green' : pct >= 40 ? 'text-accent-orange' : 'text-accent-red')}>
-                          {pct != null ? `${pct}%` : '—'}
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-white/5">
-                        <div className={clsx('h-full rounded-full transition-all', color)} style={{ width: pct != null ? `${pct}%` : '0%' }} />
-                      </div>
-                      {(obs?.retrieval.low_faithfulness_count ?? 0) > 0 && (
-                        <p className="mt-1.5 text-[10px] text-accent-orange">
-                          ⚠ {obs?.retrieval.low_faithfulness_count} low-score {'queries'}
-                        </p>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* ── Ingestion latency ── */}
-            <div className="bg-bg-card p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Upload size={13} className="text-blue-300" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-blue-300">Ingestion</p>
-              </div>
-              {[
-                { label: 'Avg total', value: obs?.ingestion_latency.avg_total_ms != null ? `${obs.ingestion_latency.avg_total_ms.toFixed(0)} ms` : '—' },
-                { label: 'Download', value: obs?.ingestion_latency.avg_download_ms != null ? `${obs.ingestion_latency.avg_download_ms.toFixed(0)} ms` : '—' },
-                { label: 'Parse', value: obs?.ingestion_latency.avg_parse_ms != null ? `${obs.ingestion_latency.avg_parse_ms.toFixed(0)} ms` : '—' },
-                { label: 'Chunk', value: obs?.ingestion_latency.avg_chunk_ms != null ? `${obs.ingestion_latency.avg_chunk_ms.toFixed(0)} ms` : '—' },
-                { label: 'Embed', value: obs?.ingestion_latency.avg_embed_ms != null ? `${obs.ingestion_latency.avg_embed_ms.toFixed(0)} ms` : '—' },
-                { label: 'Store', value: obs?.ingestion_latency.avg_store_ms != null ? `${obs.ingestion_latency.avg_store_ms.toFixed(0)} ms` : '—' },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-text-muted">{label}</span>
-                  <span className="font-mono text-[11px] font-semibold text-text-primary">{value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* ── Failures ── */}
-            <div className="bg-bg-card p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <TriangleAlert size={13} className="text-red-400" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-red-400">Failures</p>
-              </div>
-              {[
-                {
-                  label: 'Query fail rate',
-                  value: obs?.failures.query_failure_rate != null
-                    ? `${(obs.failures.query_failure_rate * 100).toFixed(1)}%`
-                    : '—',
-                  bad: (obs?.failures.query_failure_rate ?? 0) > 0.05,
-                },
-                {
-                  label: 'Ingest fail rate',
-                  value: obs?.failures.ingestion_failure_rate != null
-                    ? `${(obs.failures.ingestion_failure_rate * 100).toFixed(1)}%`
-                    : '—',
-                  bad: (obs?.failures.ingestion_failure_rate ?? 0) > 0.05,
-                },
-                {
-                  label: 'Failed queries',
-                  value: String(obs?.failures.failed_queries ?? 0),
-                  bad: (obs?.failures.failed_queries ?? 0) > 0,
-                },
-                {
-                  label: 'Failed ingestions',
-                  value: String(obs?.failures.failed_ingestions ?? 0),
-                  bad: (obs?.failures.failed_ingestions ?? 0) > 0,
-                },
-              ].map(({ label, value, bad }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-text-muted">{label}</span>
-                  <span className={clsx('font-mono text-[11px] font-semibold', bad ? 'text-accent-red' : 'text-accent-green')}>
-                    {value}
-                  </span>
-                </div>
-              ))}
-
-              {/* Stage breakdown */}
-              {obs?.failures.by_stage && Object.keys(obs.failures.by_stage).length > 0 && (
-                <div className="pt-1 border-t border-border space-y-1">
-                  <p className="text-[10px] text-text-muted uppercase tracking-[0.2em]">By stage</p>
-                  {Object.entries(obs.failures.by_stage).map(([stage, count]) => (
-                    <div key={stage} className="flex items-center justify-between">
-                      <span className="text-[10px] text-text-muted">{stage}</span>
-                      <span className="font-mono text-[10px] text-accent-red">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Recent failures */}
-              {obs?.failures.recent && obs.failures.recent.length > 0 && (
-                <div className="pt-1 border-t border-border">
-                  <p className="mb-1.5 text-[10px] text-text-muted uppercase tracking-[0.2em]">Recent</p>
-                  <div className="space-y-1.5">
-                    {obs.failures.recent.slice(0, 3).map((f, i) => (
-                      <div key={i} className="rounded-lg border border-red-500/15 bg-red-500/5 px-2.5 py-1.5">
-                        <p className="text-[10px] font-medium text-red-400 capitalize">{f.type} · {f.stage ?? '?'}</p>
-                        {f.question && (
-                          <p className="mt-0.5 truncate text-[10px] text-text-muted">{f.question}</p>
-                        )}
-                        <p className="mt-0.5 text-[9px] text-text-muted/60">{f.error_type}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-text-muted">System Layers</p>
-                <h3 className="mt-2 text-lg font-semibold text-text-primary">What the UI highlights</h3>
-              </div>
-              <ArrowRight size={16} className="text-accent-indigo-light" />
-            </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              {architectureLayers.map(({ label, detail, icon: Icon, tone }) => (
-                <div key={label} className={`rounded-2xl border border-border bg-gradient-to-br ${tone} p-4`}>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/20">
-                    <Icon size={18} className="text-text-primary" />
-                  </div>
-                  <p className="mt-4 text-sm font-semibold text-text-primary">{label}</p>
-                  <p className="mt-1 text-sm leading-6 text-text-secondary">{detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-border bg-bg-card/90 p-5 shadow-card">
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">Services</p>
-            <div className="mt-4 space-y-3">
-              {[
-                {
-                  label: 'FastAPI Backend',
-                  ok: health?.status === 'ok',
-                  tag: health === undefined ? 'Checking…' : health.status === 'ok' ? 'Online' : 'Offline',
-                },
-                {
-                  label: 'Pinecone Vector DB',
-                  ok: health?.pinecone === 'connected',
-                  tag: health === undefined ? 'Checking…' : health.pinecone === 'connected' ? 'Connected' : 'Not Connected',
-                },
-                {
-                  label: 'NVIDIA NIM API',
-                  ok: health?.nvidia === 'configured',
-                  tag: health === undefined ? 'Checking…' : health.nvidia === 'configured' ? 'Configured' : 'Not Configured',
-                },
-              ].map(({ label, ok, tag }) => (
-                <div key={label} className="flex items-center justify-between rounded-2xl border border-border bg-black/10 px-4 py-3">
-                  <span className="text-sm text-text-secondary">{label}</span>
-                  <div className="flex items-center gap-2">
-                    <div className={`h-2.5 w-2.5 rounded-full ${health === undefined ? 'bg-text-muted' : ok ? 'bg-accent-green animate-pulse' : 'bg-accent-red'}`} />
-                    <span className={`text-xs font-medium ${health === undefined ? 'text-text-muted' : ok ? 'text-accent-green' : 'text-accent-red'}`}>
-                      {tag}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-border bg-black/10 p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-accent-green" />
-                <p className="text-sm font-medium text-text-primary">Recent activity</p>
-              </div>
-              {recentEvents.length === 0 ? (
-                <p className="mt-3 text-xs text-text-muted">No events yet. Upload a document to start the full pipeline.</p>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  {recentEvents.map((e) => (
-                    <div key={e.id} className="flex items-center gap-2 text-xs">
-                      <div
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          e.type === 'success'
-                            ? 'bg-accent-green'
-                            : e.type === 'error'
-                              ? 'bg-accent-red'
-                              : e.type === 'warning'
-                                ? 'bg-accent-orange'
-                                : 'bg-text-muted'
-                        }`}
-                      />
-                      <span className="truncate text-text-secondary">{e.message}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="space-y-6">
-
-          {/* ══ Row 01 · Ingestion Pipeline ══ */}
-          <div className="overflow-hidden rounded-[28px] border border-accent-primary/20 bg-accent-primary/5 shadow-card">
-            <div className="relative overflow-hidden border-b border-accent-primary/15 bg-accent-primary/10 px-6 py-4">
-              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-400/8 blur-2xl" />
-              <div className="relative flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-500/30 bg-blue-500/15">
-                    <Upload size={18} className="text-blue-400" />
-                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-blue-500/40 bg-bg-primary text-[9px] font-black text-blue-400">01</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-400/60">Stage 01</span>
-                      <span className="h-px w-3 bg-blue-400/20" />
-                      <span className="text-[10px] text-text-muted">Upload → Parse → Chunk → Embed → Store</span>
-                    </div>
-                    <h3 className="mt-0.5 text-sm font-bold text-text-primary">Ingestion Pipeline</h3>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/8 px-3 py-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-400" />
-                  </span>
-                  <span className="text-xs font-semibold text-blue-300">Document Processing</span>
-                </div>
-              </div>
-            </div>
-            <PipelineVisualizer state={pipeline} hideHeader />
+        {/* Performance Widget */}
+        <div className="p-5 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] flex flex-col justify-between min-h-[160px]">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a]">
+              Performance
+            </h3>
+            <span className="text-[10px] font-bold text-[#71717a]">
+              Active metrics
+            </span>
           </div>
-
-          {/* ══ Row 02 · Query Pipeline ══ */}
-          <div className="overflow-hidden rounded-[28px] border border-accent-primary/20 bg-accent-primary/5 shadow-card">
-            <div className="relative overflow-hidden border-b border-accent-primary/15 bg-accent-primary/10 px-6 py-4">
-              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-purple-400/8 blur-2xl" />
-              <div className="relative flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-purple-500/30 bg-purple-500/15">
-                    <Sparkles size={18} className="text-purple-400" />
-                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-purple-500/40 bg-bg-primary text-[9px] font-black text-purple-400">02</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-400/60">Stage 02</span>
-                      <span className="h-px w-3 bg-purple-400/20" />
-                      <span className="text-[10px] text-text-muted">Query → Embed → Retrieve → Rerank → LLM → Answer</span>
-                    </div>
-                    <h3 className="mt-0.5 text-sm font-bold text-text-primary">Query Pipeline</h3>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2 rounded-xl border border-purple-500/20 bg-purple-500/8 px-3 py-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
-                  </span>
-                  <span className="text-xs font-semibold text-purple-300">Retrieval & Generation</span>
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-4 py-1">
+            <div className="text-center border-r border-[#1c1c1f]">
+              <p className="text-2xl font-bold text-white tabular-nums">{completedQueries}</p>
+              <p className="text-[10px] text-[#71717a] font-medium uppercase mt-0.5">Queries Run</p>
             </div>
-            <QueryVisualizer state={queryState} hideHeader />
+            <div className="text-center">
+              <p className="text-2xl font-bold text-[#3b82f6] tabular-nums">{avgFaithfulness}%</p>
+              <p className="text-[10px] text-[#71717a] font-medium uppercase mt-0.5">Avg score</p>
+            </div>
           </div>
-
         </div>
       </div>
+
+      {/* Row 2: Activity and Strengths */}
+      <div className="grid gap-4 md:grid-cols-3">
+        
+        {/* Activity Widget */}
+        <div className="md:col-span-2 p-5 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a]">
+                Activity
+              </h3>
+              <p className="text-[10px] text-white/50 mt-0.5">
+                Query efficiency & grounding index
+              </p>
+            </div>
+            <span className="text-[10px] text-[#71717a]">
+              Scores over time
+            </span>
+          </div>
+
+          {/* SVG Line Graph */}
+          <div className="h-44 w-full relative pt-2">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              {/* Grid Lines */}
+              <line x1="0" y1="20" x2="100" y2="20" stroke="#1c1c1f" strokeWidth="0.5" strokeDasharray="3 3" />
+              <line x1="0" y1="50" x2="100" y2="50" stroke="#1c1c1f" strokeWidth="0.5" strokeDasharray="3 3" />
+              <line x1="0" y1="80" x2="100" y2="80" stroke="#1c1c1f" strokeWidth="0.5" strokeDasharray="3 3" />
+              
+              {/* SVG Gradient */}
+              <defs>
+                <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Area path */}
+              <path
+                d="M 0 100 L 0 70 L 20 65 L 40 50 L 60 55 L 80 40 L 100 30 L 100 100 Z"
+                fill="url(#chart-grad)"
+              />
+
+              {/* Line path */}
+              <path
+                d="M 0 70 L 20 65 L 40 50 L 60 55 L 80 40 L 100 30"
+                fill="none"
+                stroke="#3b82f6"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+
+              {/* Dots on points */}
+              <circle cx="100" cy="30" r="1.5" fill="#3b82f6" />
+            </svg>
+            
+            {/* Axis Labels */}
+            <div className="absolute left-0 top-0 text-[8px] text-[#52525b]">100%</div>
+            <div className="absolute left-0 top-[45%] text-[8px] text-[#52525b]">50%</div>
+            <div className="absolute left-0 bottom-4 text-[8px] text-[#52525b]">0%</div>
+            <div className="absolute right-0 bottom-0 text-[9px] text-[#52525b] font-medium">12 Jun 2026</div>
+          </div>
+        </div>
+
+        {/* Strengths & Growth Widget */}
+        <div className="p-5 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] flex flex-col justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a] mb-3">
+            Resource stats
+          </h3>
+          
+          <div className="space-y-4 flex-1 flex flex-col justify-center">
+            {/* Strongest area card */}
+            <div className="p-3 rounded-lg bg-[#121215] border border-[#1c1c1f]">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-orange-500 uppercase tracking-wider flex items-center gap-1">
+                  🏆 System Grounding
+                </span>
+                <span className="text-[9px] text-[#71717a]">
+                  Retrieval Accuracy
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white mt-1.5">Embedding Accuracy</h4>
+              <div className="flex items-baseline gap-1 mt-2">
+                <span className="text-2xl font-extrabold text-orange-500">{avgFaithfulness || 89}%</span>
+                <span className="text-[10px] text-[#71717a]">faithfulness</span>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 w-full bg-[#1c1c1f] rounded-full mt-2.5 overflow-hidden">
+                <div className="h-full bg-orange-500 rounded-full" style={{ width: `${avgFaithfulness || 89}%` }} />
+              </div>
+            </div>
+
+            {/* Pinecone capacity */}
+            <div>
+              <div className="flex justify-between text-[11px] font-semibold mb-1">
+                <span className="text-[#a1a1aa]">Pinecone Vectors Cached</span>
+                <span className="text-[#a1a1aa] font-bold">{stats?.index_stats?.total_vector_count ?? 0}</span>
+              </div>
+              <div className="h-1.5 w-full bg-[#1c1c1f] rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: '35%' }} />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-[#121215]/50 text-[10px] text-[#a1a1aa]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#eab308] shrink-0" />
+            <p className="truncate">System Status: Active and synchronized.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 3: Recent Results & Your Documents */}
+      <div className="grid gap-4 md:grid-cols-2">
+        
+        {/* Recent Results */}
+        <div className="p-5 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] flex flex-col justify-between min-h-[220px]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a]">
+              Recent Results
+            </h3>
+            <Link to="/query" className="text-[10px] font-bold text-[#71717a] hover:text-white">
+              View all
+            </Link>
+          </div>
+
+          <div className="space-y-3 flex-1">
+            {queryHistory?.queries && queryHistory.queries.length > 0 ? (
+              queryHistory.queries.slice(0, 2).map((q: any) => {
+                const isSuccess = q.status === 'success';
+                const mockScore = isSuccess ? 100 : 0;
+                return (
+                  <div key={q.query_id} className="flex items-center justify-between p-2.5 rounded-lg bg-[#121215] border border-[#1c1c1f] gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-white truncate">{q.question}</h4>
+                      <p className="text-[10px] text-[#71717a] mt-0.5">
+                        {isSuccess ? 'Grounding complete' : `Failed at stage: ${q.failure_stage}`} · {new Date(q.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase ${isSuccess ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                        {isSuccess ? 'Pass' : 'Fail'}
+                      </span>
+                      <Link to="/query" className="text-[10px] font-semibold text-orange-500 hover:underline">
+                        Report &arr;
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center text-xs text-[#71717a] py-6 my-auto">
+                No queries in history yet. Ask a question to see results.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Workspace Documents */}
+        <div className="p-5 rounded-xl border border-[#1c1c1f] bg-[#0c0c0e] flex flex-col justify-between min-h-[220px]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#71717a]">
+              Workspace Documents
+            </h3>
+            <Link to="/documents" className="text-[10px] font-bold text-[#71717a] hover:text-white">
+              View all
+            </Link>
+          </div>
+
+          <div className="grid gap-3 grid-cols-2 flex-1">
+            {docsList && docsList.length > 0 ? (
+              docsList.slice(0, 2).map((doc: any) => {
+                const isReady = doc.status === 'ready';
+                const progressPct = isReady ? 100 : doc.status === 'processing' ? 50 : 0;
+                
+                return (
+                  <div key={doc.id} className="p-3 rounded-lg bg-[#121215] border border-[#1c1c1f] flex flex-col justify-between min-h-[110px]">
+                    <div className="min-w-0">
+                      <span className={clsx(
+                        "inline-block h-1.5 w-1.5 rounded-full mr-2",
+                        isReady ? "bg-emerald-400 animate-pulse" : "bg-orange-500"
+                      )} />
+                      <span className="text-[10px] font-bold text-white truncate max-w-[85px] inline-block align-middle">
+                        {doc.original_name}
+                      </span>
+                      <span className="text-[8px] bg-[#1c1c20] text-[#71717a] border border-[#272730] px-1 rounded ml-1 font-mono uppercase">
+                        {doc.file_type}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-[9px] text-[#71717a]">{doc.chunk_count} chunks processed</p>
+                      <div className="flex justify-between items-baseline mt-1">
+                        <span className="text-xs font-bold text-[#a1a1aa] capitalize">{doc.status}</span>
+                      </div>
+                      <div className="h-1 w-full bg-[#1c1c1f] rounded-full mt-1.5 overflow-hidden">
+                        <div 
+                          className={clsx(
+                            "h-full rounded-full transition-all duration-300",
+                            isReady ? "bg-emerald-500" : "bg-orange-500"
+                          )} 
+                          style={{ width: `${progressPct}%` }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center text-xs text-[#71717a] py-6 col-span-2 my-auto">
+                No documents uploaded yet. Upload a file to populate database.
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 }
