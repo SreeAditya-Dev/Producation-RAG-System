@@ -133,7 +133,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
         {/* ── Vertical Timeline Steps ── */}
         <div className="relative pl-1">
           {/* Vertical track line */}
-          <div className="absolute left-[13px] top-2 bottom-2 w-[1px] bg-zinc-850" />
+          <div className="absolute left-[13px] top-2 bottom-2 w-[1px] bg-zinc-800" />
 
           <div className="space-y-6">
             {STEPS.map((step, i) => {
@@ -210,7 +210,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
                   <span>Upserting Ingestion Vectors</span>
                   <span className="font-semibold text-zinc-200">{progress.toFixed(1)}%</span>
                 </div>
-                <div className="w-full bg-zinc-900 border border-zinc-850 rounded h-1 overflow-hidden">
+                <div className="w-full bg-zinc-900 border border-zinc-800 rounded h-1 overflow-hidden">
                   <motion.div
                     className="h-full bg-[#F4831F]"
                     initial={{ width: 0 }}
@@ -227,7 +227,7 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
         </AnimatePresence>
 
         {/* ── Status Metrics ── */}
-        <div className="grid gap-2 grid-cols-3 pt-3.5 border-t border-zinc-850 bg-black">
+        <div className="grid gap-2 grid-cols-3 pt-3.5 border-t border-zinc-800 bg-black">
           <div className="text-left">
             <p className="text-[9px] uppercase tracking-wider text-zinc-600 font-mono font-semibold">Active State</p>
             <p className="mt-1 text-xs font-semibold text-[#F4831F] capitalize font-mono truncate">{stage}</p>

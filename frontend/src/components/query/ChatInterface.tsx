@@ -206,10 +206,10 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
                 <Sparkles size={10} />
                 Active Core Ingestion Specs
               </div>
-              <div className="flex justify-between"><span className="text-zinc-650">Embedding model:</span><span className="text-zinc-300">NV-EmbedQA-E5-v5</span></div>
-              <div className="flex justify-between"><span className="text-zinc-650">Vector store:</span><span className="text-zinc-300">Pinecone (Cosine Index)</span></div>
+              <div className="flex justify-between"><span className="text-zinc-600">Embedding model:</span><span className="text-zinc-300">NV-EmbedQA-E5-v5</span></div>
+              <div className="flex justify-between"><span className="text-zinc-600">Vector store:</span><span className="text-zinc-300">Pinecone (Cosine Index)</span></div>
               <div className="flex justify-between"><span className="text-zinc-655">Reranker algorithm:</span><span className="text-zinc-300">NIM Cross-Encoder Llama-3</span></div>
-              <div className="flex justify-between"><span className="text-zinc-650">Synthesis LLM:</span><span className="text-zinc-300">Llama-3.3-70B-Spec</span></div>
+              <div className="flex justify-between"><span className="text-zinc-600">Synthesis LLM:</span><span className="text-zinc-300">Llama-3.3-70B-Spec</span></div>
             </div>
           </div>
         )}
@@ -223,7 +223,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
               className="flex gap-6 p-6 hover:bg-zinc-950/20 transition-colors border-b border-zinc-900/50"
             >
               {/* Monospace Indicator Tag */}
-              <div className="w-[84px] shrink-0 font-mono text-[9px] uppercase tracking-widest font-bold text-zinc-650 pt-0.5 select-none">
+              <div className="w-[84px] shrink-0 font-mono text-[9px] uppercase tracking-widest font-bold text-zinc-600 pt-0.5 select-none">
                 {msg.role === 'assistant' ? 'assistant' : 'user'}
               </div>
 
@@ -304,7 +304,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
       {/* Input panel */}
       <div className="border-t border-zinc-900 bg-black px-6 py-4">
         <div className="max-w-[700px] mx-auto w-full space-y-2">
-          <div className="relative flex items-stretch border border-zinc-850 rounded bg-zinc-950 focus-within:border-[#F4831F]/50 transition-colors">
+          <div className="relative flex items-stretch border border-zinc-800 rounded bg-zinc-950 focus-within:border-[#F4831F]/50 transition-colors">
             <textarea
               ref={inputRef}
               value={input}
@@ -313,7 +313,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
               placeholder="Ask a question grounded in vector data..."
               rows={1}
               disabled={isLoading}
-              className="flex-1 bg-transparent px-4 py-3 text-xs text-white placeholder-zinc-650 resize-none focus:outline-none disabled:opacity-50 font-sans leading-relaxed"
+              className="flex-1 bg-transparent px-4 py-3 text-xs text-white placeholder-zinc-600 resize-none focus:outline-none disabled:opacity-50 font-sans leading-relaxed"
               style={{ maxHeight: '100px', overflowY: 'auto' }}
             />
             
@@ -349,7 +349,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage }: Pr
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-between text-[8px] font-mono text-zinc-650 px-1">
+          <div className="flex items-center justify-between text-[8px] font-mono text-zinc-600 px-1">
             <span>ENTER TO TRANSMIT &middot; SHIFT+ENTER FOR NEWLINE</span>
             <span className="flex items-center gap-1">
               <CornerDownLeft size={8} /> READY

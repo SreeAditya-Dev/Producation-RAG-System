@@ -159,7 +159,7 @@ function StepRow({ stageNode, status, isLast, state }: StepProps) {
         <p
           className={clsx(
             'text-[10px] font-mono mt-0.5 leading-relaxed',
-            isActive ? 'text-zinc-200 font-medium' : isComplete ? 'text-zinc-500' : 'text-zinc-650'
+            isActive ? 'text-zinc-200 font-medium' : isComplete ? 'text-zinc-500' : 'text-zinc-600'
           )}
         >
           {stageNode.sublabel}
@@ -277,7 +277,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
             <span
               className={clsx(
                 'rounded border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider',
-                stage === 'idle' && 'border-zinc-850 text-zinc-500 bg-zinc-950/40',
+                stage === 'idle' && 'border-zinc-800 text-zinc-500 bg-zinc-950/40',
                 stage === 'complete' && 'border-zinc-700 bg-zinc-900/20 text-zinc-300',
                 stage === 'error' && 'border-red-950 bg-red-950/20 text-red-405',
                 ['embedding', 'retrieving', 'reranking', 'generating'].includes(stage) &&
@@ -320,7 +320,7 @@ export function QueryVisualizer({ state, hideHeader = false }: Props) {
               {sources.map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2.5 rounded border border-zinc-900 bg-black px-2 py-1.5 hover:border-zinc-850 transition-colors cursor-pointer"
+                  className="flex items-center gap-2.5 rounded border border-zinc-900 bg-black px-2 py-1.5 hover:border-zinc-800 transition-colors cursor-pointer"
                 >
                   <div className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-zinc-900 border border-zinc-800">
                     <span className="font-mono text-[8px] text-[#F4831F] font-bold">{i + 1}</span>

@@ -59,7 +59,7 @@ export function Documents() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search documents..."
-                className="w-52 pl-8 pr-3 py-1.5 text-[11px] bg-transparent text-white placeholder-zinc-650 focus:outline-none transition-all font-mono"
+                className="w-52 pl-8 pr-3 py-1.5 text-[11px] bg-transparent text-white placeholder-zinc-600 focus:outline-none transition-all font-mono"
               />
             </div>
 

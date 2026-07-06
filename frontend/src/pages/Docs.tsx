@@ -101,7 +101,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
         </div>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] border border-zinc-850 bg-[#0c0c0f] text-zinc-400 hover:border-zinc-750 hover:text-white rounded-md transition-all duration-200 cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] border border-zinc-800 bg-[#0c0c0f] text-zinc-400 hover:border-zinc-700 hover:text-white rounded-md transition-all duration-200 cursor-pointer"
         >
           {copied ? (
             <>
@@ -120,7 +120,7 @@ function CodeBlock({ code, filename, language }: CodeBlockProps) {
       {/* Code Area */}
       <div className="p-4 overflow-x-auto bg-[#040406]/60 flex">
         {/* Line Numbers */}
-        <div className="text-zinc-650 text-right pr-4 select-none border-r border-zinc-900 min-w-[2rem] text-[10px] leading-5 font-mono">
+        <div className="text-zinc-600 text-right pr-4 select-none border-r border-zinc-900 min-w-[2rem] text-[10px] leading-5 font-mono">
           {code.split('\n').map((_, i) => (
             <div key={i}>{i + 1}</div>
           ))}
@@ -493,7 +493,7 @@ sources = reranker_service.rerank(
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/2 rounded-full blur-[80px] pointer-events-none" />
                     
                     {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-855 pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
                       <div>
                         <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                           Pipeline Simulator
@@ -530,7 +530,7 @@ sources = reranker_service.rerank(
                     {/* Nodes Connector Area */}
                     <div className="relative py-8 px-4 overflow-x-auto no-scrollbar">
                       {/* Visual Line Connectors */}
-                      <div className="absolute top-[48px] left-[5%] right-[5%] h-0.5 bg-zinc-850 z-0 hidden md:block">
+                      <div className="absolute top-[48px] left-[5%] right-[5%] h-0.5 bg-zinc-800 z-0 hidden md:block">
                         <div 
                           className="h-full bg-gradient-to-r from-orange-500 via-blue-500 to-emerald-500 transition-all duration-500 ease-out"
                           style={{ width: `${(activeStep / 6) * 100}%` }}
@@ -592,9 +592,9 @@ sources = reranker_service.rerank(
                     </div>
 
                     {/* Stage Details Drawer */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-stretch pt-4 border-t border-zinc-855">
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-stretch pt-4 border-t border-zinc-800">
                       {/* Left: Prose details */}
-                      <div className="rounded-xl border border-zinc-855 bg-black/40 p-5 flex flex-col justify-between space-y-4">
+                      <div className="rounded-xl border border-zinc-800 bg-black/40 p-5 flex flex-col justify-between space-y-4">
                         <div className="space-y-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-mono text-[9px] bg-orange-950/50 border border-orange-800/40 text-orange-400 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
@@ -614,14 +614,14 @@ sources = reranker_service.rerank(
                         
                         <div className="flex items-center gap-2 pt-2 text-[10px] text-zinc-500 font-mono border-t border-zinc-900/60">
                           <span>Active Engine:</span>
-                          <span className="text-zinc-300 font-bold bg-zinc-900 px-2 py-0.5 rounded border border-zinc-850">
+                          <span className="text-zinc-300 font-bold bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
                             {pipelineSteps[activeStep].engine}
                           </span>
                         </div>
                       </div>
 
                       {/* Right: Live log output terminal */}
-                      <div className="rounded-xl border border-zinc-855 bg-black/90 p-4 font-mono text-[10px] flex flex-col justify-between h-[160px] lg:h-auto shadow-inner relative">
+                      <div className="rounded-xl border border-zinc-800 bg-black/90 p-4 font-mono text-[10px] flex flex-col justify-between h-[160px] lg:h-auto shadow-inner relative">
                         <div className="absolute top-3 right-3 flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-bold">Telemetry Live Feed</span>
@@ -640,7 +640,7 @@ sources = reranker_service.rerank(
                             );
                           })}
                         </div>
-                        <div className="text-[8px] text-zinc-650 border-t border-zinc-900 pt-2 flex justify-between items-center mt-3">
+                        <div className="text-[8px] text-zinc-600 border-t border-zinc-900 pt-2 flex justify-between items-center mt-3">
                           <span>CONSOLE // READY</span>
                           <span>SYS_TIME: {new Date().toLocaleTimeString()}</span>
                         </div>
@@ -719,7 +719,7 @@ sources = reranker_service.rerank(
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
                       {/* 1. Ingestion */}
-                      <div className="p-5 bg-zinc-950/50 border border-zinc-855 rounded-xl space-y-3 relative group hover:border-zinc-700 transition-colors">
+                      <div className="p-5 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-3 relative group hover:border-zinc-700 transition-colors">
                         <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-zinc-800 hidden md:block animate-pulse">
                           <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                         </div>
@@ -737,7 +737,7 @@ sources = reranker_service.rerank(
                       </div>
 
                       {/* 2. Retrieval */}
-                      <div className="p-5 bg-zinc-950/50 border border-zinc-855 rounded-xl space-y-3 relative group hover:border-zinc-700 transition-colors">
+                      <div className="p-5 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-3 relative group hover:border-zinc-700 transition-colors">
                         <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-zinc-800 hidden md:block animate-pulse">
                           <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                         </div>
@@ -755,7 +755,7 @@ sources = reranker_service.rerank(
                       </div>
 
                       {/* 3. Completion */}
-                      <div className="p-5 bg-zinc-950/50 border border-zinc-855 rounded-xl space-y-3 hover:border-zinc-700 transition-colors">
+                      <div className="p-5 bg-zinc-950/50 border border-zinc-800 rounded-xl space-y-3 hover:border-zinc-700 transition-colors">
                         <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           3. Generation Core
@@ -779,7 +779,7 @@ sources = reranker_service.rerank(
                   {/* Left Column: Descriptive prose */}
                   <div className="space-y-6">
                     <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5">
-                      <div className="flex items-center gap-2 pb-3 border-b border-zinc-855">
+                      <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
                         <div className="h-2 w-2 rounded-full bg-orange-500" />
                         <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                           Ingestion Protocols
@@ -793,18 +793,18 @@ sources = reranker_service.rerank(
                             Content Extraction Engine
                           </h4>
                           <p className="text-zinc-455">
-                            Raw file bytes uploaded to storage are analyzed and parsed inside <code className="text-orange-400 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-850 font-mono font-semibold">app/utils/file_parsers.py</code>:
+                            Raw file bytes uploaded to storage are analyzed and parsed inside <code className="text-orange-400 bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-800 font-mono font-semibold">app/utils/file_parsers.py</code>:
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                            <div className="p-3 rounded-xl border border-zinc-855 bg-black/40">
+                            <div className="p-3 rounded-xl border border-zinc-800 bg-black/40">
                               <span className="text-white font-bold block text-[11px] font-sans">PDF Layouts</span>
                               <span className="text-zinc-500 mt-1 block text-xs">pdfplumber (tables & formatting)</span>
                             </div>
-                            <div className="p-3 rounded-xl border border-zinc-855 bg-black/40">
+                            <div className="p-3 rounded-xl border border-zinc-800 bg-black/40">
                               <span className="text-white font-bold block text-[11px] font-sans">Word Docs</span>
                               <span className="text-zinc-500 mt-1 block text-xs">python-docx parser</span>
                             </div>
-                            <div className="p-3 rounded-xl border border-zinc-855 bg-black/40">
+                            <div className="p-3 rounded-xl border border-zinc-800 bg-black/40">
                               <span className="text-white font-bold block text-[11px] font-sans">Scanned Image</span>
                               <span className="text-zinc-500 mt-1 block text-xs">pytesseract OCR engine</span>
                             </div>
@@ -842,7 +842,7 @@ sources = reranker_service.rerank(
 
                     {/* Metadata Schema Box */}
                     <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-4">
-                      <div className="flex items-center justify-between border-b border-zinc-855 pb-2.5">
+                      <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
                         <h4 className="text-xs font-bold font-mono text-white flex items-center gap-1.5">
                           <Database size={13} className="text-blue-500" />
                           Pinecone Metadata Envelope
@@ -872,7 +872,7 @@ sources = reranker_service.rerank(
                       language="python" 
                     />
 
-                    <div className="rounded-xl border border-zinc-855 bg-zinc-950/40 p-4 flex items-start gap-3 font-sans text-xs text-zinc-450 leading-relaxed">
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 flex items-start gap-3 font-sans text-xs text-zinc-450 leading-relaxed">
                       <Info size={16} className="text-orange-500 shrink-0 mt-0.5" />
                       <span>
                         <strong className="text-zinc-300">Splitting Edge Case:</strong> If the text does not contain any of the registered separators, the algorithm splits the text at exactly <code className="text-orange-400 font-mono">chunk_size</code> characters to ensure the pipeline doesn't overflow.
@@ -889,7 +889,7 @@ sources = reranker_service.rerank(
                   {/* Left Column: Retrieval Explanation */}
                   <div className="space-y-6">
                     <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5">
-                      <div className="flex items-center gap-2 pb-3 border-b border-zinc-855">
+                      <div className="flex items-center gap-2 pb-3 border-b border-zinc-800">
                         <div className="h-2 w-2 rounded-full bg-blue-500" />
                         <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                           Retrieval Architecture
@@ -928,7 +928,7 @@ sources = reranker_service.rerank(
 
                     {/* Interactive Faithfulness Simulator */}
                     <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-5">
-                      <div className="flex items-center justify-between border-b border-zinc-855 pb-2.5">
+                      <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
                         <div>
                           <h4 className="text-xs font-mono font-bold text-white">
                             Faithfulness Calculator
@@ -1022,7 +1022,7 @@ sources = reranker_service.rerank(
                 <div className="space-y-8">
                   {/* Parameter control table panel */}
                   <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-855 pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
                       <div>
                         <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                           Configuration Registry
@@ -1041,14 +1041,14 @@ sources = reranker_service.rerank(
                             placeholder="Filter configurations..."
                             value={paramSearch}
                             onChange={(e) => setParamSearch(e.target.value)}
-                            className="pl-8 pr-4 py-1.5 bg-black border border-zinc-850 rounded-xl text-xs text-white placeholder-zinc-550 focus:outline-none focus:border-zinc-700 w-52 font-mono"
+                            className="pl-8 pr-4 py-1.5 bg-black border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-550 focus:outline-none focus:border-zinc-700 w-52 font-mono"
                           />
                         </div>
 
                         <select
                           value={paramFilter}
                           onChange={(e) => setParamFilter(e.target.value as any)}
-                          className="bg-black border border-zinc-850 rounded-xl text-xs text-zinc-400 py-1.5 px-3 focus:outline-none font-sans font-semibold cursor-pointer"
+                          className="bg-black border border-zinc-800 rounded-xl text-xs text-zinc-400 py-1.5 px-3 focus:outline-none font-sans font-semibold cursor-pointer"
                         >
                           <option value="all">All Modules</option>
                           <option value="llm">LLM Models</option>
@@ -1061,10 +1061,10 @@ sources = reranker_service.rerank(
                     </div>
 
                     {/* Params Table grid */}
-                    <div className="overflow-x-auto rounded-xl border border-zinc-855 bg-black/20">
+                    <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-black/20">
                       <table className="w-full text-left border-collapse font-sans text-xs sm:text-sm">
                         <thead>
-                          <tr className="border-b border-zinc-855 bg-zinc-950/60 text-zinc-400 font-bold font-mono">
+                          <tr className="border-b border-zinc-800 bg-zinc-950/60 text-zinc-400 font-bold font-mono">
                             <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Parameter Key</th>
                             <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Component Provider</th>
                             <th className="px-5 py-3.5 text-[9px] uppercase tracking-wider font-semibold">Data Type</th>
@@ -1089,7 +1089,7 @@ sources = reranker_service.rerank(
                                     <td className="px-5 py-3.5 text-zinc-550">{param.type}</td>
                                     <td className="px-5 py-3.5 font-semibold text-orange-500/90">{param.value}</td>
                                     <td className="px-5 py-3.5 text-right font-sans">
-                                      <button className="text-[10px] text-zinc-500 hover:text-zinc-350 bg-zinc-900 border border-zinc-850 px-2.5 py-0.5 rounded transition-colors font-sans font-semibold">
+                                      <button className="text-[10px] text-zinc-500 hover:text-zinc-350 bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 rounded transition-colors font-sans font-semibold">
                                         {isExpanded ? 'Hide' : 'Show'}
                                       </button>
                                     </td>
@@ -1136,7 +1136,7 @@ sources = reranker_service.rerank(
                   <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
                     {/* Relational schemas */}
                     <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-6">
-                      <div className="flex items-center justify-between border-b border-zinc-855 pb-3">
+                      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                         <div>
                           <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                             Relational Database Schema
@@ -1150,7 +1150,7 @@ sources = reranker_service.rerank(
 
                       <div className="space-y-6">
                         {dbModels.map((model, idx) => (
-                          <div key={idx} className="rounded-xl border border-zinc-855 bg-black/30 p-4 space-y-3">
+                          <div key={idx} className="rounded-xl border border-zinc-800 bg-black/30 p-4 space-y-3">
                             <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
                               <span className="font-bold text-zinc-100 font-sans text-sm flex items-center gap-1.5">
                                 <Database size={13} className="text-orange-500" />
@@ -1190,7 +1190,7 @@ sources = reranker_service.rerank(
 
                     {/* Infrastructure layer */}
                     <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e]/80 p-6 backdrop-blur-md shadow-2xl space-y-6">
-                      <div className="flex items-center justify-between border-b border-zinc-855 pb-3">
+                      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                         <div>
                           <h3 className="text-xs font-mono font-bold tracking-widest text-orange-500 uppercase">
                             Infrastructure Specs
@@ -1203,7 +1203,7 @@ sources = reranker_service.rerank(
                       </div>
 
                       <div className="space-y-4 font-sans text-xs sm:text-sm text-zinc-450 leading-relaxed">
-                        <div className="p-4 rounded-xl border border-zinc-855 bg-black/40 space-y-1.5">
+                        <div className="p-4 rounded-xl border border-zinc-800 bg-black/40 space-y-1.5">
                           <h5 className="font-bold text-white flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                             NVIDIA NIM Gateway
@@ -1213,7 +1213,7 @@ sources = reranker_service.rerank(
                           </p>
                         </div>
 
-                        <div className="p-4 rounded-xl border border-zinc-855 bg-black/40 space-y-1.5">
+                        <div className="p-4 rounded-xl border border-zinc-800 bg-black/40 space-y-1.5">
                           <h5 className="font-bold text-white flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                             Pinecone Serverless Index
@@ -1223,7 +1223,7 @@ sources = reranker_service.rerank(
                           </p>
                         </div>
 
-                        <div className="p-4 rounded-xl border border-zinc-855 bg-black/40 space-y-1.5">
+                        <div className="p-4 rounded-xl border border-zinc-800 bg-black/40 space-y-1.5">
                           <h5 className="font-bold text-white flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             File Storage Registry

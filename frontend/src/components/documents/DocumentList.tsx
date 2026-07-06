@@ -82,7 +82,7 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
   if (!filtered.length) {
     return (
       <div className="text-center py-16 border border-zinc-800 bg-[#000000] rounded-lg select-none font-sans">
-        <FileText size={24} className="mx-auto text-zinc-750 mb-3" />
+        <FileText size={24} className="mx-auto text-zinc-700 mb-3" />
         <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider font-mono">No search results</p>
         <p className="text-zinc-550 text-[10px] mt-1 font-mono uppercase tracking-wide">No records match "{searchQuery}"</p>
       </div>
@@ -117,7 +117,7 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
               >
                 {/* File name & details */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded border border-zinc-850 bg-zinc-950 flex items-center justify-center text-zinc-500 shrink-0">
+                  <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-950 flex items-center justify-center text-zinc-500 shrink-0">
                     <TypeIcon size={13} className="text-zinc-400" />
                   </div>
                   <div className="min-w-0 flex-1">

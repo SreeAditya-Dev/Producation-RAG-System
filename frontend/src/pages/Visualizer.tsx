@@ -145,7 +145,7 @@ export function Visualizer() {
                           {step.label}
                         </p>
                         <p className="text-[10px] text-zinc-500 font-mono mt-0.5 leading-none">
-                          {step.sub} &middot; <span className="text-[9px] text-zinc-650 font-light">{step.tech}</span>
+                          {step.sub} &middot; <span className="text-[9px] text-zinc-600 font-light">{step.tech}</span>
                         </p>
                       </div>
                     </div>

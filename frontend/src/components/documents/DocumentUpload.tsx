@@ -111,7 +111,7 @@ export function DocumentUpload({ onUploaded }: Props) {
                 <span className="truncate max-w-[200px] text-left">{fileName}</span>
                 <span className="font-semibold text-zinc-250">{progress}%</span>
               </div>
-              <div className="w-full bg-zinc-900 border border-zinc-850 rounded h-1 overflow-hidden">
+              <div className="w-full bg-zinc-900 border border-zinc-800 rounded h-1 overflow-hidden">
                 <motion.div
                   className="h-full bg-[#F4831F]"
                   initial={{ width: 0 }}

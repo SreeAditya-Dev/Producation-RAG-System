@@ -22,7 +22,7 @@ const TYPE_DOT = {
   info: 'bg-zinc-800 border border-zinc-700',
   success: 'bg-zinc-400',
   error: 'bg-red-500',
-  warning: 'bg-zinc-650',
+  warning: 'bg-zinc-600',
 };
 
 function formatTime(iso: string) {
@@ -74,7 +74,7 @@ export function EventLog({ entries, onClear, connected, collapsed = false, onTog
           <div className="flex items-center justify-center h-full text-zinc-700 py-6">
             <div className="text-center font-mono">
               <Radio size={14} className="mx-auto mb-1 opacity-20" />
-              <p className="text-[10px] uppercase tracking-wider text-zinc-650">Ready. Awaiting pipeline events...</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-600">Ready. Awaiting pipeline events...</p>
             </div>
           </div>
         )}
