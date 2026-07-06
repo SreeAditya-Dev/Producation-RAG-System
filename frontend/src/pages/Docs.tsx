@@ -176,7 +176,7 @@ export function Docs() {
   }, [simulating]);
 
   const configParams = [
-    { name: 'llm_model', value: 'meta/llama-3.3-70b-instruct', desc: 'LLM for streaming completion generation.', type: 'String', provider: 'NVIDIA NIM', category: 'llm', envVar: 'LLM_MODEL', impact: 'Determines complete response quality, streaming speed, and reasoning capability.' },
+    { name: 'llm_model', value: 'meta/llama-3.1-70b-instruct', desc: 'LLM for streaming completion generation.', type: 'String', provider: 'NVIDIA NIM', category: 'llm', envVar: 'LLM_MODEL', impact: 'Determines complete response quality, streaming speed, and reasoning capability.' },
     { name: 'embedding_model', value: 'nvidia/nv-embedqa-e5-v5', desc: 'Dense passage retrieval vectorizer.', type: 'String', provider: 'NVIDIA NIM', category: 'embedding', envVar: 'EMBEDDING_MODEL', impact: 'Sets vector space semantic matching. Ingestion and queries must share this exact model.' },
     { name: 'embedding_dimension', value: '1024', desc: 'Size of vectors generated for Pinecone.', type: 'Integer', provider: 'NVIDIA NIM', category: 'embedding', envVar: 'EMBEDDING_DIMENSION', impact: 'Matches Pinecone serverless index schema bounds.' },
     { name: 'reranker_model', value: 'nvidia/llama-3.2-nv-rerankqa-1b-v2', desc: 'Neural cross-encoder reranker.', type: 'String', provider: 'NVIDIA NIM', category: 'reranker', envVar: 'RERANKER_MODEL', impact: 'Assesses document-query pair relevance with high precision prior to generation.' },
@@ -272,11 +272,11 @@ sources = reranker_service.rerank(
     },
     {
       title: "Augmented Generation & Evaluation",
-      desc: "Re-ordered context chunks are formatted into a prompt. meta/llama-3.3-70b streams the response. A proxy faithfulness rating is calculated using the sigmoid of rerank scores.",
+      desc: "Re-ordered context chunks are formatted into a prompt. meta/llama-3.1-70b streams the response. A proxy faithfulness rating is calculated using the sigmoid of rerank scores.",
       icon: Workflow,
       badge: "Stage 6: Generate",
       service: "Completion Hub",
-      engine: "meta/llama-3.3-70b-instruct"
+      engine: "meta/llama-3.1-70b-instruct"
     }
   ];
 

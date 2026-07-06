@@ -140,7 +140,7 @@ export function KTGraph() {
       id: 'core',
       label: 'Production RAG System',
       type: 'central',
-      description: 'The orchestrator connecting vector spaces, chat logs, pipelines, and Llama 3.3 weights.',
+      description: 'The orchestrator connecting vector spaces, chat logs, pipelines, and Llama 3.1 weights.',
       metadata: {
         'Active Docs': stats?.total_documents || 0,
         'Vector Count': stats?.index_stats?.total_vector_count || 0,
@@ -195,7 +195,7 @@ export function KTGraph() {
 
     // Cluster children for Parametric Memory
     const parametricChildren: { id: string; label: string; desc: string; metadata: Record<string, string | number> }[] = [
-      { id: 'llama-model', label: 'meta/llama-3.3-70b-instruct', desc: 'Main generator model handling reasoning and generation.', metadata: { Provider: 'NVIDIA NIM', Context: '128k' } },
+      { id: 'llama-model', label: 'meta/llama-3.1-70b-instruct', desc: 'Main generator model handling reasoning and generation.', metadata: { Provider: 'NVIDIA NIM', Context: '128k' } },
       { id: 'reranker-model', label: 'nvidia/llama-3.2-nv-rerankqa-1b-v2', desc: 'Cross-encoder ranking context candidates.', metadata: { Precision: 'Float16', Latency: '30ms' } }
     ];
     parametricChildren.forEach((child, i) => {

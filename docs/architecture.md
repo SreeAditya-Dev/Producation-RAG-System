@@ -29,7 +29,7 @@ graph TD
         E -.->|Fetch 20 Candidates| G
         G -->|Filtered Chunks| H[NVIDIA Rerank NIM]
         H -->|Top 5 Context Chunks| I[System Prompt Ingestion]
-        I --> J[meta/llama-3.3-70b-instruct]
+        I --> J[meta/llama-3.1-70b-instruct]
         J -->|SSE Stream| K[User Chat Interface]
     end
 
@@ -114,7 +114,7 @@ Higher values signify that the retrieved text blocks strongly answer the prompt,
 
 ### 3.4 Step 5: Context Injection & Generation
 The selected chunks are injected into a structured system template:
-- **Generation Model:** `meta/llama-3.3-70b-instruct` (NVIDIA NIM)
+- **Generation Model:** `meta/llama-3.1-70b-instruct` (NVIDIA NIM)
 - **Mechanism:** Streams response tokens over a persistent Server-Sent Events (SSE) WebSocket channel.
 
 ---
@@ -123,7 +123,7 @@ The selected chunks are injected into a structured system template:
 
 | Parameter Name | Component / Service | Type | Default Value | Operational Impact |
 | :--- | :--- | :--- | :--- | :--- |
-| `llm_model` | NVIDIA NIM LLM | String | `meta/llama-3.3-70b-instruct` | Determines reasoning and language style. |
+| `llm_model` | NVIDIA NIM LLM | String | `meta/llama-3.1-70b-instruct` | Determines reasoning and language style. |
 | `embedding_model` | NVIDIA NIM Embedding | String | `nvidia/nv-embedqa-e5-v5` | Transforms texts into semantic spaces. |
 | `embedding_dimension`| NVIDIA NIM Embedding | Integer | `1024` | Size of dense vector vectors. |
 | `reranker_model` | NVIDIA NIM Reranking | String | `nvidia/llama-3.2-nv-rerankqa-1b-v2` | Re-evaluates chunk order relevance. |
@@ -166,6 +166,6 @@ The system addresses three complex production RAG challenges with modular domain
 ### Challenge 3: Code-Mixed Query Translation (Hinglish Queries)
 * **Problem**: Casual queries are asked in a mixture of Hindi and English (Hinglish), e.g., *"kitna refund milega for cancelled order"*, whereas the documents are in formal English. This vocabulary mismatch leads to low embedding similarity and retrieval failure.
 * **Architectural Solution**: We implemented the [QueryTranslator](file:///D:/Projects/RAG%20System/backend/app/services/query_translator.py) service.
-  - Before embedding the query, the retrieval pipeline routes the raw query through a fast, deterministic LLM translation step (using `meta/llama-3.3-70b-instruct` at `temp=0.0`).
+  - Before embedding the query, the retrieval pipeline routes the raw query through a fast, deterministic LLM translation step (using `meta/llama-3.1-70b-instruct` at `temp=0.0`).
   - Hinglish queries are rewritten into formal English queries (e.g. *"How much refund will I receive for a cancelled order?"*).
   - The vector index is searched using the formal English query vector for high recall, while the original Hinglish question is passed to the LLM during generation to ensure context-appropriate natural language responses.
