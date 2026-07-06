@@ -63,14 +63,14 @@ export function DocumentUpload({ onUploaded }: Props) {
       <div
         {...getRootProps()}
         className={clsx(
-          'relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
+          'relative border border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200',
           isDragActive
-            ? 'border-orange-500 bg-orange-500/5 scale-[1.01]'
+            ? 'border-zinc-400 bg-zinc-900/30 scale-[1.005]'
             : state === 'success'
-            ? 'border-emerald-500/50 bg-emerald-500/5'
+            ? 'border-zinc-800 bg-zinc-900/10'
             : state === 'error'
-            ? 'border-red-500/50 bg-red-500/5'
-            : 'border-[#1c1c1f] hover:border-[#27272a] hover:bg-[#121215]',
+            ? 'border-zinc-800 bg-zinc-900/10'
+            : 'border-zinc-800 hover:border-zinc-700 hover:bg-[#0c0c0e]',
           state === 'uploading' && 'pointer-events-none'
         )}
       >
@@ -80,19 +80,21 @@ export function DocumentUpload({ onUploaded }: Props) {
           {state === 'idle' && (
             <motion.div
               key="idle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
               className="space-y-3"
             >
-              <div className="w-14 h-14 mx-auto rounded-xl bg-[#121215] border border-[#1c1c1f] flex items-center justify-center">
-                <Upload size={24} className={isDragActive ? 'text-orange-500' : 'text-[#71717a]'} />
+              <div className="w-10 h-10 mx-auto rounded-lg bg-zinc-900/50 border border-zinc-800 flex items-center justify-center">
+                <Upload size={16} className={isDragActive ? 'text-zinc-200' : 'text-zinc-500'} />
               </div>
               <div>
-                <p className="text-white font-medium text-sm">
-                  {isDragActive ? 'Drop your file here' : 'Drag & drop or click to upload'}
+                <p className="text-zinc-200 font-medium text-xs">
+                  {isDragActive ? 'Drop to upload' : 'Click or drag file here to upload'}
                 </p>
-                <p className="text-[#71717a] text-xs mt-1">PDF, DOCX, TXT, MD — up to 50MB</p>
+                <p className="text-zinc-500 text-[10px] mt-1 font-mono">
+                  PDF, DOCX, TXT, MD &middot; Max 50MB
+                </p>
               </div>
             </motion.div>
           )}
@@ -103,36 +105,37 @@ export function DocumentUpload({ onUploaded }: Props) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-4"
+              className="space-y-4 py-2"
             >
-              <Loader2 size={28} className="mx-auto text-accent-primary animate-spin" />
-              <div>
-                <p className="text-text-primary text-sm font-medium truncate max-w-xs mx-auto">{fileName}</p>
-                <p className="text-text-muted text-xs mt-1">Uploading…</p>
+              <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+                <span className="truncate max-w-[200px] text-left">{fileName}</span>
+                <span>{progress}%</span>
               </div>
-              <div className="w-full bg-border rounded-full h-1.5">
+              <div className="w-full bg-zinc-900 border border-zinc-800/80 rounded-full h-1 overflow-hidden">
                 <motion.div
-                  className="h-1.5 rounded-full bg-accent-primary"
+                  className="h-full bg-zinc-300"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ ease: 'linear' }}
                 />
               </div>
-              <p className="text-accent-purple text-xs font-mono">{progress}%</p>
+              <p className="text-zinc-500 text-[10px] font-mono text-left">Uploading payload to engine...</p>
             </motion.div>
           )}
 
           {state === 'success' && (
             <motion.div
               key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-2"
+              className="space-y-2 py-3"
             >
-              <CheckCircle2 size={28} className="mx-auto text-accent-green" />
-              <p className="text-accent-green text-sm font-medium">Upload successful!</p>
-              <p className="text-text-muted text-xs">Ingestion pipeline started…</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5 text-[10px] font-mono text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Upload Complete
+              </div>
+              <p className="text-zinc-400 text-xs">Ingesting document chunks into pipeline</p>
             </motion.div>
           )}
 
@@ -142,18 +145,20 @@ export function DocumentUpload({ onUploaded }: Props) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-2"
+              className="space-y-2 py-3"
             >
-              <AlertCircle size={28} className="mx-auto text-accent-red" />
-              <p className="text-accent-red text-sm font-medium">Upload failed</p>
-              <p className="text-text-muted text-xs">{error}</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-2.5 py-0.5 text-[10px] font-mono text-red-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                Upload Failed
+              </div>
+              <p className="text-zinc-500 text-[10px] font-mono max-w-xs mx-auto truncate">{error}</p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {fileRejections.length > 0 && (
-        <p className="text-accent-red text-xs text-center">
+        <p className="text-red-400 text-[10px] font-mono text-center">
           {fileRejections[0].errors[0].message}
         </p>
       )}

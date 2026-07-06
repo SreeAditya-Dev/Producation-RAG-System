@@ -151,201 +151,159 @@ export function PipelineVisualizer({ state, hideHeader = false }: Props) {
   const isError = stage === 'error';
 
   return (
-    <div className="bg-[#0c0c0e] overflow-hidden rounded-xl border border-[#1c1c1f]">
-      {!hideHeader && <div className="flex items-center justify-between border-b border-[#1c1c1f] px-5 pb-4 pt-5">
-        <div className="flex items-center gap-3">
-          <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-[#1c1c1f] bg-[#121215]">
-            <Upload size={13} className="text-orange-500" />
-            {isActive && !isDone && !isError && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-orange-500 animate-pulse" />}
+    <div className="bg-[#0c0c0e] overflow-hidden rounded-lg border border-zinc-800">
+      {!hideHeader && (
+        <div className="flex items-center justify-between border-b border-zinc-800/80 px-4 py-3.5">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Pipeline telemetry</span>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-text-primary">Ingestion Pipeline</h3>
-            <p className="mt-0.5 max-w-[200px] truncate text-xs text-text-muted">
-              {filename || 'Waiting for document…'}
-            </p>
+          <div className="flex items-center gap-2">
+            {isActive && !isDone && !isError && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/50 px-2 py-0.5 text-[10px] font-mono text-zinc-300">
+                <Loader2 size={10} className="animate-spin text-zinc-400" />
+                Ingesting
+              </span>
+            )}
+            {isDone && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2 py-0.5 text-[10px] font-mono text-emerald-400">
+                Ready
+              </span>
+            )}
+            {isError && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/5 px-2 py-0.5 text-[10px] font-mono text-red-400">
+                Error
+              </span>
+            )}
           </div>
         </div>
+      )}
 
-        <div className="flex shrink-0 items-center gap-2">
-          {isActive && !isDone && !isError && (
-            <span className="flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs text-orange-500">
-              <Loader2 size={11} className="animate-spin" />
-              Running
-            </span>
-          )}
-          {isDone && (
-            <span className="flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 text-xs text-orange-500">
-              <CheckCircle2 size={11} />
-              Complete
-            </span>
-          )}
-          {isError && (
-            <span className="flex items-center gap-1.5 rounded-full border border-red-400/20 bg-red-400/10 px-2.5 py-1 text-xs text-red-400">
-              <AlertCircle size={11} />
-              Failed
-            </span>
-          )}
-        </div>
-      </div>}
+      <div className="p-4 space-y-5">
+        {/* Active filename details */}
+        {filename && (
+          <div className="border border-zinc-800 bg-zinc-900/10 rounded-lg p-3 flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Processing Payload</p>
+              <p className="text-xs text-zinc-200 truncate mt-1">{filename}</p>
+            </div>
+            {total_chunks > 0 && (
+              <div className="text-right pl-4">
+                <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Segment Chunks</p>
+                <p className="text-xs text-zinc-200 font-mono mt-1">{total_chunks}</p>
+              </div>
+            )}
+          </div>
+        )}
 
-      <div className="px-5 py-5">
-        {/* ── Steps row ── */}
-        <div className="flex items-center overflow-x-auto pb-2 -mx-2 px-2">
-          {STEPS.map((step, i) => {
-            const st = status(step.id, stage);
-            const Icon = step.icon;
-            const isStepActive = st === 'active';
-            const isStepDone = st === 'done';
+        {/* ── Vertical Timeline Steps ── */}
+        <div className="relative pl-2.5">
+          {/* Vertical track line */}
+          <div className="absolute left-[21px] top-2.5 bottom-2.5 w-[1px] bg-zinc-800" />
 
-            return (
-              <div key={step.id} className="flex flex-1 items-center">
-                {/* Step column */}
-                <div className="flex flex-1 flex-col items-center">
-                  <motion.div
+          <div className="space-y-5">
+            {STEPS.map((step, i) => {
+              const st = status(step.id, stage);
+              const isStepActive = st === 'active';
+              const isStepDone = st === 'done';
+              const isStepError = st === 'error';
+
+              return (
+                <div key={step.id} className="relative flex items-start gap-4 group">
+                  {/* Node Circle */}
+                  <div
                     className={clsx(
-                      'relative flex w-full cursor-default flex-col items-center gap-2 rounded-2xl border px-2 pb-3 pt-4 transition-all duration-500',
-                      isStepActive && step.activeClass,
-                      isStepDone && 'border-orange-500/20 bg-orange-500/5',
-                      st === 'idle' && 'border-[#1c1c1f] bg-[#121215]/50',
-                      st === 'error' && 'border-red-500/30 bg-red-500/5',
+                      'relative z-10 flex items-center justify-center w-6 h-6 rounded-full bg-[#0c0c0e] border transition-all duration-300',
+                      isStepActive
+                        ? 'border-zinc-200 text-zinc-200 shadow-[0_0_8px_rgba(255,255,255,0.05)]'
+                        : isStepDone
+                        ? 'border-zinc-700 text-zinc-400'
+                        : isStepError
+                        ? 'border-red-500/50 text-red-400 bg-red-500/5'
+                        : 'border-zinc-900 text-zinc-600 bg-zinc-950'
                     )}
-                    animate={isStepActive ? { y: [-1, 1, -1] } : {}}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   >
-                    {isStepActive && (
-                      <>
-                        <div className="pulse-ring absolute inset-0 rounded-2xl" style={{ border: `1px solid ${step.color}40` }} />
-                        <div className="pulse-ring absolute inset-0 rounded-2xl" style={{ border: `1px solid ${step.color}25`, animationDelay: '0.5s' }} />
-                      </>
+                    {isStepDone ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+                    ) : isStepActive ? (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-300 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-200" />
+                      </span>
+                    ) : isStepError ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    ) : (
+                      <span className="h-1 w-1 rounded-full bg-zinc-800" />
                     )}
+                  </div>
 
-                    {/* Number badge */}
-                    <span
-                      className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex h-5 min-w-[20px] items-center justify-center rounded-full border px-1 text-[9px] font-black"
-                      style={
-                        isStepActive
-                          ? { background: step.color, borderColor: 'transparent', color: '#fff' }
-                          : { borderColor: '#1c1c1f', color: '#71717a', background: '#09090b' }
-                      }
-                    >
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-
-                    {/* Icon */}
-                    <div
-                      className={clsx(
-                        'flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300',
-                        isStepActive ? step.iconBg : isStepDone ? 'bg-orange-500/10' : 'bg-white/[0.04]',
-                      )}
-                    >
-                      {isStepActive ? (
-                        <Loader2 size={18} className={clsx(step.iconText, 'animate-spin')} />
-                      ) : isStepDone ? (
-                        <CheckCircle2 size={18} className="text-orange-500" />
-                      ) : st === 'error' ? (
-                        <AlertCircle size={18} className="text-red-400" />
-                      ) : (
-                        <Icon size={18} className="text-[#71717a]" />
-                      )}
-                    </div>
-
-                    {/* Label */}
-                    <div className="text-center">
-                      <p className={clsx('text-xs font-semibold leading-tight', isStepActive ? 'text-text-primary' : isStepDone ? 'text-orange-500' : 'text-[#71717a]')}>
+                  {/* Content Info */}
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <div className="flex items-center justify-between">
+                      <p
+                        className={clsx(
+                          'text-xs font-semibold',
+                          isStepActive ? 'text-zinc-200' : isStepDone ? 'text-zinc-400' : 'text-zinc-600'
+                        )}
+                      >
                         {step.label}
                       </p>
-                      <p className="mt-0.5 text-[10px] leading-tight text-[#71717a]">{step.sublabel}</p>
+                      <span className="text-[10px] font-mono text-zinc-600">{step.tech}</span>
                     </div>
-                  </motion.div>
-
-                  {/* Tech label */}
-                  <p className="mt-2 w-full truncate px-1 text-center text-[10px] text-[#71717a]">{step.tech}</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">{step.sublabel}</p>
+                  </div>
                 </div>
-
-                {/* Connector (between steps only) */}
-                {i < STEPS.length - 1 && (
-                  <Connector fromStatus={st} toColor={STEPS[i + 1].color} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 grid gap-3 grid-cols-1 xs:grid-cols-3">
-          <div className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-3">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-[#71717a]">Current step</p>
-            <p className="mt-2 text-sm font-semibold capitalize text-white">{stage}</p>
-          </div>
-          <div className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-3">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-[#71717a]">Chunks</p>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {embedded_chunks} / {total_chunks || 0}
-            </p>
-          </div>
-          <div className="rounded-xl border border-[#1c1c1f] bg-[#121215] px-3 py-3">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-[#71717a]">Progress</p>
-            <p className="mt-2 text-sm font-semibold text-white">{progress.toFixed(1)}%</p>
+              );
+            })}
           </div>
         </div>
 
+        {/* ── Progress bar section ── */}
         <AnimatePresence>
           {(stage === 'embedding' || stage === 'storing') && total_chunks > 0 && (
             <motion.div
-              initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
-              exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              className="overflow-hidden"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden pt-2"
             >
-              <div className="space-y-3 rounded-xl border border-accent-primary/20 bg-accent-primary/8 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-accent-primary">Embedding chunks</span>
-                  <span className="text-xs font-mono text-accent-primary">
-                    {embedded_chunks} <span className="text-text-muted">/</span> {total_chunks}
-                  </span>
+              <div className="border border-zinc-800 bg-zinc-900/10 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                  <span>Embedding Vector Sets</span>
+                  <span>{progress.toFixed(1)}%</span>
                 </div>
-                <div className="relative h-2 overflow-hidden rounded-full bg-black/40">
+                <div className="w-full bg-zinc-900 border border-zinc-800 rounded-full h-1 overflow-hidden">
                   <motion.div
-                    className="absolute inset-y-0 left-0 rounded-full bg-accent-primary"
+                    className="h-full bg-zinc-300"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ ease: 'easeOut', duration: 0.3 }}
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    {Array.from({ length: Math.min(6, total_chunks) }).map((_, i) => (
-                      <motion.div
-                        key={i}
-                        className="h-3 w-1.5 rounded-full"
-                        style={{ background: i < Math.ceil((embedded_chunks / total_chunks) * 6) ? '#F4831F' : 'rgba(244, 131, 31, 0.2)' }}
-                        animate={i === Math.ceil((embedded_chunks / total_chunks) * 6) - 1 ? { scale: [1, 1.3, 1] } : {}}
-                        transition={{ duration: 0.3 }}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-xs font-mono font-bold text-accent-primary">{progress.toFixed(1)}%</span>
-                </div>
+                <p className="text-zinc-500 text-[10px] font-mono text-right">
+                  {embedded_chunks} / {total_chunks} chunks stored
+                </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence>
-          {isDone && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              className="mt-4 flex items-center gap-3 rounded-xl border border-accent-primary/25 bg-accent-primary/8 px-4 py-3"
-            >
-              <CheckCircle2 size={16} className="shrink-0 text-accent-primary" />
-              <div>
-                <p className="text-xs font-semibold text-accent-primary">Ingestion complete</p>
-                <p className="text-xs text-text-muted">{total_chunks} chunks embedded and stored in Pinecone</p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* ── Status Metrics ── */}
+        <div className="grid gap-2 grid-cols-3 pt-2 border-t border-zinc-800/60">
+          <div className="text-left">
+            <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Stage</p>
+            <p className="mt-1 text-xs font-semibold text-zinc-200 capitalize font-mono truncate">{stage}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Chunks</p>
+            <p className="mt-1 text-xs font-semibold text-zinc-200 font-mono">
+              {embedded_chunks}/{total_chunks}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Progress</p>
+            <p className="mt-1 text-xs font-semibold text-zinc-200 font-mono">{progress.toFixed(0)}%</p>
+          </div>
+        </div>
       </div>
     </div>
   );

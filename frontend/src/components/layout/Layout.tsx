@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom';
+ pageimport { Outlet, useLocation } from 'react-router-dom';
 import { createContext, useContext, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Wifi, WifiOff, X } from 'lucide-react';

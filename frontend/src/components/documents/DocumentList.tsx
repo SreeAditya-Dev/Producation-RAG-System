@@ -38,9 +38,10 @@ interface Props {
   documents: Document[];
   onDeleted: () => void;
   loading?: boolean;
+  searchQuery?: string;
 }
 
-export function DocumentList({ documents, onDeleted, loading }: Props) {
+export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const handleDelete = async (doc: Document) => {
@@ -60,87 +61,158 @@ export function DocumentList({ documents, onDeleted, loading }: Props) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={24} className="text-orange-500 animate-spin" />
+        <Loader2 size={16} className="text-zinc-500 animate-spin" />
       </div>
     );
   }
 
   if (!documents.length) {
     return (
-      <div className="text-center py-16">
-        <FileText size={40} className="mx-auto text-[#52525b] opacity-40 mb-3" />
-        <p className="text-[#a1a1aa] text-xs">No documents yet</p>
-        <p className="text-[#71717a] text-[10px] mt-1">Upload a document to get started</p>
+      <div className="text-center py-16 border border-zinc-800/80 bg-zinc-900/5 rounded-lg">
+        <FileText size={28} className="mx-auto text-zinc-600 mb-3" />
+        <p className="text-zinc-400 text-xs font-semibold">No documents yet</p>
+        <p className="text-zinc-500 text-[10px] mt-1 font-mono">Upload a document to populate the workspace</p>
+      </div>
+    );
+  }
+
+  // Filter documents client-side based on search term
+  const filtered = documents.filter((doc) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      doc.original_name.toLowerCase().includes(q) ||
+      doc.file_type.toLowerCase().includes(q)
+    );
+  });
+
+  if (!filtered.length) {
+    return (
+      <div className="text-center py-16 border border-zinc-800/80 bg-zinc-900/5 rounded-lg">
+        <FileText size={28} className="mx-auto text-zinc-600 mb-3" />
+        <p className="text-zinc-400 text-xs font-semibold">No search results</p>
+        <p className="text-zinc-500 text-[10px] mt-1 font-mono">No documents matching "{searchQuery}"</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <AnimatePresence>
-        {documents.map((doc) => {
-          const TypeIcon = TYPE_ICONS[doc.file_type] || File;
-          const status = STATUS_CONFIG[doc.status] || STATUS_CONFIG.error;
-          const StatusIcon = status.icon;
-          const isDeleting = deleting === doc.id;
+    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-[#0c0c0e]">
+      {/* Tabular Header */}
+      <div className="hidden md:grid grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 px-4 py-2.5 border-b border-zinc-800 bg-[#09090b]/60 text-[9px] uppercase tracking-wider text-zinc-500 font-mono">
+        <div>Filename</div>
+        <div>Status</div>
+        <div>Chunks</div>
+        <div>Size</div>
+        <div>Created</div>
+        <div className="text-right">Action</div>
+      </div>
 
-          return (
-            <motion.div
-              key={doc.id}
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex items-center gap-4 p-3.5 bg-[#0c0c0e] border border-[#1c1c1f] rounded-xl hover:border-[#27272a] hover:bg-[#121215] transition-all duration-200 group"
-            >
-              {/* File type icon */}
-              <div className="w-9 h-9 rounded-lg bg-[#121215] border border-[#1c1c1f] flex items-center justify-center flex-shrink-0">
-                <TypeIcon size={17} className="text-orange-500" />
-              </div>
+      <div className="divide-y divide-zinc-850">
+        <AnimatePresence>
+          {filtered.map((doc) => {
+            const TypeIcon = TYPE_ICONS[doc.file_type] || File;
+            const isDeleting = deleting === doc.id;
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-semibold truncate">{doc.original_name}</p>
-                <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-[#71717a] text-[10px] uppercase tracking-wide font-mono">{doc.file_type}</span>
-                  <span className="text-[#52525b] text-[10px]">·</span>
-                  <span className="text-[#71717a] text-[10px]">{formatBytes(doc.file_size)}</span>
-                  {doc.status === 'ready' && (
-                    <>
-                      <span className="text-[#52525b] text-[10px]">·</span>
-                      <span className="text-[#71717a] text-[10px]">{doc.chunk_count} chunks</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className={clsx('flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider', status.color)}>
-                <StatusIcon size={12} className={status.spin ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">{status.label}</span>
-              </div>
-
-              {/* Date */}
-              <div className="hidden md:flex items-center gap-1.5 text-[10px] text-[#71717a]">
-                <Clock size={11} />
-                {formatDate(doc.created_at)}
-              </div>
-
-              {/* Delete */}
-              <button
-                onClick={() => handleDelete(doc)}
-                disabled={isDeleting || doc.status === 'processing'}
-                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 text-[#71717a] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            return (
+              <motion.div
+                key={doc.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 p-4 md:px-4 md:py-3 hover:bg-zinc-900/20 transition-all duration-200 group text-xs text-zinc-300"
               >
-                {isDeleting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Trash2 size={14} />
-                )}
-              </button>
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
+                {/* File name & details */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-900/50 flex items-center justify-center text-zinc-400 shrink-0">
+                    <TypeIcon size={14} className="text-zinc-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-zinc-200 truncate pr-2" title={doc.original_name}>
+                      {doc.original_name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 md:hidden">
+                      <span className="font-mono text-[9px] text-zinc-500 uppercase">{doc.file_type}</span>
+                      <span className="text-zinc-700">&middot;</span>
+                      <span className="text-[10px] text-zinc-500 font-mono">{formatBytes(doc.file_size)}</span>
+                      {doc.status !== 'ready' && (
+                        <>
+                          <span className="text-zinc-700">&middot;</span>
+                          <span
+                            className={clsx(
+                              'text-[9px] font-mono uppercase',
+                              doc.status === 'processing' ? 'text-amber-400' : 'text-red-400'
+                            )}
+                          >
+                            {doc.status}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="hidden md:block">
+                  <span
+                    className={clsx(
+                      'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider',
+                      doc.status === 'ready'
+                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+                        : doc.status === 'processing'
+                        ? 'border-amber-500/20 bg-amber-500/5 text-amber-400'
+                        : 'border-red-500/20 bg-red-500/5 text-red-400'
+                    )}
+                  >
+                    <span
+                      className={clsx(
+                        'h-1 w-1 rounded-full',
+                        doc.status === 'ready'
+                          ? 'bg-emerald-400'
+                          : doc.status === 'processing'
+                          ? 'bg-amber-400 animate-pulse'
+                          : 'bg-red-400'
+                      )}
+                    />
+                    {doc.status}
+                  </span>
+                </div>
+
+                {/* Chunks */}
+                <div className="hidden md:block font-mono text-[11px] text-zinc-400">
+                  {doc.status === 'ready' ? doc.chunk_count : '—'}
+                </div>
+
+                {/* Size */}
+                <div className="hidden md:block font-mono text-[11px] text-zinc-400">
+                  {formatBytes(doc.file_size)}
+                </div>
+
+                {/* Date */}
+                <div className="hidden md:block font-mono text-[10px] text-zinc-500">
+                  {formatDate(doc.created_at)}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-2 text-right">
+                  <button
+                    onClick={() => handleDelete(doc)}
+                    disabled={isDeleting || doc.status === 'processing'}
+                    className="opacity-100 md:opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/10 hover:text-red-400 text-zinc-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                    title="Delete document"
+                  >
+                    {isDeleting ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
