@@ -91,8 +91,8 @@ export function Sidebar({
                       : 'gap-3 rounded-xl px-4 py-2.5 text-[#8b8b9f] hover:bg-[#18181b]/50 hover:text-white',
                     isActive 
                       ? isCollapsed 
-                        ? 'bg-[#18181b] text-orange-500 border-l-2 border-orange-500 rounded-l-none'
-                        : 'bg-[#18181b] text-white border-l-2 border-orange-500 pl-[14px]'
+                        ? 'bg-[#18181b] text-orange-500'
+                        : 'bg-[#18181b] text-white'
                       : 'text-[#8b8b9f] hover:text-white'
                   )
                 }
