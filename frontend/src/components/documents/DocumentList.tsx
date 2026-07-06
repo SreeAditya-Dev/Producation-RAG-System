@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, FileType, File, Loader2, CheckCircle2, AlertCircle,
-  Trash2, RefreshCw, Clock,
+  Trash2,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { documentsApi } from '../../services/api';
@@ -17,7 +17,7 @@ function formatBytes(bytes: number) {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
   });
 }
 
@@ -26,12 +26,6 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   docx: FileType,
   txt: File,
   md: File,
-};
-
-const STATUS_CONFIG = {
-  processing: { icon: Loader2, color: 'text-orange-500', label: 'Processing', spin: true },
-  ready: { icon: CheckCircle2, color: 'text-emerald-400', label: 'Ready', spin: false },
-  error: { icon: AlertCircle, color: 'text-red-400', label: 'Error', spin: false },
 };
 
 interface Props {
@@ -61,22 +55,21 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 size={16} className="text-zinc-500 animate-spin" />
+        <Loader2 size={14} className="text-[#F4831F] animate-spin" />
       </div>
     );
   }
 
   if (!documents.length) {
     return (
-      <div className="text-center py-16 border border-zinc-800/80 bg-zinc-900/5 rounded-lg">
-        <FileText size={28} className="mx-auto text-zinc-600 mb-3" />
-        <p className="text-zinc-400 text-xs font-semibold">No documents yet</p>
-        <p className="text-zinc-500 text-[10px] mt-1 font-mono">Upload a document to populate the workspace</p>
+      <div className="text-center py-16 border border-zinc-800 bg-[#000000] rounded-lg select-none font-sans">
+        <FileText size={24} className="mx-auto text-zinc-700 mb-3" />
+        <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider font-mono">No documents found</p>
+        <p className="text-zinc-550 text-[10px] mt-1 font-mono uppercase tracking-wide">Upload a payload to populate inventory</p>
       </div>
     );
   }
 
-  // Filter documents client-side based on search term
   const filtered = documents.filter((doc) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
@@ -88,18 +81,18 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
 
   if (!filtered.length) {
     return (
-      <div className="text-center py-16 border border-zinc-800/80 bg-zinc-900/5 rounded-lg">
-        <FileText size={28} className="mx-auto text-zinc-600 mb-3" />
-        <p className="text-zinc-400 text-xs font-semibold">No search results</p>
-        <p className="text-zinc-500 text-[10px] mt-1 font-mono">No documents matching "{searchQuery}"</p>
+      <div className="text-center py-16 border border-zinc-800 bg-[#000000] rounded-lg select-none font-sans">
+        <FileText size={24} className="mx-auto text-zinc-750 mb-3" />
+        <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider font-mono">No search results</p>
+        <p className="text-zinc-550 text-[10px] mt-1 font-mono uppercase tracking-wide">No records match "{searchQuery}"</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-[#0c0c0e]">
+    <div className="overflow-hidden rounded-lg border border-zinc-800 bg-[#000000] font-sans select-none">
       {/* Tabular Header */}
-      <div className="hidden md:grid grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 px-4 py-2.5 border-b border-zinc-800 bg-[#09090b]/60 text-[9px] uppercase tracking-wider text-zinc-500 font-mono">
+      <div className="hidden md:grid grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 px-4 py-2.5 border-b border-zinc-800 bg-[#09090b] text-[9px] uppercase tracking-widest text-zinc-450 font-mono font-semibold">
         <div>Filename</div>
         <div>Status</div>
         <div>Chunks</div>
@@ -108,7 +101,7 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
         <div className="text-right">Action</div>
       </div>
 
-      <div className="divide-y divide-zinc-850">
+      <div className="divide-y divide-zinc-900 bg-black">
         <AnimatePresence>
           {filtered.map((doc) => {
             const TypeIcon = TYPE_ICONS[doc.file_type] || File;
@@ -117,31 +110,31 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
             return (
               <motion.div
                 key={doc.id}
-                initial={{ opacity: 0, y: 4 }}
+                initial={{ opacity: 0, y: 3 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 p-4 md:px-4 md:py-3 hover:bg-zinc-900/20 transition-all duration-200 group text-xs text-zinc-300"
+                className="grid grid-cols-1 md:grid-cols-[2.5fr_1fr_100px_100px_130px_40px] items-center gap-4 p-4 md:px-4 md:py-3 hover:bg-zinc-950/60 transition-colors duration-200 group text-xs text-zinc-300 border-zinc-900"
               >
                 {/* File name & details */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded border border-zinc-800 bg-zinc-900/50 flex items-center justify-center text-zinc-400 shrink-0">
-                    <TypeIcon size={14} className="text-zinc-400" />
+                  <div className="w-8 h-8 rounded border border-zinc-850 bg-zinc-950 flex items-center justify-center text-zinc-500 shrink-0">
+                    <TypeIcon size={13} className="text-zinc-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-zinc-200 truncate pr-2" title={doc.original_name}>
+                    <p className="font-semibold text-zinc-200 truncate pr-2 font-mono" title={doc.original_name}>
                       {doc.original_name}
                     </p>
                     <div className="flex items-center gap-2 mt-1 md:hidden">
-                      <span className="font-mono text-[9px] text-zinc-500 uppercase">{doc.file_type}</span>
-                      <span className="text-zinc-700">&middot;</span>
+                      <span className="font-mono text-[9px] text-[#F4831F] font-bold uppercase">{doc.file_type}</span>
+                      <span className="text-zinc-800">&middot;</span>
                       <span className="text-[10px] text-zinc-500 font-mono">{formatBytes(doc.file_size)}</span>
                       {doc.status !== 'ready' && (
                         <>
-                          <span className="text-zinc-700">&middot;</span>
+                          <span className="text-zinc-800">&middot;</span>
                           <span
                             className={clsx(
-                              'text-[9px] font-mono uppercase',
-                              doc.status === 'processing' ? 'text-amber-400' : 'text-red-400'
+                              'text-[9px] font-mono uppercase font-bold',
+                              doc.status === 'processing' ? 'text-[#F4831F]' : 'text-red-405'
                             )}
                           >
                             {doc.status}
@@ -154,42 +147,44 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
 
                 {/* Status */}
                 <div className="hidden md:block">
-                  <span
-                    className={clsx(
-                      'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider',
-                      doc.status === 'ready'
-                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
-                        : doc.status === 'processing'
-                        ? 'border-amber-500/20 bg-amber-500/5 text-amber-400'
-                        : 'border-red-500/20 bg-red-500/5 text-red-400'
-                    )}
-                  >
-                    <span
-                      className={clsx(
-                        'h-1 w-1 rounded-full',
-                        doc.status === 'ready'
-                          ? 'bg-emerald-400'
-                          : doc.status === 'processing'
-                          ? 'bg-amber-400 animate-pulse'
-                          : 'bg-red-400'
-                      )}
-                    />
-                    {doc.status}
-                  </span>
+                  {doc.status === 'processing' && (
+                    <span className="inline-flex items-center gap-1.5 rounded border border-[#F4831F]/30 bg-[#F4831F]/5 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#F4831F] font-bold">
+                      <Loader2 size={10} className="animate-spin text-[#F4831F]" />
+                      Processing
+                    </span>
+                  )}
+                  {doc.status === 'ready' && (
+                    <span className="inline-flex items-center gap-1.5 rounded border border-zinc-800 bg-zinc-900/10 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-zinc-400">
+                      <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                      Ready
+                    </span>
+                  )}
+                  {doc.status === 'error' && (
+                    <span className="inline-flex items-center gap-1.5 rounded border border-red-950 bg-red-950/20 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-red-405">
+                      <AlertCircle size={10} className="text-red-405" />
+                      Error
+                    </span>
+                  )}
                 </div>
 
                 {/* Chunks */}
-                <div className="hidden md:block font-mono text-[11px] text-zinc-400">
-                  {doc.status === 'ready' ? doc.chunk_count : '—'}
+                <div className="hidden md:block font-mono text-[10px] text-zinc-400 font-semibold">
+                  {doc.status === 'ready' ? (
+                    <span className="text-zinc-300">{doc.chunk_count}</span>
+                  ) : doc.status === 'processing' ? (
+                    <Loader2 size={10} className="animate-spin text-[#F4831F]" />
+                  ) : (
+                    <span className="text-zinc-600">&mdash;</span>
+                  )}
                 </div>
 
                 {/* Size */}
-                <div className="hidden md:block font-mono text-[11px] text-zinc-400">
+                <div className="hidden md:block font-mono text-[10px] text-zinc-400">
                   {formatBytes(doc.file_size)}
                 </div>
 
                 {/* Date */}
-                <div className="hidden md:block font-mono text-[10px] text-zinc-500">
+                <div className="hidden md:block font-mono text-[10px] text-zinc-550">
                   {formatDate(doc.created_at)}
                 </div>
 
@@ -198,11 +193,11 @@ export function DocumentList({ documents, onDeleted, loading, searchQuery = '' }
                   <button
                     onClick={() => handleDelete(doc)}
                     disabled={isDeleting || doc.status === 'processing'}
-                    className="opacity-100 md:opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-500/10 hover:text-red-400 text-zinc-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                    className="opacity-100 md:opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-red-950/20 hover:text-red-405 text-zinc-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0 cursor-pointer"
                     title="Delete document"
                   >
                     {isDeleting ? (
-                      <Loader2 size={13} className="animate-spin" />
+                      <Loader2 size={13} className="animate-spin text-[#F4831F]" />
                     ) : (
                       <Trash2 size={13} />
                     )}

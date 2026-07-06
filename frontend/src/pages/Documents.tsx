@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { RefreshCw, RotateCcw, Search } from 'lucide-react';
+import { RefreshCw, RotateCcw, Search, Signal } from 'lucide-react';
 import { documentsApi } from '../services/api';
 import { DocumentUpload } from '../components/documents/DocumentUpload';
 import { DocumentList } from '../components/documents/DocumentList';
@@ -36,34 +36,37 @@ export function Documents() {
   }, [qc, refetch]);
 
   return (
-    <div className="px-6 py-6 sm:px-8 lg:py-8 max-w-[1600px] mx-auto">
+    <div className="px-6 py-6 mx-auto w-full h-full max-w-[1600px] font-sans text-zinc-300">
       <div className="space-y-6">
         {/* Top Header Actions Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-zinc-800/80">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-zinc-900">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Document Control</h1>
-            <p className="text-zinc-500 text-xs mt-1">Upload, process, and track your ingestion layers.</p>
+            <h1 className="text-sm font-mono tracking-widest uppercase font-bold text-white flex items-center gap-2">
+              <Signal size={13} className="text-[#F4831F]" />
+              Document Control
+            </h1>
+            <p className="text-zinc-550 text-xs mt-1 font-mono">Upload, process, and track your ingestion layers.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Search Input Box */}
-            <div className="relative flex items-center">
-              <span className="absolute left-2.5 text-zinc-500">
-                <Search size={13} />
+            <div className="relative flex items-center border border-zinc-800 rounded bg-zinc-950 focus-within:border-[#F4831F]/50 transition-colors">
+              <span className="absolute left-2.5 text-zinc-600">
+                <Search size={12} />
               </span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search documents..."
-                className="w-56 pl-8 pr-3 py-1.5 text-[11px] bg-zinc-950 border border-zinc-800 hover:border-zinc-700 focus:border-zinc-500 rounded-md text-white placeholder-zinc-500 focus:outline-none transition-all font-mono"
+                className="w-52 pl-8 pr-3 py-1.5 text-[11px] bg-transparent text-white placeholder-zinc-650 focus:outline-none transition-all font-mono"
               />
             </div>
 
             {/* Refresh button */}
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 bg-[#0c0c0e] hover:bg-zinc-900/60 hover:text-white text-zinc-400 text-[11px] transition-all font-mono"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-zinc-800 bg-[#000000] hover:bg-zinc-900/60 hover:text-white text-zinc-400 text-[11px] transition-all font-mono cursor-pointer"
               title="Refresh inventory"
             >
               <RefreshCw size={11} />
@@ -73,7 +76,7 @@ export function Documents() {
             {/* Reload UI button */}
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-zinc-800 bg-[#0c0c0e] hover:bg-zinc-900/60 hover:text-white text-zinc-400 text-[11px] transition-all font-mono"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-zinc-800 bg-[#000000] hover:bg-zinc-900/60 hover:text-white text-zinc-400 text-[11px] transition-all font-mono cursor-pointer"
               title="Reload UI state"
             >
               <RotateCcw size={11} />
@@ -87,8 +90,8 @@ export function Documents() {
           {/* Left Column: Control Center */}
           <div className="space-y-6">
             {/* Upload Box */}
-            <div className="border border-zinc-800 bg-[#0c0c0e] p-4 rounded-lg">
-              <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono mb-3">Upload payload</p>
+            <div className="border border-zinc-800 bg-[#000000] p-5 rounded-lg">
+              <p className="text-[9px] uppercase tracking-widest text-[#F4831F] font-semibold font-mono mb-3">Upload payload</p>
               <DocumentUpload onUploaded={() => qc.invalidateQueries({ queryKey: ['documents'] })} />
             </div>
 
@@ -96,9 +99,9 @@ export function Documents() {
             <PipelineVisualizer state={pipeline} />
 
             {/* Steps & Integration Guide */}
-            <div className="border border-zinc-800 bg-[#0c0c0e] p-4 rounded-lg">
-              <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono mb-3">Ingestion lifecycle</p>
-              <div className="space-y-2.5">
+            <div className="border border-zinc-800 bg-[#000000] p-5 rounded-lg">
+              <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-semibold font-mono mb-3.5">Ingestion lifecycle</p>
+              <div className="space-y-3">
                 {[
                   'Upload raw PDF, DOCX, TXT, or MD payload sources.',
                   'Engine parsing isolates structural text and metadata.',
@@ -106,8 +109,8 @@ export function Documents() {
                   'Embeddings generated using active NIM neural architectures.',
                   'Vectors upserted into Pinecone storage and synchronized.',
                 ].map((step, idx) => (
-                  <div key={idx} className="flex gap-2.5 text-[10px] text-zinc-400 leading-normal font-mono">
-                    <span className="text-zinc-600 shrink-0">0{idx + 1}.</span>
+                  <div key={idx} className="flex gap-3 text-[10px] text-zinc-400 leading-normal font-mono">
+                    <span className="text-[#F4831F] shrink-0 font-bold">0{idx + 1}.</span>
                     <span>{step}</span>
                   </div>
                 ))}
@@ -119,14 +122,14 @@ export function Documents() {
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Document inventory</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-zinc-500 font-semibold">Document inventory</span>
                 {data && (
-                  <span className="font-mono text-[9px] bg-zinc-950 border border-zinc-850 px-1.5 py-0.5 rounded text-zinc-400">
+                  <span className="font-mono text-[9px] bg-zinc-950 border border-zinc-900 px-1.5 py-0.5 rounded text-[#F4831F] font-bold">
                     {data.total} records
                   </span>
                 )}
               </div>
-              <span className="text-[9px] text-zinc-600 font-mono hidden sm:inline">Telemetry auto-synced</span>
+              <span className="text-[9px] text-zinc-600 font-mono hidden sm:inline uppercase tracking-wider">Telemetry auto-synced</span>
             </div>
 
             <DocumentList
@@ -141,3 +144,4 @@ export function Documents() {
     </div>
   );
 }
+export default Documents;
