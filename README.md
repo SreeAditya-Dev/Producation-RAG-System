@@ -832,19 +832,19 @@ LANGSMITH_PROJECT=rag-system
 
 **Ingestion Pipeline Trace:**
 
-![LangSmith Ingestion Trace](docs/images/langsmith/Screenshot%202026-07-07%20173044.png)
+![LangSmith Ingestion Trace](docs/images/langsmith/ingestion-trace.png)
 
 **Query Pipeline Trace:**
 
-![LangSmith Query Trace](docs/images/langsmith/Screenshot%202026-07-07%20173053.png)
+![LangSmith Query Trace](docs/images/langsmith/query-trace.png)
 
 **Token Usage Analytics:**
 
-![LangSmith Token Usage](docs/images/langsmith/Screenshot%202026-07-07%20173117.png)
+![LangSmith Token Usage](docs/images/langsmith/token-usage.png)
 
 **Performance Metrics:**
 
-![LangSmith Metrics Dashboard](docs/images/langsmith/Screenshot%202026-07-07%20173127.png)
+![LangSmith Metrics Dashboard](docs/images/langsmith/metrics-dashboard.png)
 
 ### Metrics Available
 

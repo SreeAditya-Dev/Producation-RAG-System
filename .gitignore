@@ -7,3 +7,6 @@ package-lock.json
 dist/
 build/
 backend/uploads/
+
+docs/plans
+docs/records
