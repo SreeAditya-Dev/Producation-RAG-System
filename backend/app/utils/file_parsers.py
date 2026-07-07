@@ -18,8 +18,9 @@ from __future__ import annotations
 import io
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ _IMG_MIN_H = 80
 _SCAN_THRESHOLD = 80
 # OCR text below this length → treat image as figure / chart
 _OCR_MIN_MEANINGFUL = 30
+# Vision-description calls are I/O-bound network round-trips (~10-15s each)
+# to NVIDIA NIM — run several concurrently instead of one at a time, but keep
+# it low enough to not trip the provider's rate limit on chart-heavy PDFs.
+_VISION_MAX_CONCURRENCY = 4
 
 
 # ── Public interface ──────────────────────────────────────────────────────────
@@ -66,7 +71,10 @@ def _parse_pdf(file_path: str) -> str:
         logger.warning("pymupdf unavailable (%s) — falling back to basic extraction", exc)
         return _parse_pdf_basic(file_path)
 
-    pages_content: List[str] = []
+    pages_parts: List[List[str]] = []
+    # (page_index_into_pages_parts, position_within_that_page's_parts, img_bytes)
+    pending_vision: List[Tuple[int, int, bytes]] = []
+    vision_model = _vision_model_name()
 
     try:
         fitz_doc = fitz.open(file_path)
@@ -86,9 +94,14 @@ def _parse_pdf(file_path: str) -> str:
                     if md_table:
                         parts.append(md_table)
 
-                # ── Stage 3 + 4 + 5: Image blocks ────────────────────────────
-                image_blocks = _process_page_images(fitz_doc, fitz_page)
+                # ── Stage 3 + 4: Image blocks (local OCR only — vision calls
+                # are deferred and batched concurrently after all pages are
+                # walked, so this loop never blocks on network I/O) ─────────
+                image_blocks, page_pending = _process_page_images(
+                    fitz_doc, fitz_page, len(pages_parts), len(parts), vision_model
+                )
                 parts.extend(image_blocks)
+                pending_vision.extend(page_pending)
 
                 # ── Stage 6: Full-page OCR for scanned pages ─────────────────
                 if len(digital_text) < _SCAN_THRESHOLD and not image_blocks:
@@ -96,12 +109,19 @@ def _parse_pdf(file_path: str) -> str:
                     if ocr and len(ocr.strip()) > len(digital_text):
                         parts = [f"[Page {page_num} — scanned, OCR result]\n{ocr.strip()}"]
 
-                if parts:
-                    pages_content.append(
-                        f"### Page {page_num}\n\n" + "\n\n".join(parts)
-                    )
+                pages_parts.append(parts)
 
         fitz_doc.close()
+
+        # ── Stage 5: Vision descriptions, fired concurrently ────────────────
+        if pending_vision and vision_model:
+            _resolve_vision_batch(pending_vision, pages_parts, vision_model)
+
+        pages_content = [
+            f"### Page {i + 1}\n\n" + "\n\n".join(parts)
+            for i, parts in enumerate(pages_parts)
+            if parts
+        ]
         return "\n\n".join(pages_content)
 
     except Exception as exc:
@@ -139,21 +159,32 @@ def _table_to_markdown(table: list) -> str:
     return "\n".join(lines)
 
 
-def _process_page_images(fitz_doc, fitz_page) -> List[str]:
+def _process_page_images(
+    fitz_doc, fitz_page, page_index: int, base_position: int, vision_model: Optional[str]
+) -> Tuple[List[str], List[tuple]]:
     """
     For each embedded image on the page:
       • OCR it (pytesseract, optional)
-      • If OCR yields < _OCR_MIN_MEANINGFUL chars → try NVIDIA NIM vision description
-      • Otherwise record the image's presence and any partial OCR text
+      • If OCR yields < _OCR_MIN_MEANINGFUL chars and a vision model is
+        configured, reserve a placeholder slot and queue it for a batched,
+        concurrent vision-description call (resolved later by the caller —
+        this keeps the per-page loop free of network I/O).
+      • Otherwise record the image's presence and any partial OCR text.
+
+    Returns (results, pending) where `pending` entries are
+    (page_index, position_in_results, img_bytes, img_idx, dims, ocr_text) —
+    position_in_results is an index into `results` that the caller must
+    offset by `base_position` to get the final position within the page's
+    assembled parts list.
     """
     results: List[str] = []
+    pending: List[tuple] = []
     ocr_ready = _tesseract_available()
-    vision_model = _vision_model_name()
 
     try:
         image_list = fitz_page.get_images(full=True)
     except Exception:
-        return results
+        return results, pending
 
     for img_idx, img_info in enumerate(image_list, 1):
         try:
@@ -175,13 +206,12 @@ def _process_page_images(fitz_doc, fitz_page) -> List[str]:
                 results.append(f"[Image {img_idx} — OCR text]\n{ocr_text}")
 
             elif vision_model:
-                # Chart / graph / diagram — describe with vision LLM
-                description = _describe_with_vision(img_bytes, vision_model)
-                if description:
-                    results.append(f"[Figure {img_idx} — Vision description]\n{description}")
-                else:
-                    partial = f"\nPartial OCR: {ocr_text}" if ocr_text else ""
-                    results.append(f"[Figure {img_idx}: Visual content ({dims}){partial}]")
+                # Chart / graph / diagram — queue for a concurrent vision call.
+                # Placeholder is overwritten in-place once the batch resolves;
+                # it also serves as the fallback text if the call fails.
+                partial = f"\nPartial OCR: {ocr_text}" if ocr_text else ""
+                results.append(f"[Figure {img_idx}: Visual content ({dims}){partial}]")
+                pending.append((page_index, base_position + len(results) - 1, img_bytes, img_idx, dims, ocr_text))
 
             else:
                 partial = f"\nPartial OCR: {ocr_text}" if ocr_text else ""
@@ -190,7 +220,27 @@ def _process_page_images(fitz_doc, fitz_page) -> List[str]:
         except Exception as exc:
             logger.debug("Image %d extraction error: %s", img_idx, exc)
 
-    return results
+    return results, pending
+
+
+def _resolve_vision_batch(pending: List[tuple], pages_parts: List[List[str]], vision_model: str) -> None:
+    """
+    Fires all queued vision-description calls concurrently (bounded pool) and
+    writes each result back into pages_parts in place. Failures keep the
+    placeholder text already in pages_parts, so a slow/erroring provider
+    degrades to "visual content present" rather than blocking or dropping data.
+    """
+
+    def _resolve_one(item: tuple):
+        page_index, position, img_bytes, img_idx, dims, ocr_text = item
+        description = _describe_with_vision(img_bytes, vision_model)
+        return page_index, position, img_idx, dims, ocr_text, description
+
+    with ThreadPoolExecutor(max_workers=_VISION_MAX_CONCURRENCY) as executor:
+        for page_index, position, img_idx, dims, ocr_text, description in executor.map(_resolve_one, pending):
+            if description:
+                pages_parts[page_index][position] = f"[Figure {img_idx} — Vision description]\n{description}"
+            # else: leave the fallback placeholder already in place
 
 
 # ── OCR helpers ───────────────────────────────────────────────────────────────
