@@ -8,7 +8,8 @@ function buildWsUrl(): string {
   const apiKey = import.meta.env.VITE_API_KEY || '';
   const clientId = getClientId();
   const params = new URLSearchParams({ client_id: clientId, key: apiKey });
-  return `ws://${window.location.hostname}:8000/ws?${params.toString()}`;
+  const wsBase = import.meta.env.VITE_WS_BASE_URL || `ws://${window.location.hostname}:8000`;
+  return `${wsBase}/ws?${params.toString()}`;
 }
 
 export function useWebSocket() {

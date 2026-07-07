@@ -9,8 +9,10 @@ import type {
 } from '../types';
 import { getClientId } from './clientId';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 120000,
 });
 
@@ -60,6 +62,6 @@ export const queryApi = {
 
 export const systemApi = {
   stats: () => api.get<StatsResponse>('/stats'),
-  health: () => api.get<HealthResponse>('/health', { baseURL: '' }),
+  health: () => api.get<HealthResponse>('/health', { baseURL: API_BASE_URL }),
   observability: () => api.get<ObservabilityResponse>('/observability'),
 };
