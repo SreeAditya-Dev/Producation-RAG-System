@@ -1825,6 +1825,79 @@ sources = reranker_service.rerank(
                         </div>
                       </div>
 
+                      {/* Challenge 17 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 17
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Multi-Turn Context Awareness (Follow-Up Questions Across Turns)
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> Users often ask follow-up questions in a conversation &mdash; e.g. <em>&ldquo;What is the refund policy?&rdquo;</em> followed by <em>&ldquo;What about international orders?&rdquo;</em>. A stateless RAG system treats each query independently, so the second question has no idea it&rsquo;s about refunds. The LLM retrieves irrelevant chunks about &ldquo;international orders&rdquo; in general, ignoring the conversational thread.
+                          </p>
+
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Why naive solutions fail:</strong> Simply concatenating the entire chat transcript into the prompt grows unboundedly &mdash; after 20 turns you&rsquo;re sending thousands of tokens of stale dialogue, hitting context window limits, increasing latency, and burning cost on irrelevant history.
+                          </p>
+
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-emerald-400">Solution &mdash; Hybrid Memory Architecture:</strong> We solve this with a three-layer memory system coordinated by the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">HybridMemoryCoordinator</code>:
+                            </p>
+                            <ol className="list-decimal list-inside ml-2 space-y-2 text-sm text-zinc-300">
+                              <li>
+                                <strong>Procedural Memory (System Prompt):</strong> A static system prompt defines the LLM&rsquo;s role, tone, and grounding rules. This never changes across turns.
+                              </li>
+                              <li>
+                                <strong>Episodic Memory (Sliding Session History):</strong> The <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">SessionEpisodicMemory</code> service queries the SQL database for the last <strong>5 successful Q&amp;A turns</strong> belonging to the current <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">session_id</code>. These are injected as prior <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">user</code>/<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">assistant</code> messages in chronological order, giving the LLM conversational context without unbounded growth.
+                              </li>
+                              <li>
+                                <strong>Working Memory (Retrieved Context + Current Query):</strong> Fresh retrieval chunks for <em>this</em> query are formatted and appended as the final user message. The LLM sees: prior conversation thread &rarr; fresh evidence &rarr; current question.
+                              </li>
+                            </ol>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-zinc-100">How the prompt is assembled each turn:</strong>
+                            </p>
+                            <div className="rounded-lg bg-zinc-900/70 border border-zinc-800/60 p-3 font-mono text-xs text-zinc-300 space-y-1">
+                              <p className="text-orange-400">{"{"} role: &ldquo;system&rdquo;, content: System Prompt (procedural memory) {"}"}</p>
+                              <p className="text-zinc-500">&mdash; sliding window (last 5 turns from SQL) &mdash;</p>
+                              <p className="text-blue-400">{"{"} role: &ldquo;user&rdquo;, content: &ldquo;What is the refund policy?&rdquo; {"}"}</p>
+                              <p className="text-emerald-400">{"{"} role: &ldquo;assistant&rdquo;, content: &ldquo;The refund policy states...&rdquo; {"}"}</p>
+                              <p className="text-zinc-500">&mdash; current turn &mdash;</p>
+                              <p className="text-blue-400">{"{"} role: &ldquo;user&rdquo;, content: &ldquo;Context: [retrieved chunks]\n\nQuestion: What about international orders?&rdquo; {"}"}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-zinc-100">Why this design works well:</strong>
+                            </p>
+                            <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Bounded cost:</strong> Only 5 turns are included &mdash; prompt token count stays predictable regardless of conversation length.</li>
+                              <li><strong>Session isolation:</strong> Each <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">session_id</code> has its own history &mdash; different users or tabs don&rsquo;t leak context into each other.</li>
+                              <li><strong>Persistent across reconnects:</strong> History is stored in SQL (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryHistory</code> table), not in ephemeral memory &mdash; refreshing the page doesn&rsquo;t erase conversation context.</li>
+                              <li><strong>Quality filtering:</strong> Only <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">status = &ldquo;success&rdquo;</code> turns are included &mdash; failed queries don&rsquo;t pollute the LLM&rsquo;s context with error messages.</li>
+                              <li><strong>Chronological ordering:</strong> Turns are fetched in <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">desc</code> order and reversed to maintain natural dialogue flow.</li>
+                            </ul>
+                          </div>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/session_episodic_memory.py</code> &bull; <code className="text-zinc-400">hybrid_memory_coordinator.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
