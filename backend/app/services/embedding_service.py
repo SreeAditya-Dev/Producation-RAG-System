@@ -2,17 +2,18 @@ from openai import OpenAI
 from typing import List, Tuple
 import logging
 from app.config import settings
+from app.observability import wrap_openai, traceable
 
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
     def __init__(self):
-        self.client = OpenAI(
+        self.client = wrap_openai(OpenAI(
             base_url=settings.nvidia_base_url,
             api_key=settings.nvidia_api_key,
             timeout=30.0,
-        )
+        ))
         self.model = settings.embedding_model
         self.dimension = settings.embedding_dimension
 
@@ -26,6 +27,7 @@ class EmbeddingService:
         embedding, _ = self.embed_query_tracked(text)
         return embedding
 
+    @traceable(name="nvidia_embed_single", run_type="tool")
     def embed_single(self, text: str, input_type: str = "passage") -> List[float]:
         try:
             response = self.client.embeddings.create(
@@ -41,6 +43,7 @@ class EmbeddingService:
 
     # ── Tracked variants (return token count alongside embeddings) ────────────
 
+    @traceable(name="nvidia_embed_passages", run_type="tool")
     def embed_passages_tracked(self, texts: List[str]) -> Tuple[List[List[float]], int]:
         """Returns (embeddings, total_tokens_used)."""
         if not texts:
@@ -68,6 +71,7 @@ class EmbeddingService:
 
         return all_embeddings, total_tokens
 
+    @traceable(name="nvidia_embed_query", run_type="tool")
     def embed_query_tracked(self, text: str) -> Tuple[List[float], int]:
         """Returns (embedding, tokens_used)."""
         try:

@@ -3,6 +3,7 @@ import json
 import asyncio
 from typing import List
 from app.services.llm_service import llm_service
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class QueryDecomposer:
         self.client = llm_service.client
         self.model = llm_service.model
 
+    @traceable(name="query_decompose", run_type="chain")
     async def decompose(self, query: str) -> List[str]:
         """
         Analyzes the user's question and breaks it down into up to 3 sub-queries.

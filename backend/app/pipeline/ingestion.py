@@ -13,6 +13,7 @@ from app.services.embedding_service import embedding_service
 from app.services.pinecone_service import pinecone_service
 from app.services.storage_service import storage_service
 from app.ws_manager import manager
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ def _ms(t0: float) -> float:
     return round((time.perf_counter() - t0) * 1000, 1)
 
 
+@traceable(name="document_ingestion", run_type="chain")
 async def ingest_document(
     doc_id: str,
     s3_key: str,

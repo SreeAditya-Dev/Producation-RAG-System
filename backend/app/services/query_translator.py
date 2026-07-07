@@ -1,5 +1,6 @@
 import logging
 from app.services.llm_service import llm_service
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class QueryTranslator:
         self.client = llm_service.client
         self.model = llm_service.model
 
+    @traceable(name="query_translate", run_type="chain")
     async def translate_query(self, raw_query: str) -> str:
         """
         Translates Hinglish or code-mixed user questions into standard English.

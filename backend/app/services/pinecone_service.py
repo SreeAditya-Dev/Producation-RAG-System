@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 import logging
 import time
 from app.config import settings
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class PineconeService:
             logger.info(f"Index '{self.index_name}' already exists.")
         self._index_ready = True
 
+    @traceable(name="pinecone_upsert", run_type="tool")
     def upsert_vectors(self, vectors: List[Dict[str, Any]], namespace: str = "") -> int:
         """Upsert vectors in batches of 100. Returns count upserted."""
         if not vectors:
@@ -76,6 +78,7 @@ class PineconeService:
 
         return total
 
+    @traceable(name="pinecone_dense_query", run_type="retriever")
     def query(
         self,
         vector: List[float],

@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 import httpx
 
 from app.config import settings
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class RerankerService:
         base = settings.nvidia_base_url.rstrip("/")
         return f"{base}/ranking"
 
+    @traceable(name="cross_encoder_rerank", run_type="retriever")
     def rerank(
         self,
         query: str,

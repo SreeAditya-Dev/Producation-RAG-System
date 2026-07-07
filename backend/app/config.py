@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     bm25_hybrid_enabled: bool = True
     bm25_floor_score: float = 0.3
 
+    # LangSmith observability — disabled unless both flag and API key are set.
+    # When enabled, every ingestion + query pipeline run is traced end-to-end
+    # (embed / retrieve / bm25 / rerank / compress / generate) in LangSmith.
+    langsmith_tracing: bool = False
+    langsmith_api_key: str = ""
+    langsmith_project: str = "rag-system"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
+
     # Supabase PostgreSQL
     database_url: str = "sqlite:///./rag_system.db"
 

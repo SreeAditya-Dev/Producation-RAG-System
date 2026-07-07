@@ -2,6 +2,7 @@ from openai import OpenAI
 from typing import Generator, List, Dict, Any, Tuple
 import logging
 from app.config import settings
+from app.observability import traceable, wrap_openai
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +19,11 @@ Rules:
 
 class LLMService:
     def __init__(self):
-        self.client = OpenAI(
+        self.client = wrap_openai(OpenAI(
             base_url=settings.nvidia_base_url,
             api_key=settings.nvidia_api_key,
             timeout=30.0,
-        )
+        ))
         self.model = settings.llm_model
 
     # ── Public API (backward-compatible) ─────────────────────────────────────

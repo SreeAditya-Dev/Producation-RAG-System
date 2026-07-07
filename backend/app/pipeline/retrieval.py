@@ -17,6 +17,7 @@ from app.services.query_translator import QueryTranslator
 from app.services.query_decomposer import query_decomposer
 from app.services.context_compressor import context_compressor
 from app.services.bm25_service import bm25_service
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,7 @@ def _bm25_hits_to_candidates(db_session, bm25_hits: List[Tuple[str, float]]) -> 
     return candidates
 
 
+@traceable(name="hybrid_retrieve", run_type="retriever")
 async def _embed_and_retrieve_subqueries(
     translated_queries: List[str],
     top_k: int,
@@ -203,6 +205,7 @@ def _verify_active_documents(db_session, candidates: List[Dict[str, Any]]) -> Li
     ]
 
 
+@traceable(name="rag_query", run_type="chain")
 async def retrieve_and_generate(
     question: str,
     top_k: int,

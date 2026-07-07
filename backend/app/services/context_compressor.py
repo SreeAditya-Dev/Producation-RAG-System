@@ -3,6 +3,7 @@ import re
 from typing import List, Dict, Any
 import tiktoken
 from app.config import settings
+from app.observability import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class ContextCompressor:
         except Exception:
             self.encoder = None
 
+    @traceable(name="context_compress", run_type="tool")
     def compress_chunks(
         self,
         chunks: List[Dict[str, Any]],

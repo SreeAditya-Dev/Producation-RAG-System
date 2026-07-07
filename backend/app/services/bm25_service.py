@@ -5,6 +5,8 @@ import threading
 from collections import Counter
 from typing import List, Tuple
 
+from app.observability import traceable
+
 logger = logging.getLogger(__name__)
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
@@ -105,6 +107,7 @@ class BM25SearchService:
         corpus = [(f"{doc_id}-chunk-{chunk_index}", text) for doc_id, chunk_index, text in rows]
         return cache_key, corpus
 
+    @traceable(name="bm25_lexical_search", run_type="retriever")
     def search(self, db_session, query: str, top_k: int) -> List[Tuple[str, float]]:
         try:
             cache_key, corpus = self._load_corpus(db_session)
