@@ -19,6 +19,8 @@ from app.services.context_compressor import context_compressor
 from app.services.bm25_service import bm25_service
 from app.services.crag_evaluator import crag_evaluator
 from app.services.web_search_service import web_search_service
+from app.services.query_cache import query_cache
+from app.services import prompt_guard
 from app.observability import traceable
 
 logger = logging.getLogger(__name__)
@@ -103,14 +105,21 @@ async def _embed_and_retrieve_subqueries(
     top_k: int,
     qm: Dict[str, Any],
     db_session,
+    doc_ids: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Embed sub-queries in parallel and retrieve candidate matches from both dense
     (Pinecone cosine) and lexical (BM25) search, merging both into one candidate pool
     (hybrid search). BM25 catches exact-match terms — numbers, IDs, currency figures —
     that dense embeddings are known to under-rank.
+
+    `doc_ids`, if given, scopes both searches to that document subset via a Pinecone
+    metadata filter (rather than a full-corpus ANN scan) — the lever that keeps
+    per-query cost/latency flat as the corpus grows into the millions of documents:
+    scope to the relevant subset *before* searching, don't search everything.
     """
     candidates_k = max(20, top_k * settings.reranker_candidates_multiplier)
+    pinecone_filter = {"doc_id": {"$in": doc_ids}} if doc_ids else None
 
     async def _retrieve_single(t_q: str) -> List[Dict[str, Any]]:
         t = time.perf_counter()
@@ -126,6 +135,7 @@ async def _embed_and_retrieve_subqueries(
             lambda: pinecone_service.query(
                 vector=q_vector,
                 top_k=candidates_k,
+                filter=pinecone_filter,
                 include_values=False,
             ),
         )
@@ -137,7 +147,7 @@ async def _embed_and_retrieve_subqueries(
             return []
         t = time.perf_counter()
         hits = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: bm25_service.search(db_session, t_q, candidates_k)
+            None, lambda: bm25_service.search(db_session, t_q, candidates_k, doc_ids=doc_ids)
         )
         qm["bm25_ms"] = qm.get("bm25_ms", 0.0) + _ms(t)
         return _bm25_hits_to_candidates(db_session, hits)
@@ -229,6 +239,8 @@ async def retrieve_and_generate(
     top_k: int,
     db_session,
     session_id: Optional[str] = None,
+    client_id: Optional[str] = None,
+    doc_ids: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Full RAG pipeline: Decompose → Parallel Embed/Retrieve → DB Filter → Rerank → Compress → Generate.
@@ -248,13 +260,41 @@ async def retrieve_and_generate(
     current_stage = "embed"
 
     async def emit(event: str, data: Any = None):
-        await manager.broadcast(event=event, data=data, query_id=query_id)
+        await manager.broadcast(event=event, data=data, query_id=query_id, client_id=client_id)
 
     # Accumulated metrics
     qm: Dict[str, Any] = {"status": "success", "failure_stage": None, "error_type": None}
 
     try:
         await emit("query_started", {"query_id": query_id, "question": question})
+
+        # ── 0. Query cache check (stateless queries only) ─────────────────────
+        # Keyed to a corpus fingerprint, not just a TTL — invalidated the instant
+        # any document is ingested/replaced/deleted, so a cache hit can never
+        # return an answer that's gone stale relative to the document set.
+        if not session_id:
+            cached = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: query_cache.get(db_session, question, top_k, doc_ids)
+            )
+            if cached is not None:
+                await emit("cache_hit", {"query_id": query_id})
+                processing_time = 0.0
+                await emit("generation_completed", {
+                    "query_id": query_id,
+                    "answer": cached["answer"],
+                    "sources": cached["sources"],
+                    "processing_time": processing_time,
+                    "metrics": {"cache_hit": True},
+                })
+                logger.info("Query %s served from cache (question=%r)", query_id[:8], question[:60])
+                return {
+                    "query_id": query_id,
+                    "question": question,
+                    "answer": cached["answer"],
+                    "sources": cached["sources"],
+                    "processing_time": processing_time,
+                    "created_at": datetime.utcnow(),
+                }
 
         # ── 1. Decompose Query (Multi-document support) ──────────────────────────
         await emit("query_embedding_started", {"question": question})
@@ -270,7 +310,7 @@ async def retrieve_and_generate(
             translated_queries.append(t_sq)
 
         # ── 3. Embed & Retrieve in Parallel ──────────────────────────────────
-        raw_candidates = await _embed_and_retrieve_subqueries(translated_queries, top_k, qm, db_session)
+        raw_candidates = await _embed_and_retrieve_subqueries(translated_queries, top_k, qm, db_session, doc_ids=doc_ids)
 
         # ── 4. Verify Active Documents (No stale chunks) ──────────────────────
         current_stage = "retrieve"
@@ -328,6 +368,15 @@ async def retrieve_and_generate(
             "top_score": qm["rerank_score_top"],
             "faithfulness": qm["faithfulness_score"],
         })
+
+        # ── 6.1 Prompt injection scan (detection/telemetry only) ──────────────
+        # Defense-in-depth alongside the hardened SYSTEM_PROMPT and the
+        # untrusted-data delimiters in HybridMemoryCoordinator. Does not block
+        # the query — logs and reports so injection attempts are visible.
+        guard_result = prompt_guard.scan_question_and_context(question, sources)
+        qm["prompt_injection_flagged"] = guard_result["flagged"]
+        if guard_result["flagged"]:
+            await emit("prompt_injection_flagged", guard_result)
 
         # ── 6.5 CRAG: Corrective Retrieval Evaluation ─────────────────────────
         # An LLM grader classifies the refined internal context as correct /
@@ -442,6 +491,9 @@ async def retrieve_and_generate(
         db_session.add(history)
         _save_query_metrics(db_session, query_id, qm)
         db_session.commit()
+
+        if not session_id:
+            query_cache.set(db_session, question, top_k, {"answer": full_answer, "sources": sources}, doc_ids=doc_ids)
 
         logger.info(
             "Query %s (Session: %s): %.0f ms total | embed %.0f | retrieve %.0f | rerank %.0f | llm %.0f | faith=%.2f",

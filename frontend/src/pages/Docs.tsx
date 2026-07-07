@@ -2027,6 +2027,165 @@ sources = reranker_service.rerank(
                         </div>
                       </div>
 
+                      {/* Challenge 20 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 20
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Securing a Multi-User Enterprise RAG (Unauthorized Access, Data Leakage, Prompt Injection)
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Question:</strong> Your RAG system handles sensitive enterprise data accessed by multiple users. How would you secure it against unauthorized access, data leakage, and prompt injection?
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-red-400">Audit found real gaps, not hypotheticals:</strong> before this pass, every REST endpoint (upload, delete, query, observability) had zero authentication, CORS combined a wildcard origin with <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">allow_credentials=True</code> (a real misconfiguration), and the WebSocket pipeline visualizer broadcast every user's query text, retrieved chunk previews, and generated answers to <em>every connected client</em> &mdash; a genuine cross-user data leak in a multi-user deployment.
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed"><strong className="text-emerald-400">Fixed:</strong></p>
+                            <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Unauthorized access:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">require_api_key</code> (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">app/auth.py</code>) gates every sensitive REST route via an <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">X-API-Key</code> header, constant-time compared and fail-closed (503) if unconfigured &mdash; a misconfiguration can never silently mean "no auth." The WebSocket handshake validates the same key as a query param.</li>
+                              <li><strong>CORS:</strong> removed the wildcard-origin fallback; only explicit configured origins are allowed alongside credentials.</li>
+                              <li><strong>Cross-user data leakage:</strong> rewrote <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ConnectionManager</code> to scope every broadcast to the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">client_id</code> that issued the request (sent via an <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">X-Client-Id</code> header / WS query param) &mdash; pipeline telemetry with no matching client_id is now dropped rather than broadcast blind.</li>
+                              <li><strong>Prompt injection:</strong> hardened <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">SYSTEM_PROMPT</code> to explicitly frame retrieved context as untrusted data, wrapped context in <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">&lt;&lt;&lt;BEGIN_CONTEXT&gt;&gt;&gt;</code>/<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">END_CONTEXT</code> delimiters, and added <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">prompt_guard.py</code>, a heuristic scanner that flags injection phrasing in both the question and retrieved chunks for logging/telemetry (detection, not a silent block &mdash; heuristics have false positives).</li>
+                              <li><strong>Scoped search as an access-control boundary:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryRequest.doc_ids</code> lets a caller restrict retrieval to a permitted document subset via a real Pinecone metadata filter (see Challenge 22) &mdash; the hook a per-user document-permissions table would plug into.</li>
+                            </ul>
+                          </div>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Honest scope:</strong> this is a shared API key (single secret, not per-user identity) by design choice for this app's current single-tenant reality &mdash; it answers "is this caller authorized at all," not "which user is this." A production multi-tenant deployment would extend this with real per-user JWT auth (the app already has unused <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">SUPABASE_JWKS_URL</code> config for exactly that) and a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">document_permissions</code> table joined into the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">doc_ids</code> filter.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/auth.py</code> &bull; <code className="text-zinc-400">ws_manager.py</code> &bull; <code className="text-zinc-400">services/prompt_guard.py</code> &bull; <code className="text-zinc-400">main.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 21 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 21
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              $40K Instead of $4K &mdash; Cost Guardrails for an LLM Product
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Scenario:</strong> Your LLM bill hits $40K instead of $4K. Someone added a feature that retries failed requests 10x with full context. How do you build cost guardrails into an LLM product?
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-red-400">Audit finding:</strong> before this pass, there were zero cost guardrails &mdash; no rate limiting, no spend cap, nothing stopping a client (or exactly this kind of retry bug) from calling <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">/api/query</code> in an unbounded loop, each call re-embedding, reranking, and invoking a 70B-parameter streaming LLM call.
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed"><strong className="text-emerald-400">Implemented, layered defenses:</strong></p>
+                            <ol className="list-decimal list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Per-client rate limiting:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">RateLimiter</code> (in-memory sliding window, keyed by <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">client_id</code>/IP) caps requests/minute &mdash; a retry-storm bug hits <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">429</code> immediately rather than 10x-ing every call.</li>
+                              <li><strong>Hard daily token budget:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">check_daily_budget()</code> sums today's <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">prompt_tokens + completion_tokens</code> across <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryMetrics</code> and rejects new queries with <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">429</code> once the configured ceiling is hit &mdash; checked <em>before</em> the LLM call, not discovered after the fact in a billing dashboard.</li>
+                              <li><strong>Per-request token cap:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">max_tokens=1024</code> already bounds the cost of any single completion, retried or not.</li>
+                              <li><strong>Repeated-question cache:</strong> the query cache (Challenge 23) means an actual retry of the <em>same</em> question doesn't even re-invoke the LLM after the first success &mdash; it's served from cache at near-zero cost.</li>
+                            </ol>
+                          </div>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            All limits are config-driven (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">RATE_LIMIT_PER_MINUTE</code>, <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">DAILY_TOKEN_BUDGET</code>) so they can be tuned without a redeploy, and every rejection is a normal HTTP <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">429</code>, not a crash.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/rate_limiter.py</code> &bull; <code className="text-zinc-400">cost_guard.py</code> &bull; Integrated in <code className="text-zinc-400">main.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 22 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 22
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Scaling Retrieval to 100 Million Documents
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Scenario:</strong> Your company has 100 million documents. Searching all of them for every query is too expensive. How would you design retrieval that scales while staying relevant?
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed"><strong className="text-emerald-400">Two separate levers, both matter:</strong></p>
+                            <ol className="list-decimal list-inside ml-2 space-y-2 text-sm text-zinc-300">
+                              <li>
+                                <strong>ANN indexing (already solved by the vector DB choice):</strong> "Searching all of them" implies a brute-force linear scan, which this system never does &mdash; Pinecone serverless indexes with HNSW-style approximate nearest neighbor search and auto-shards internally as the corpus grows. This is the primary lever for raw query latency at scale, and it required no code change here: it's what choosing a real ANN vector DB (vs. e.g. a flat numpy array) already buys you.
+                              </li>
+                              <li>
+                                <strong>Scope before you search (the part that <em>was</em> missing):</strong> ANN search over 100M vectors is still slower and pricier than ANN search over a relevant 10K-vector subset. We wired the previously-unused Pinecone <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">filter</code> parameter end-to-end: <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryRequest.doc_ids</code> &rarr; <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">retrieve_and_generate(doc_ids=...)</code> &rarr; a real <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">{'{"doc_id": {"$in": doc_ids}}'}</code> metadata filter on the Pinecone query. The same scope is applied to BM25: <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">BM25SearchService.search(doc_ids=...)</code> builds a small throwaway index over just that subset instead of scanning the full lexical corpus.
+                              </li>
+                            </ol>
+                          </div>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Where the scope comes from in production:</strong> department/project tags, per-user document permissions, or a coarse routing/classification step run before retrieval &mdash; any of which populate <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">doc_ids</code>. This system doesn't fabricate a fake categorization scheme it doesn't have real data for; it implements the actual plumbing (query &rarr; filter &rarr; both search backends) so a real permission/category system slots in without further pipeline changes. This is also the same mechanism Challenge 20 uses for access-control scoping &mdash; "search only what this user can see" and "search only what's relevant" are the same filter.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/pipeline/retrieval.py</code> &bull; <code className="text-zinc-400">services/pinecone_service.py</code> &bull; <code className="text-zinc-400">services/bm25_service.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 23 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 23
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Stale Embeddings &amp; Cache Invalidation After a Document Update
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Scenario:</strong> A document was updated but the AI still returns outdated information &mdash; stale embeddings and cached responses. How would you design indexing &amp; cache invalidation to keep answers current?
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed"><strong className="text-zinc-100">Two distinct staleness risks, both addressed:</strong></p>
+                            <ol className="list-decimal list-inside ml-2 space-y-2 text-sm text-zinc-300">
+                              <li>
+                                <strong>Stale embeddings:</strong> already handled by re-ingestion &mdash; uploading a document with a name that matches an existing one purges its old Pinecone vectors and SQL <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">Chunk</code> rows before re-embedding (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">main.py</code>'s upload handler). But auditing this surfaced a real latent bug: <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">BM25SearchService</code>'s index-rebuild check keyed only on <em>(doc count, row count)</em> &mdash; editing a document's content <em>without</em> changing its chunk count would leave the lexical index silently stale. <strong className="text-emerald-400">Fixed</strong> by adding <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">Document.updated_at</code> (max across ready docs) into the cache key, so any content edit invalidates the index, not just an add/delete.
+                              </li>
+                              <li>
+                                <strong>Stale cached responses:</strong> this system had no response caching at all before this pass (a gap flagged back in Challenge 14) &mdash; so we added one correctly rather than adding it naively. <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryCache</code> keys each cached answer to a <strong>corpus fingerprint</strong> (ready-document count + latest <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">updated_at</code>), not just a TTL. The fingerprint changes the instant any document is ingested, replaced, or deleted, so a cache entry is invalidated by an actual corpus change &mdash; a repeated question can never return an answer that's gone stale relative to the current documents. TTL (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QUERY_CACHE_TTL_SECONDS</code>) is only a secondary safety net on top of that.
+                              </li>
+                            </ol>
+                          </div>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            Caching is scoped to stateless queries only (no <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">session_id</code>) &mdash; an answer compiled with conversation history in scope can't be safely replayed for a different session or turn.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/query_cache.py</code> &bull; <code className="text-zinc-400">bm25_service.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 

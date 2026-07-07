@@ -1,9 +1,15 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type { WSMessage, WSEventType } from '../types';
+import { getClientId } from '../services/clientId';
 
 type EventHandler = (msg: WSMessage) => void;
 
-const WS_URL = `ws://${window.location.hostname}:8000/ws`;
+function buildWsUrl(): string {
+  const apiKey = import.meta.env.VITE_API_KEY || '';
+  const clientId = getClientId();
+  const params = new URLSearchParams({ client_id: clientId, key: apiKey });
+  return `ws://${window.location.hostname}:8000/ws?${params.toString()}`;
+}
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -14,7 +20,7 @@ export function useWebSocket() {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(buildWsUrl());
     wsRef.current = ws;
 
     ws.onopen = () => {

@@ -34,6 +34,24 @@ class Settings(BaseSettings):
     bm25_hybrid_enabled: bool = True
     bm25_floor_score: float = 0.3
 
+    # Security: shared API key gate (X-API-Key header) for all sensitive REST +
+    # WebSocket endpoints. Fails closed (503) if unset — misconfiguration should
+    # never silently mean "no auth".
+    api_key: str = ""
+
+    # Cost guardrails: per-client rate limiting + a hard daily token budget,
+    # enforced before invoking the LLM so a runaway client/retry bug can't
+    # silently rack up spend.
+    rate_limit_per_minute: int = 20
+    daily_token_budget: int = 2_000_000
+
+    # Query result cache: avoids re-running the full pipeline for a repeated
+    # question. Keyed to a corpus fingerprint (doc count + latest update time)
+    # so it's invalidated the moment any document is ingested/deleted/updated —
+    # never serves a stale answer past a real corpus change.
+    query_cache_enabled: bool = True
+    query_cache_ttl_seconds: int = 3600
+
     # CRAG (Corrective RAG): an LLM grader classifies the reranked+compressed
     # context as correct / incorrect / ambiguous. "incorrect" discards internal
     # knowledge and falls back to web search; "ambiguous" combines both.

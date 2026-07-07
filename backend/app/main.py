@@ -3,14 +3,16 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     BackgroundTasks,
     Depends,
     FastAPI,
     File,
+    Header,
     HTTPException,
+    Request,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -20,6 +22,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.auth import require_api_key, verify_ws_key
 from app.database import Document, QueryHistory, QueryMetrics, IngestionMetrics, Chunk, create_tables, get_db
 from app.models import (
     DocumentListResponse,
@@ -41,6 +44,8 @@ from app.pipeline.retrieval import retrieve_and_generate
 from app.services.pinecone_service import pinecone_service
 from app.services.llm_service import llm_service
 from app.services.storage_service import storage_service, CONTENT_TYPES
+from app.services.rate_limiter import rate_limiter
+from app.services.cost_guard import check_daily_budget
 from app.utils.file_parsers import detect_file_type
 from app.ws_manager import manager
 
@@ -58,7 +63,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list + ["*"],
+    # A wildcard origin combined with allow_credentials=True lets any website
+    # make credentialed requests to this API from a victim's browser — the
+    # browser itself blocks this combination per-spec, but relying on browser
+    # enforcement rather than a correct server config is not a real boundary.
+    # Explicit configured origins only.
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,7 +85,14 @@ async def startup():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+    client_id = websocket.query_params.get("client_id")
+    key = websocket.query_params.get("key")
+
+    if not verify_ws_key(key) or not client_id:
+        await websocket.close(code=4401)
+        return
+
+    await manager.connect(websocket, client_id)
     try:
         while True:
             data = await websocket.receive_text()
@@ -86,7 +103,7 @@ async def websocket_endpoint(websocket: WebSocket):
             except Exception:
                 pass
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        manager.disconnect(websocket, client_id)
 
 
 # ── Health ───────────────────────────────────────────────────────────────────
@@ -107,10 +124,17 @@ async def health():
 
 @app.post("/api/documents/upload", response_model=DocumentResponse, status_code=202)
 async def upload_document(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    _api_key: str = Depends(require_api_key),
+    x_client_id: Optional[str] = Header(default=None),
 ):
+    identity = x_client_id or (request.client.host if request.client else "unknown")
+    if not rate_limiter.allow(identity):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please slow down.")
+
     file_type = detect_file_type(file.filename or "")
     if not file_type:
         raise HTTPException(
@@ -170,7 +194,7 @@ async def upload_document(
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(
-                ingest_document(doc_id, s3_key, original_name, file_type, session)
+                ingest_document(doc_id, s3_key, original_name, file_type, session, client_id=x_client_id)
             )
         finally:
             session.close()
@@ -190,7 +214,7 @@ async def upload_document(
 
 
 @app.get("/api/documents", response_model=DocumentListResponse)
-def list_documents(db: Session = Depends(get_db)):
+def list_documents(db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     docs = db.query(Document).order_by(Document.created_at.desc()).all()
     return DocumentListResponse(
         documents=[
@@ -212,7 +236,7 @@ def list_documents(db: Session = Depends(get_db)):
 
 
 @app.get("/api/documents/{doc_id}", response_model=DocumentResponse)
-def get_document(doc_id: str, db: Session = Depends(get_db)):
+def get_document(doc_id: str, db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -230,7 +254,12 @@ def get_document(doc_id: str, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/documents/{doc_id}", status_code=204)
-async def delete_document(doc_id: str, db: Session = Depends(get_db)):
+async def delete_document(
+    doc_id: str,
+    db: Session = Depends(get_db),
+    _api_key: str = Depends(require_api_key),
+    x_client_id: Optional[str] = Header(default=None),
+):
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -246,13 +275,25 @@ async def delete_document(doc_id: str, db: Session = Depends(get_db)):
     db.query(Chunk).filter(Chunk.doc_id == doc_id).delete()
     db.delete(doc)
     db.commit()
-    await manager.broadcast("document_deleted", {"doc_id": doc_id})
+    await manager.broadcast("document_deleted", {"doc_id": doc_id}, client_id=x_client_id)
 
 
 # ── Query ─────────────────────────────────────────────────────────────────────
 
 @app.post("/api/query", response_model=QueryResponse)
-async def query(req: QueryRequest, db: Session = Depends(get_db)):
+async def query(
+    req: QueryRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _api_key: str = Depends(require_api_key),
+    x_client_id: Optional[str] = Header(default=None),
+):
+    identity = x_client_id or (request.client.host if request.client else "unknown")
+    if not rate_limiter.allow(identity):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please slow down.")
+    if not check_daily_budget(db):
+        raise HTTPException(status_code=429, detail="Daily LLM token budget exceeded. Try again tomorrow.")
+
     from app.database import SessionLocal
     session = SessionLocal()
     try:
@@ -260,7 +301,9 @@ async def query(req: QueryRequest, db: Session = Depends(get_db)):
             question=req.question,
             top_k=req.top_k,
             db_session=session,
-            session_id=req.session_id
+            session_id=req.session_id,
+            client_id=x_client_id,
+            doc_ids=req.doc_ids,
         )
     finally:
         session.close()
@@ -287,7 +330,7 @@ async def query(req: QueryRequest, db: Session = Depends(get_db)):
 
 
 @app.get("/api/queries", response_model=dict)
-def get_query_history(limit: int = 20, db: Session = Depends(get_db)):
+def get_query_history(limit: int = 20, db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     queries = (
         db.query(QueryHistory)
         .order_by(QueryHistory.created_at.desc())
@@ -319,7 +362,7 @@ def get_query_history(limit: int = 20, db: Session = Depends(get_db)):
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 @app.get("/api/stats", response_model=StatsResponse)
-async def get_stats(db: Session = Depends(get_db)):
+async def get_stats(db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     total_documents = db.query(Document).filter(Document.status == "ready").count()
     chunk_rows = (
         db.query(Document.chunk_count)
@@ -354,7 +397,7 @@ async def get_stats(db: Session = Depends(get_db)):
 # ── Observability ─────────────────────────────────────────────────────────────
 
 @app.get("/api/observability", response_model=ObservabilityResponse)
-async def get_observability(db: Session = Depends(get_db)):
+async def get_observability(db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     """
     Returns aggregate observability metrics across all queries and ingestions.
     Covers: latency (per-stage), token usage, retrieval quality, faithfulness, failures.

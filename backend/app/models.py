@@ -27,6 +27,11 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
     session_id: Optional[str] = Field(default=None, description="Optional episodic chat session ID")
+    doc_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Optional document subset to scope retrieval to (metadata-filtered search — "
+                     "skips the full-corpus scan; also serves as an access-control boundary).",
+    )
 
 
 class SourceChunk(BaseModel):

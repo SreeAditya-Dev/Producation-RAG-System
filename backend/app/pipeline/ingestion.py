@@ -30,6 +30,7 @@ async def ingest_document(
     original_name: str,
     file_type: str,
     db_session,
+    client_id: Optional[str] = None,
 ) -> int:
     """
     Full ingestion pipeline: download → parse → chunk → embed → upsert to Pinecone.
@@ -41,7 +42,7 @@ async def ingest_document(
     pipeline_start = time.perf_counter()
 
     async def emit(event: str, data: Any = None):
-        await manager.broadcast(event=event, data=data, document_id=doc_id)
+        await manager.broadcast(event=event, data=data, document_id=doc_id, client_id=client_id)
 
     # Accumulated metrics
     metrics: Dict[str, Any] = {

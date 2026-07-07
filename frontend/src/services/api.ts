@@ -7,10 +7,20 @@ import type {
   HealthResponse,
   ObservabilityResponse,
 } from '../types';
+import { getClientId } from './clientId';
 
 const api = axios.create({
   baseURL: '/api',
   timeout: 120000,
+});
+
+api.interceptors.request.use((config) => {
+  const apiKey = import.meta.env.VITE_API_KEY;
+  if (apiKey) {
+    config.headers['X-API-Key'] = apiKey;
+  }
+  config.headers['X-Client-Id'] = getClientId();
+  return config;
 });
 
 api.interceptors.response.use(

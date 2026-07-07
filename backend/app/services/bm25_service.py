@@ -3,7 +3,7 @@ import math
 import re
 import threading
 from collections import Counter
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from app.observability import traceable
 
@@ -89,33 +89,57 @@ class BM25SearchService:
         self._cache_key = None
         self._lock = threading.Lock()
 
-    def _load_corpus(self, db_session):
+    def _load_corpus(self, db_session, doc_ids: Optional[List[str]] = None):
         from app.database import Chunk, Document
 
-        ready_doc_ids = [
-            row[0] for row in db_session.query(Document.id).filter(Document.status == "ready").all()
-        ]
-        if not ready_doc_ids:
+        q = db_session.query(Document.id, Document.updated_at).filter(Document.status == "ready")
+        if doc_ids:
+            q = q.filter(Document.id.in_(doc_ids))
+        ready_docs = q.all()
+        if not ready_docs:
             return None, []
+
+        ready_doc_ids = [d[0] for d in ready_docs]
+        # Latest update timestamp across the scoped doc set — included in the cache
+        # key so an in-place document edit (same chunk count, new content) still
+        # invalidates the index, not just an add/delete that changes the doc count.
+        latest_update = max((d[1] for d in ready_docs if d[1] is not None), default=None)
 
         rows = (
             db_session.query(Chunk.doc_id, Chunk.chunk_index, Chunk.text)
             .filter(Chunk.doc_id.in_(ready_doc_ids))
             .all()
         )
-        cache_key = (tuple(sorted(ready_doc_ids)), len(rows))
+        cache_key = (tuple(sorted(ready_doc_ids)), len(rows), latest_update)
         corpus = [(f"{doc_id}-chunk-{chunk_index}", text) for doc_id, chunk_index, text in rows]
         return cache_key, corpus
 
     @traceable(name="bm25_lexical_search", run_type="retriever")
-    def search(self, db_session, query: str, top_k: int) -> List[Tuple[str, float]]:
+    def search(
+        self,
+        db_session,
+        query: str,
+        top_k: int,
+        doc_ids: Optional[List[str]] = None,
+    ) -> List[Tuple[str, float]]:
+        """
+        `doc_ids`, if given, scopes the lexical search to that document subset —
+        builds a small throwaway index over just those chunks rather than the
+        full corpus, so a query already scoped to a relevant subset (e.g. by
+        access control or a coarse routing step) doesn't pay to index everything.
+        """
         try:
-            cache_key, corpus = self._load_corpus(db_session)
+            cache_key, corpus = self._load_corpus(db_session, doc_ids=doc_ids)
         except Exception as exc:
             logger.warning("BM25 corpus load failed, skipping lexical search: %s", exc)
             return []
         if not corpus:
             return []
+
+        if doc_ids:
+            scoped_index = _BM25Index()
+            scoped_index.build(corpus)
+            return scoped_index.search(query, top_k)
 
         with self._lock:
             if cache_key != self._cache_key:
