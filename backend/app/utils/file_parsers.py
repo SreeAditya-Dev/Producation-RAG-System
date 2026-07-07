@@ -38,6 +38,10 @@ _OCR_MIN_MEANINGFUL = 30
 # it low enough to not trip the provider's rate limit on chart-heavy PDFs.
 _VISION_MAX_CONCURRENCY = 4
 
+# Minimum confidence from the image classifier to trust its decision.
+# Below this threshold, images are sent to vision as a safety margin.
+_CLASSIFIER_CONFIDENCE_THRESHOLD = 0.5
+
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
@@ -164,11 +168,12 @@ def _process_page_images(
 ) -> Tuple[List[str], List[tuple]]:
     """
     For each embedded image on the page:
-      • OCR it (pytesseract, optional)
-      • If OCR yields < _OCR_MIN_MEANINGFUL chars and a vision model is
-        configured, reserve a placeholder slot and queue it for a batched,
-        concurrent vision-description call (resolved later by the caller —
-        this keeps the per-page loop free of network I/O).
+      • Classify it locally (chart/diagram vs photo/logo/icon) — ~5 ms, no API.
+      • OCR it (pytesseract, optional).
+      • If OCR yields >= _OCR_MIN_MEANINGFUL chars → use text directly.
+      • Else if the classifier says "vision-worthy" (chart/diagram/table) AND
+        a vision model is configured → queue for a batched, concurrent vision
+        call (resolved later by the caller).
       • Otherwise record the image's presence and any partial OCR text.
 
     Returns (results, pending) where `pending` entries are
@@ -177,6 +182,8 @@ def _process_page_images(
     offset by `base_position` to get the final position within the page's
     assembled parts list.
     """
+    from app.utils.image_classifier import classify_image, VISION_WORTHY
+
     results: List[str] = []
     pending: List[tuple] = []
     ocr_ready = _tesseract_available()
@@ -204,18 +211,34 @@ def _process_page_images(
 
             if len(ocr_text) >= _OCR_MIN_MEANINGFUL:
                 results.append(f"[Image {img_idx} — OCR text]\n{ocr_text}")
+                continue
 
-            elif vision_model:
-                # Chart / graph / diagram — queue for a concurrent vision call.
+            # ── Classify image locally before deciding on vision ──────────
+            img_type, confidence, reason = classify_image(
+                img_bytes, width, height, ocr_text
+            )
+            needs_vision = (
+                img_type in VISION_WORTHY
+                or confidence < _CLASSIFIER_CONFIDENCE_THRESHOLD
+            )
+
+            logger.info(
+                "Image %d (%s): classified=%s conf=%.2f reason=%s → %s",
+                img_idx, dims, img_type.value, confidence, reason,
+                "VISION" if (needs_vision and vision_model) else "SKIP",
+            )
+
+            partial = f"\nPartial OCR: {ocr_text}" if ocr_text else ""
+
+            if needs_vision and vision_model:
+                # Chart / diagram / table — queue for a concurrent vision call.
                 # Placeholder is overwritten in-place once the batch resolves;
                 # it also serves as the fallback text if the call fails.
-                partial = f"\nPartial OCR: {ocr_text}" if ocr_text else ""
                 results.append(f"[Figure {img_idx}: Visual content ({dims}){partial}]")
                 pending.append((page_index, base_position + len(results) - 1, img_bytes, img_idx, dims, ocr_text))
-
             else:
-                partial = f"\nPartial OCR: {ocr_text}" if ocr_text else ""
-                results.append(f"[Figure {img_idx}: Visual content ({dims}){partial}]")
+                # Photo / logo / decorative — skip vision, just note presence.
+                results.append(f"[Figure {img_idx}: {img_type.value} ({dims}) — skipped vision]{partial}")
 
         except Exception as exc:
             logger.debug("Image %d extraction error: %s", img_idx, exc)

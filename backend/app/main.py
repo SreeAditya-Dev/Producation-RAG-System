@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import (
-    BackgroundTasks,
     Depends,
     FastAPI,
     File,
@@ -46,6 +45,7 @@ from app.services.llm_service import llm_service
 from app.services.storage_service import storage_service, CONTENT_TYPES
 from app.services.rate_limiter import rate_limiter
 from app.services.cost_guard import check_daily_budget
+from app.services.ingestion_queue import ingestion_queue, IngestionTask
 from app.utils.file_parsers import detect_file_type
 from app.ws_manager import manager
 
@@ -78,7 +78,14 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     create_tables()
-    logger.info("RAG System started. Tables ready.")
+    ingestion_queue.start()
+    logger.info("RAG System started. Tables ready. Ingestion queue active.")
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await ingestion_queue.stop()
+    logger.info("RAG System shut down. Ingestion queue stopped.")
 
 
 # ── WebSocket ────────────────────────────────────────────────────────────────
@@ -125,7 +132,6 @@ async def health():
 @app.post("/api/documents/upload", response_model=DocumentResponse, status_code=202)
 async def upload_document(
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     _api_key: str = Depends(require_api_key),
@@ -171,12 +177,16 @@ async def upload_document(
         None, storage_service.upload, content, s3_key, content_type
     )
 
+    # Determine initial status: "processing" if queue is empty, "queued" if others are ahead
+    queue_status = ingestion_queue.get_queue_status()
+    initial_status = "queued" if queue_status["is_processing"] or queue_status["queue_depth"] > 0 else "processing"
+
     doc = Document(
         id=doc_id,
         original_name=original_name,
         filename=s3_key,
         file_type=file_type,
-        status="processing",
+        status=initial_status,
         chunk_count=0,
         file_size=file_size,
         created_at=datetime.utcnow(),
@@ -186,20 +196,15 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    from app.database import SessionLocal
-
-    def _run_ingestion():
-        session = SessionLocal()
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(
-                ingest_document(doc_id, s3_key, original_name, file_type, session, client_id=x_client_id)
-            )
-        finally:
-            session.close()
-
-    background_tasks.add_task(_run_ingestion)
+    # Enqueue for serial processing instead of fire-and-forget BackgroundTask
+    task = IngestionTask(
+        doc_id=doc_id,
+        s3_key=s3_key,
+        original_name=original_name,
+        file_type=file_type,
+        client_id=x_client_id,
+    )
+    position = await ingestion_queue.enqueue(task)
 
     return DocumentResponse(
         id=doc.id,
@@ -211,6 +216,12 @@ async def upload_document(
         created_at=doc.created_at,
         updated_at=doc.updated_at,
     )
+
+
+@app.get("/api/queue")
+async def get_queue_status(_api_key: str = Depends(require_api_key)):
+    """Returns the current ingestion queue state: depth, current task, pending tasks."""
+    return ingestion_queue.get_queue_status()
 
 
 @app.get("/api/documents", response_model=DocumentListResponse)
