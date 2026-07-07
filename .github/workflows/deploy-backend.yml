@@ -12,7 +12,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  AZURE_WEBAPP_NAME: CHANGE-ME-app-service-name   # e.g. rag-system-backend
+  AZURE_WEBAPP_NAME: rag-system-backend
   REGISTRY: ghcr.io
   IMAGE_NAME: sreeaditya-dev/rag-backend          # GHCR requires lowercase
 
