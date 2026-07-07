@@ -1261,7 +1261,7 @@ sources = reranker_service.rerank(
                         Addressing Core Production Challenges
                       </h4>
                       <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
-                        How we solved critical RAG failures: retaining layout structures in table parsers, avoiding information redundancy during semantic searches, and handling informal code-mixed Hinglish queries.
+                        How we solved critical RAG failures: retaining layout structures in table parsers, avoiding information redundancy during semantic searches, handling informal code-mixed Hinglish queries, keeping prompt cost/latency bounded across turns, and catching exact numeric figures dense embeddings miss.
                       </p>
                     </div>
 
@@ -1647,6 +1647,107 @@ sources = reranker_service.rerank(
                         <div className="border-t border-zinc-800/50 pt-3">
                           <span className="text-xs font-mono text-zinc-500">
                             Keywords: <code className="text-zinc-400">Deprecation Outage</code> &bull; <code className="text-zinc-400">Circuit Breaker</code> &bull; <code className="text-zinc-400">Model Fallbacks</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 13 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 13
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              "Chunk, Embed, Top-3, Done" — Why That's Not Enough for Production
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Interview framing:</strong> A candidate answers "How will you store documents in a Vector DB for production?" with: chunk by paragraph, embed with OpenAI, dump into Pinecone, grab top-3 matches at query time and hand them to the LLM — "vector similarity will handle everything."
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-red-400">Why the naive answer fails:</strong> Paragraph-only chunking ignores tables and headings, so a number gets separated from the label that gives it meaning. A bare top-3 pull has no re-ranking step, so a cosine-similarity near-miss can silently outrank the chunk that actually answers the question, and there's no fallback for terms embeddings represent poorly (exact numbers, IDs, currency codes).
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">What this system does instead:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">TableAwareSplitter</code> + <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">RecursiveTextSplitter</code> chunk on structural boundaries with overlap, not raw character counts. At query time we over-fetch <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">top_k * 4</code> dense candidates, merge in a <strong className="text-zinc-100">BM25 lexical search pool</strong> (see Challenge 15), and only then run a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">Cross-Encoder</code> reranker to pick the final top-k — dense similarity alone never gets the last word.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/pipeline/table_splitter.py</code> &bull; <code className="text-zinc-400">reranker_service.py</code> &bull; <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 14 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 14
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              10-Second Replies From Resending the Whole Manual Every Turn
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Scenario:</strong> A chatbot takes 10 seconds to reply because it re-sends an entire 50-page manual with every single prompt — slow and expensive, since cost and latency both scale with prompt tokens.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Fix — retrieval-only context injection:</strong> The root cause is treating the document as chat history instead of an external knowledge base. This system never resends source documents. <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">HybridMemoryCoordinator.compile_working_memory</code> builds each turn's prompt from exactly three things: the system prompt, a small bounded window of prior turns, and only the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">top_k</code> (default 5) reranked chunks for <em>this</em> question.
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">Three layers keep that context small:</p>
+                            <ol className="list-decimal list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Bounded episodic history</strong> &mdash; <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">SessionEpisodicMemory</code> keeps only the last 5 successful Q&amp;A turns per session (sliding window, not the full transcript).</li>
+                              <li><strong>Sentence-level compression</strong> &mdash; <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ContextCompressor</code> keeps only the highest-scoring sentences of each retrieved chunk that fit a 256-token budget, dropping irrelevant filler before it ever reaches the LLM.</li>
+                              <li><strong>Token telemetry</strong> &mdash; every turn's real <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">prompt_tokens</code>/<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">completion_tokens</code> are logged to <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryMetrics</code>, so a cost/latency regression is visible immediately rather than discovered in a bill.</li>
+                            </ol>
+                          </div>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Honest gap:</strong> we do not yet cache repeated/duplicate questions (no semantic or prompt cache) — every query re-embeds and re-retrieves from scratch even if asked twice in a row. That's the next optimization on top of this, not a fix for the 10-second/full-manual problem itself.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/hybrid_memory_coordinator.py</code> &bull; <code className="text-zinc-400">session_episodic_memory.py</code> &bull; <code className="text-zinc-400">context_compressor.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 15 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 15
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Financial PDFs: Missing One Number Can Cost Millions
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Problem:</strong> Dense embeddings are optimized for semantic/topical similarity, not exact-match. Two sentences about "quarterly revenue" embed close together whether the number is <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">$45,231,908.12</code> or <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">$44,900,000.00</code> &mdash; cosine similarity alone cannot reliably tell them apart, which is fatal in finance where the exact figure is the answer.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Solution &mdash; hybrid dense + lexical (BM25) search:</strong> We added a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">BM25SearchService</code> that runs an Okapi BM25 keyword index over the full (untruncated) chunk corpus in SQL, in parallel with the existing Pinecone dense search. BM25 tokenizes numbers as first-class terms, so a query containing <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">45231908.12</code> or an account/PO code will surface the exact chunk containing that literal token even if its embedding ranked outside the dense top-k.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            Both candidate pools are merged and de-duplicated by chunk ID; BM25-only hits enter with a fixed floor score (just above the relevance cutoff) rather than a fabricated similarity score, so the <strong className="text-zinc-100">cross-encoder reranker</strong> &mdash; not raw retrieval score &mdash; makes the final call on whether that number is actually relevant to the question. This is combined with the existing <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">TableAwareSplitter</code>, which re-injects the header row into every split table chunk so a number never loses its column label.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/bm25_service.py</code> &bull; <code className="text-zinc-400">database.py</code> (<code className="text-zinc-400">Chunk</code> table) &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
                           </span>
                         </div>
                       </div>

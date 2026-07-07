@@ -34,7 +34,7 @@ async def ingest_document(
     Records per-stage latency, token usage, and failure info in IngestionMetrics.
     Returns the number of chunks created.
     """
-    from app.database import Document, IngestionMetrics
+    from app.database import Document, IngestionMetrics, Chunk
 
     pipeline_start = time.perf_counter()
 
@@ -105,6 +105,24 @@ async def ingest_document(
             "chunk_overlap": settings.chunk_overlap,
             "elapsed_ms": metrics["chunk_ms"],
         })
+
+        # Persist full (untruncated) chunk text for BM25 lexical search — Pinecone's
+        # metadata copy of chunk text is capped at 1000 chars and dense-vector only.
+        db_session.query(Chunk).filter(Chunk.doc_id == doc_id).delete()
+        db_session.bulk_save_objects([
+            Chunk(
+                doc_id=doc_id,
+                original_name=original_name,
+                file_type=file_type,
+                chunk_index=meta.chunk_index,
+                text=meta.text,
+                char_start=meta.char_start,
+                char_end=meta.char_end,
+                boundary_level=meta.boundary_level,
+            )
+            for meta in chunk_metas
+        ])
+        db_session.commit()
 
         # ── Stage 3: Embed ────────────────────────────────────────────────────
         current_stage = "embed"

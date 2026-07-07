@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     # Fetch this many candidates before reranking, then return top_k
     reranker_candidates_multiplier: int = 4
 
+    # Hybrid search: BM25 lexical candidates are merged into the dense-retrieval
+    # pool to catch exact-match terms (numbers, IDs, codes) dense embeddings miss.
+    # They're given a fixed floor score (just above the 0.25 relevance cutoff) so
+    # the cross-encoder reranker — not raw retrieval score — decides real relevance.
+    bm25_hybrid_enabled: bool = True
+    bm25_floor_score: float = 0.3
+
     # Supabase PostgreSQL
     database_url: str = "sqlite:///./rag_system.db"
 

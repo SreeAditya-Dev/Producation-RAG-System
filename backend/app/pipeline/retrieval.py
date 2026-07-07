@@ -5,7 +5,7 @@ import math
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.config import settings
 from app.services.embedding_service import embedding_service
@@ -16,6 +16,7 @@ from app.ws_manager import manager
 from app.services.query_translator import QueryTranslator
 from app.services.query_decomposer import query_decomposer
 from app.services.context_compressor import context_compressor
+from app.services.bm25_service import bm25_service
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,73 @@ def _faithfulness(sources: List[Dict]) -> Optional[float]:
     return round(1.0 / (1.0 + math.exp(-mean_logit)), 4)
 
 
+def _bm25_hits_to_candidates(db_session, bm25_hits: List[Tuple[str, float]]) -> List[Dict[str, Any]]:
+    """
+    Turn BM25 (chunk_id, score) hits into Pinecone-shaped candidate dicts by looking
+    up the full chunk row in SQL. Score is replaced with a fixed floor just above the
+    relevance cutoff — BM25 rank only decides *inclusion* in the pool; the
+    cross-encoder reranker decides real relevance.
+    """
+    from app.database import Chunk
+
+    if not bm25_hits:
+        return []
+
+    parsed = []
+    for chunk_id, _ in bm25_hits:
+        if "-chunk-" not in chunk_id:
+            continue
+        doc_id, _, idx_str = chunk_id.rpartition("-chunk-")
+        try:
+            parsed.append((chunk_id, doc_id, int(idx_str)))
+        except ValueError:
+            continue
+    if not parsed:
+        return []
+
+    rows = (
+        db_session.query(Chunk)
+        .filter(Chunk.doc_id.in_({p[1] for p in parsed}))
+        .all()
+    )
+    row_lookup = {(r.doc_id, r.chunk_index): r for r in rows}
+
+    candidates = []
+    for chunk_id, doc_id, idx in parsed:
+        row = row_lookup.get((doc_id, idx))
+        if not row:
+            continue
+        candidates.append({
+            "id": chunk_id,
+            "score": settings.bm25_floor_score,
+            "metadata": {
+                "doc_id": row.doc_id,
+                "original_name": row.original_name,
+                "file_type": row.file_type,
+                "chunk_index": row.chunk_index,
+                "char_start": row.char_start,
+                "char_end": row.char_end,
+                "boundary_level": row.boundary_level,
+                "text": row.text[:1000],
+            },
+        })
+    return candidates
+
+
 async def _embed_and_retrieve_subqueries(
     translated_queries: List[str],
     top_k: int,
-    qm: Dict[str, Any]
+    qm: Dict[str, Any],
+    db_session,
 ) -> List[Dict[str, Any]]:
-    """Embed sub-queries in parallel and retrieve candidate matches from Pinecone."""
+    """
+    Embed sub-queries in parallel and retrieve candidate matches from both dense
+    (Pinecone cosine) and lexical (BM25) search, merging both into one candidate pool
+    (hybrid search). BM25 catches exact-match terms — numbers, IDs, currency figures —
+    that dense embeddings are known to under-rank.
+    """
+    candidates_k = max(20, top_k * settings.reranker_candidates_multiplier)
+
     async def _retrieve_single(t_q: str) -> List[Dict[str, Any]]:
         t = time.perf_counter()
         q_vector, embed_tokens = await asyncio.get_event_loop().run_in_executor(
@@ -53,8 +115,7 @@ async def _embed_and_retrieve_subqueries(
         )
         qm["embed_ms"] = qm.get("embed_ms", 0.0) + _ms(t)
         qm["embed_tokens"] = qm.get("embed_tokens", 0) + embed_tokens
-        
-        candidates_k = max(20, top_k * settings.reranker_candidates_multiplier)
+
         t = time.perf_counter()
         raw_matches = await asyncio.get_event_loop().run_in_executor(
             None,
@@ -67,18 +128,43 @@ async def _embed_and_retrieve_subqueries(
         qm["retrieve_ms"] = qm.get("retrieve_ms", 0.0) + _ms(t)
         return raw_matches
 
-    tasks = [_retrieve_single(q) for q in translated_queries]
-    retrieval_results = await asyncio.gather(*tasks)
+    async def _bm25_single(t_q: str) -> List[Dict[str, Any]]:
+        if not settings.bm25_hybrid_enabled:
+            return []
+        t = time.perf_counter()
+        hits = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: bm25_service.search(db_session, t_q, candidates_k)
+        )
+        qm["bm25_ms"] = qm.get("bm25_ms", 0.0) + _ms(t)
+        return _bm25_hits_to_candidates(db_session, hits)
 
-    # Merge and deduplicate candidates by unique vector ID
+    dense_tasks = [_retrieve_single(q) for q in translated_queries]
+    bm25_tasks = [_bm25_single(q) for q in translated_queries]
+    dense_results, bm25_results = await asyncio.gather(
+        asyncio.gather(*dense_tasks), asyncio.gather(*bm25_tasks)
+    )
+
+    # Merge and deduplicate candidates by unique vector ID. Dense matches take
+    # priority (real cosine score); BM25-only hits are appended with a floor score.
     seen_chunk_ids = set()
     merged_candidates = []
-    for raw_matches in retrieval_results:
+    for raw_matches in dense_results:
         for m in raw_matches:
             chunk_id = m["id"]
             if chunk_id not in seen_chunk_ids:
                 seen_chunk_ids.add(chunk_id)
                 merged_candidates.append(m)
+
+    bm25_added = 0
+    for raw_matches in bm25_results:
+        for m in raw_matches:
+            chunk_id = m["id"]
+            if chunk_id not in seen_chunk_ids:
+                seen_chunk_ids.add(chunk_id)
+                merged_candidates.append(m)
+                bm25_added += 1
+    qm["bm25_candidates_added"] = qm.get("bm25_candidates_added", 0) + bm25_added
+
     return merged_candidates
 
 
@@ -163,7 +249,7 @@ async def retrieve_and_generate(
             translated_queries.append(t_sq)
 
         # ── 3. Embed & Retrieve in Parallel ──────────────────────────────────
-        raw_candidates = await _embed_and_retrieve_subqueries(translated_queries, top_k, qm)
+        raw_candidates = await _embed_and_retrieve_subqueries(translated_queries, top_k, qm, db_session)
 
         # ── 4. Verify Active Documents (No stale chunks) ──────────────────────
         current_stage = "retrieve"
@@ -177,6 +263,8 @@ async def retrieve_and_generate(
         await emit("chunks_retrieved", {
             "count": len(candidates),
             "elapsed_ms": qm.get("retrieve_ms", 0.0),
+            "bm25_elapsed_ms": qm.get("bm25_ms", 0.0),
+            "bm25_candidates_added": qm.get("bm25_candidates_added", 0),
             "score_mean": qm["retrieval_score_mean"],
             "sources": [
                 {

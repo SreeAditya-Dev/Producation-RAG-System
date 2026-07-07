@@ -35,6 +35,25 @@ class Document(Base):
     error_message = Column(Text, nullable=True)
 
 
+class Chunk(Base):
+    """
+    Full (untruncated) chunk text used as the BM25 lexical search corpus.
+    Pinecone's metadata copy is capped at 1000 chars and is dense-vector only.
+    """
+    __tablename__ = "chunks"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    doc_id = Column(String, nullable=False, index=True)
+    original_name = Column(String, nullable=False)
+    file_type = Column(String, nullable=False)
+    chunk_index = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    char_start = Column(Integer, nullable=True)
+    char_end = Column(Integer, nullable=True)
+    boundary_level = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class QueryHistory(Base):
     __tablename__ = "query_history"
 

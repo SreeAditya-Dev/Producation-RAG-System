@@ -20,7 +20,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import Document, QueryHistory, QueryMetrics, IngestionMetrics, create_tables, get_db
+from app.database import Document, QueryHistory, QueryMetrics, IngestionMetrics, Chunk, create_tables, get_db
 from app.models import (
     DocumentListResponse,
     DocumentResponse,
@@ -135,6 +135,7 @@ async def upload_document(
         await asyncio.get_event_loop().run_in_executor(
             None, storage_service.delete, existing_doc.filename
         )
+        db.query(Chunk).filter(Chunk.doc_id == existing_doc.id).delete()
         db.delete(existing_doc)
         db.commit()
 
@@ -242,6 +243,7 @@ async def delete_document(doc_id: str, db: Session = Depends(get_db)):
     await asyncio.get_event_loop().run_in_executor(
         None, storage_service.delete, doc.filename
     )
+    db.query(Chunk).filter(Chunk.doc_id == doc_id).delete()
     db.delete(doc)
     db.commit()
     await manager.broadcast("document_deleted", {"doc_id": doc_id})
