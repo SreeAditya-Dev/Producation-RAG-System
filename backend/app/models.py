@@ -36,6 +36,7 @@ class SourceChunk(BaseModel):
     text: str
     score: float
     file_type: str
+    url: Optional[str] = None
 
 
 class QueryResponse(BaseModel):

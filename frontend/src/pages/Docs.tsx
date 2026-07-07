@@ -1913,92 +1913,40 @@ sources = reranker_service.rerank(
 
                         <div className="space-y-3">
                           <p className="text-sm text-zinc-300 leading-relaxed">
-                            <strong className="text-zinc-100">Problem:</strong> Standard RAG retrieval often returns noisy, partially relevant, or completely irrelevant documents. The LLM then generates answers grounded in bad evidence &mdash; confidently wrong outputs that look plausible. The system has no mechanism to <em>evaluate</em> retrieval quality and take <strong>corrective action</strong> before generation.
+                            <strong className="text-zinc-100">Problem:</strong> Standard RAG retrieval often returns noisy, partially relevant, or completely irrelevant documents. The LLM then generates answers grounded in bad evidence &mdash; confidently wrong outputs that look plausible. A linear pipeline has no mechanism to <em>evaluate</em> retrieval quality and take <strong>corrective action</strong> before generation.
                           </p>
 
-                          <div className="space-y-2">
-                            <p className="text-sm text-zinc-300 leading-relaxed">
-                              <strong className="text-emerald-400">What is CRAG (Corrective Retrieval-Augmented Generation)?</strong> CRAG is a self-correcting retrieval framework (Yan et al., 2024) that adds a <strong>retrieval evaluator</strong> between the retrieve and generate stages. Instead of blindly passing retrieved documents to the LLM, CRAG grades them and takes different corrective actions:
-                            </p>
-                          </div>
-
                           <div className="rounded-lg bg-zinc-900/70 border border-zinc-800/60 p-4 font-mono text-xs text-zinc-300 space-y-2">
-                            <p className="text-zinc-500">&mdash; Step 1: Retrieve top-K documents &mdash;</p>
-                            <p className="text-zinc-500">&mdash; Step 2: Grade each document&rsquo;s relevance to the query &mdash;</p>
-                            <p className="text-emerald-400">&bull; <strong>CORRECT</strong> (all docs relevant) &rarr; Refine: extract key sentences, strip noise, pass to LLM</p>
-                            <p className="text-orange-400">&bull; <strong>AMBIGUOUS</strong> (mixed relevance) &rarr; Combine: keep relevant docs + trigger web search for supplementary evidence</p>
-                            <p className="text-red-400">&bull; <strong>INCORRECT</strong> (no docs relevant) &rarr; Discard all retrieved docs, fall back entirely to web search for fresh knowledge</p>
-                            <p className="text-zinc-500">&mdash; Step 3: Generate answer from refined/corrected context &mdash;</p>
+                            <p className="text-zinc-500">&mdash; Retrieve &rarr; Rerank &rarr; Compress (existing pipeline) &mdash;</p>
+                            <p className="text-zinc-500">&mdash; CRAGEvaluator grades the refined context &mdash;</p>
+                            <p className="text-emerald-400">&bull; <strong>CORRECT</strong> &rarr; use refined internal knowledge as-is</p>
+                            <p className="text-orange-400">&bull; <strong>AMBIGUOUS</strong> &rarr; combine internal knowledge + web search results</p>
+                            <p className="text-red-400">&bull; <strong>INCORRECT</strong> &rarr; discard internal knowledge, web search fallback alone</p>
+                            <p className="text-zinc-500">&mdash; Generate answer from corrected context &mdash;</p>
                           </div>
 
-                          <div className="space-y-2">
+                          <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/10 p-4 space-y-2">
                             <p className="text-sm text-zinc-300 leading-relaxed">
-                              <strong className="text-zinc-100">The three CRAG components:</strong>
-                            </p>
-                            <ol className="list-decimal list-inside ml-2 space-y-2 text-sm text-zinc-300">
-                              <li>
-                                <strong>Retrieval Evaluator (Relevance Grader):</strong> A lightweight LLM or classifier that grades each retrieved document as <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">Correct</code>, <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">Incorrect</code>, or <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">Ambiguous</code> relative to the query. This is the decision gate that triggers corrective actions.
-                              </li>
-                              <li>
-                                <strong>Knowledge Refinement:</strong> For documents graded <em>Correct</em>, decompose them into fine-grained knowledge strips (sentences), score each strip for relevance, and filter out irrelevant noise. Only high-confidence strips reach the LLM.
-                              </li>
-                              <li>
-                                <strong>Web Search Fallback:</strong> For <em>Incorrect</em> or <em>Ambiguous</em> grades, the system rewrites the query into a web-search-optimized form, queries an external search engine (e.g. Google/Bing/Tavily), and uses the web results as supplementary or replacement context.
-                              </li>
-                            </ol>
-                          </div>
-
-                          <div className="rounded-lg border border-zinc-700/60 bg-zinc-900/50 p-4 space-y-2">
-                            <p className="text-sm text-zinc-300 leading-relaxed">
-                              <strong className="text-orange-400">What our system already has (partial CRAG overlap):</strong>
+                              <strong className="text-emerald-400">Solution &mdash; implemented:</strong> We added <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">CRAGEvaluator</code>, an LLM-based retrieval grader (Yan et al., 2024) that runs immediately after rerank + context compression, classifying the context against the question as <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">correct</code> / <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">incorrect</code> / <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ambiguous</code> with a confidence score, in a single structured-JSON LLM call (temp=0).
                             </p>
                             <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
-                              <li><strong className="text-emerald-400">&check; Knowledge Refinement:</strong> Our <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ContextCompressor</code> already decomposes chunks into sentences, scores them by query-keyword overlap, and filters to a token budget &mdash; this is essentially CRAG&rsquo;s knowledge strip extraction.</li>
-                              <li><strong className="text-emerald-400">&check; Score Thresholding:</strong> Candidates below cosine similarity <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">0.25</code> are discarded, with a fallback to return top-5 from active documents if everything is filtered out.</li>
-                              <li><strong className="text-emerald-400">&check; Faithfulness Scoring:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">sigmoid(mean rerank logit)</code> estimates retrieval grounding quality <em>after</em> reranking &mdash; a post-hoc quality signal.</li>
-                              <li><strong className="text-emerald-400">&check; Cross-Encoder Reranking:</strong> The neural reranker re-scores chunks using deep query-document attention, which implicitly filters low-relevance documents to the bottom.</li>
-                              <li><strong className="text-emerald-400">&check; Hybrid Search:</strong> BM25 + Dense retrieval already reduces noise by catching exact-match terms that dense search misses.</li>
-                            </ul>
-                          </div>
-
-                          <div className="rounded-lg border border-red-900/40 bg-red-950/20 p-4 space-y-2">
-                            <p className="text-sm text-zinc-300 leading-relaxed">
-                              <strong className="text-red-400">What&rsquo;s missing for full CRAG:</strong>
-                            </p>
-                            <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
-                              <li><strong className="text-red-400">&cross; Retrieval Evaluator / Relevance Grader:</strong> No explicit LLM-based grading step that classifies retrieved docs as Correct/Incorrect/Ambiguous and triggers different corrective actions. Our faithfulness score is <em>post-hoc</em> (computed after reranking) and doesn&rsquo;t trigger any corrective pipeline branch.</li>
-                              <li><strong className="text-red-400">&cross; Web Search Fallback:</strong> No external web search integration. If internal documents don&rsquo;t contain the answer, the system has no mechanism to fetch supplementary knowledge from the open web.</li>
-                              <li><strong className="text-red-400">&cross; Conditional Pipeline Branching:</strong> The retrieval pipeline is linear (retrieve &rarr; filter &rarr; rerank &rarr; compress &rarr; generate). CRAG requires conditional branching &mdash; different execution paths based on the evaluator&rsquo;s grade.</li>
-                              <li><strong className="text-red-400">&cross; Query Rewriting for Web Search:</strong> Our <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryTranslator</code> rewrites Hinglish to English, but doesn&rsquo;t rewrite queries into web-search-optimized form when internal retrieval fails.</li>
+                              <li><strong>Conditional branching</strong> in <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">retrieval.py</code>: "correct" keeps the existing refined path unchanged; "incorrect" and "ambiguous" trigger the web fallback.</li>
+                              <li><strong><code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">WebSearchService.rewrite_query</code></strong> reformulates the conversational question into a concise, keyword-dense search query before hitting the web (CRAG&rsquo;s query-rewriting-for-web step).</li>
+                              <li><strong><code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">WebSearchService.search</code></strong> calls the Tavily search API; results are mapped into the same source-chunk shape as internal chunks (with a citable <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">url</code> field) so downstream generation and the UI need no special-casing.</li>
+                              <li><strong>Fail-open by design:</strong> the evaluator defaults to "correct" on any grader error, and the web fallback falls back to the original internal sources if no <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">TAVILY_API_KEY</code> is configured &mdash; a CRAG outage degrades to standard RAG, it never breaks a query.</li>
+                              <li><strong>Full observability:</strong> grade, confidence, and web-result count are persisted per-query in <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">QueryMetrics</code> and traced in LangSmith as <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">crag_evaluate</code> / <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">web_query_rewrite</code> / <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">web_search_fallback</code> spans.</li>
                             </ul>
                           </div>
 
                           <div className="space-y-2">
                             <p className="text-sm text-zinc-300 leading-relaxed">
-                              <strong className="text-zinc-100">How full CRAG implementation would look in our system:</strong>
+                              <strong className="text-zinc-100">This builds on retrieval quality machinery already in place:</strong> <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">ContextCompressor</code> (sentence-level knowledge refinement), the <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">0.25</code> cosine score floor, cross-encoder reranking, and BM25 + dense hybrid search all still run <em>before</em> CRAG grading &mdash; CRAG is the corrective layer on top, not a replacement for them.
                             </p>
-                            <ol className="list-decimal list-inside ml-2 space-y-1 text-sm text-zinc-300">
-                              <li><strong>Add a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">RetrievalEvaluator</code> service:</strong> After reranking, run a fast LLM call (temp=0) that grades each chunk as relevant/irrelevant. Compute a confidence ratio: <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">relevant_count / total_count</code>.</li>
-                              <li><strong>Branch on confidence:</strong> If ratio &ge; 0.8 &rarr; proceed (Correct). If 0.3&ndash;0.8 &rarr; supplement with web search (Ambiguous). If &lt; 0.3 &rarr; discard all, use only web results (Incorrect).</li>
-                              <li><strong>Add a <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">WebSearchFallback</code> service:</strong> Integrate Tavily/Bing/Google Search API. Rewrite the query for web search, fetch top results, and merge with or replace internal context.</li>
-                              <li><strong>Feed refined context to LLM:</strong> Only graded-relevant internal chunks + web results reach the generation step.</li>
-                            </ol>
-                          </div>
-
-                          <div className="space-y-2">
-                            <p className="text-sm text-zinc-300 leading-relaxed">
-                              <strong className="text-zinc-100">When CRAG matters most:</strong>
-                            </p>
-                            <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
-                              <li><strong>Knowledge gaps:</strong> When the uploaded document corpus doesn&rsquo;t cover the user&rsquo;s question at all.</li>
-                              <li><strong>Rapidly changing information:</strong> When documents are stale but web sources have current data (e.g. stock prices, regulations).</li>
-                              <li><strong>High-stakes domains:</strong> Where confidently wrong answers (grounded in noisy retrieval) are worse than admitting uncertainty.</li>
-                            </ul>
                           </div>
                         </div>
                         <div className="border-t border-zinc-800/50 pt-3">
                           <span className="text-xs font-mono text-zinc-500">
-                            Status: <code className="text-zinc-400">Partially addressed</code> &mdash; has: <code className="text-zinc-400">ContextCompressor (knowledge refinement) + faithfulness scoring + score thresholding</code> &mdash; missing: <code className="text-zinc-400">Retrieval Evaluator + Web Search Fallback + Conditional Branching</code>
+                            Status: <code className="text-emerald-400">Implemented</code> &mdash; Source code: <code className="text-zinc-400">backend/app/services/crag_evaluator.py</code> &bull; <code className="text-zinc-400">web_search_service.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
                           </span>
                         </div>
                       </div>

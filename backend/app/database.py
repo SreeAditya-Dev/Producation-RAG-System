@@ -92,6 +92,11 @@ class QueryMetrics(Base):
     rerank_score_top = Column(Float, nullable=True)
     # Hallucination proxy: sigmoid(mean rerank logit) → 0-1
     faithfulness_score = Column(Float, nullable=True)
+    # CRAG: retrieval evaluator grade + confidence, and whether the web search
+    # fallback was invoked (grade in {"correct", "incorrect", "ambiguous"})
+    crag_grade = Column(String, nullable=True)
+    crag_confidence = Column(Float, nullable=True)
+    crag_web_results_used = Column(Integer, nullable=True)
     # Status
     status = Column(String, default="success")
     failure_stage = Column(String, nullable=True)
@@ -137,6 +142,11 @@ def _apply_migrations() -> None:
             ("failure_stage", "ALTER TABLE query_history ADD COLUMN failure_stage TEXT"),
             ("error_type",    "ALTER TABLE query_history ADD COLUMN error_type TEXT"),
             ("session_id",    "ALTER TABLE query_history ADD COLUMN session_id VARCHAR"),
+        ],
+        "query_metrics": [
+            ("crag_grade",            "ALTER TABLE query_metrics ADD COLUMN crag_grade VARCHAR"),
+            ("crag_confidence",       "ALTER TABLE query_metrics ADD COLUMN crag_confidence FLOAT"),
+            ("crag_web_results_used", "ALTER TABLE query_metrics ADD COLUMN crag_web_results_used INTEGER"),
         ],
     }
 

@@ -17,6 +17,8 @@ from app.services.query_translator import QueryTranslator
 from app.services.query_decomposer import query_decomposer
 from app.services.context_compressor import context_compressor
 from app.services.bm25_service import bm25_service
+from app.services.crag_evaluator import crag_evaluator
+from app.services.web_search_service import web_search_service
 from app.observability import traceable
 
 logger = logging.getLogger(__name__)
@@ -205,6 +207,22 @@ def _verify_active_documents(db_session, candidates: List[Dict[str, Any]]) -> Li
     ]
 
 
+def _web_results_to_sources(web_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Map Tavily web results into the same source-chunk shape used internally."""
+    return [
+        {
+            "doc_id": f"web:{r.get('url', '')}",
+            "original_name": r.get("title") or r.get("url") or "Web Result",
+            "chunk_index": 0,
+            "text": r.get("content", ""),
+            "score": r.get("score", 0.0),
+            "file_type": "web",
+            "url": r.get("url"),
+        }
+        for r in web_results
+    ]
+
+
 @traceable(name="rag_query", run_type="chain")
 async def retrieve_and_generate(
     question: str,
@@ -311,6 +329,58 @@ async def retrieve_and_generate(
             "faithfulness": qm["faithfulness_score"],
         })
 
+        # ── 6.5 CRAG: Corrective Retrieval Evaluation ─────────────────────────
+        # An LLM grader classifies the refined internal context as correct /
+        # incorrect / ambiguous. "incorrect" discards it for a web search fallback;
+        # "ambiguous" combines internal knowledge with web results. Fails open to
+        # "correct" (standard RAG behavior) on any grader/web-search error.
+        qm["crag_grade"] = None
+        qm["crag_confidence"] = None
+        qm["crag_web_results_used"] = 0
+
+        if settings.crag_enabled:
+            current_stage = "crag_evaluate"
+            await emit("crag_evaluation_started", {"source_count": len(sources)})
+            t = time.perf_counter()
+            grade, confidence = await crag_evaluator.grade(question, sources)
+            qm["crag_ms"] = _ms(t)
+            qm["crag_grade"] = grade
+            qm["crag_confidence"] = confidence
+
+            await emit("crag_evaluation_completed", {
+                "grade": grade,
+                "confidence": confidence,
+                "elapsed_ms": qm["crag_ms"],
+            })
+
+            if grade in ("incorrect", "ambiguous"):
+                current_stage = "web_search"
+                await emit("web_search_started", {"grade": grade, "question": question})
+                t = time.perf_counter()
+                web_query = await web_search_service.rewrite_query(question)
+                web_results = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: web_search_service.search(web_query, settings.crag_web_max_results)
+                )
+                qm["web_search_ms"] = _ms(t)
+                qm["crag_web_results_used"] = len(web_results)
+                web_sources = _web_results_to_sources(web_results)
+
+                if grade == "incorrect":
+                    # Internal knowledge graded irrelevant. Replace it with web
+                    # results — falling back to the original sources only if web
+                    # search itself came back empty (e.g. no TAVILY_API_KEY set),
+                    # so the pipeline never returns zero context.
+                    sources = web_sources or sources
+                else:
+                    # Ambiguous: combine refined internal knowledge with the web.
+                    sources = sources + web_sources
+
+                await emit("web_search_completed", {
+                    "result_count": len(web_results),
+                    "elapsed_ms": qm["web_search_ms"],
+                    "web_query": web_query,
+                })
+
         # ── 7. LLM generation ─────────────────────────────────────────────────
         current_stage = "llm"
         await emit("generation_started", {"model": settings.llm_model})
@@ -352,6 +422,9 @@ async def retrieve_and_generate(
                 "prompt_tokens": qm["prompt_tokens"],
                 "completion_tokens": qm["completion_tokens"],
                 "faithfulness": qm["faithfulness_score"],
+                "crag_grade": qm.get("crag_grade"),
+                "crag_confidence": qm.get("crag_confidence"),
+                "crag_web_results_used": qm.get("crag_web_results_used", 0),
             },
         })
 
@@ -443,6 +516,9 @@ def _save_query_metrics(db_session, query_id: str, m: Dict[str, Any]) -> None:
             retrieval_score_max=m.get("retrieval_score_max"),
             rerank_score_top=m.get("rerank_score_top"),
             faithfulness_score=m.get("faithfulness_score"),
+            crag_grade=m.get("crag_grade"),
+            crag_confidence=m.get("crag_confidence"),
+            crag_web_results_used=m.get("crag_web_results_used"),
             status=m.get("status", "success"),
             failure_stage=m.get("failure_stage"),
             error_type=m.get("error_type"),

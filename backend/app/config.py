@@ -34,6 +34,16 @@ class Settings(BaseSettings):
     bm25_hybrid_enabled: bool = True
     bm25_floor_score: float = 0.3
 
+    # CRAG (Corrective RAG): an LLM grader classifies the reranked+compressed
+    # context as correct / incorrect / ambiguous. "incorrect" discards internal
+    # knowledge and falls back to web search; "ambiguous" combines both.
+    crag_enabled: bool = True
+    crag_web_max_results: int = 3
+
+    # Tavily web search (CRAG's external-knowledge fallback). Gracefully skipped
+    # (falls back to internal-only, standard-RAG behavior) if unset.
+    tavily_api_key: str = ""
+
     # LangSmith observability — disabled unless both flag and API key are set.
     # When enabled, every ingestion + query pipeline run is traced end-to-end
     # (embed / retrieve / bm25 / rerank / compress / generate) in LangSmith.

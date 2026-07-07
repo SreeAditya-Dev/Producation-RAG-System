@@ -277,6 +277,7 @@ async def query(req: QueryRequest, db: Session = Depends(get_db)):
                 text=s.get("text", ""),
                 score=s.get("score", 0.0),
                 file_type=s.get("file_type", ""),
+                url=s.get("url"),
             )
             for s in result["sources"]
         ],
