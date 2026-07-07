@@ -1951,6 +1951,82 @@ sources = reranker_service.rerank(
                         </div>
                       </div>
 
+                      {/* Challenge 19 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 19
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Fine-Tuning vs. RAG for an Internal Documents Assistant
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Question:</strong> Your organization wants to build an AI assistant for internal documents. Would you choose fine-tuning or RAG?
+                          </p>
+
+                          <div className="rounded-lg bg-zinc-900/70 border border-zinc-800/60 p-4 overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-300 border-collapse">
+                              <thead>
+                                <tr className="border-b border-zinc-800 text-zinc-500 text-left">
+                                  <th className="py-1.5 pr-4 font-mono font-semibold">Dimension</th>
+                                  <th className="py-1.5 pr-4 font-mono font-semibold">Fine-Tuning</th>
+                                  <th className="py-1.5 font-mono font-semibold text-emerald-400">RAG</th>
+                                </tr>
+                              </thead>
+                              <tbody className="align-top">
+                                <tr className="border-b border-zinc-900">
+                                  <td className="py-1.5 pr-4 font-semibold text-zinc-400">Where knowledge lives</td>
+                                  <td className="py-1.5 pr-4">Baked into model weights</td>
+                                  <td className="py-1.5">External vector DB, fetched per query</td>
+                                </tr>
+                                <tr className="border-b border-zinc-900">
+                                  <td className="py-1.5 pr-4 font-semibold text-zinc-400">Updating a document</td>
+                                  <td className="py-1.5 pr-4">Full retraining run (hours, $$$, GPU)</td>
+                                  <td className="py-1.5">Re-ingest one file (seconds)</td>
+                                </tr>
+                                <tr className="border-b border-zinc-900">
+                                  <td className="py-1.5 pr-4 font-semibold text-zinc-400">Source attribution</td>
+                                  <td className="py-1.5 pr-4">None &mdash; can&rsquo;t cite which document it came from</td>
+                                  <td className="py-1.5">Every answer cites the exact chunk + document</td>
+                                </tr>
+                                <tr className="border-b border-zinc-900">
+                                  <td className="py-1.5 pr-4 font-semibold text-zinc-400">Per-document access control</td>
+                                  <td className="py-1.5 pr-4">Impossible &mdash; knowledge is fused for every user</td>
+                                  <td className="py-1.5">Filterable at retrieval time (per-user permissions)</td>
+                                </tr>
+                                <tr className="border-b border-zinc-900">
+                                  <td className="py-1.5 pr-4 font-semibold text-zinc-400">Hallucination risk</td>
+                                  <td className="py-1.5 pr-4">High on undertrained facts &mdash; model guesses fluently</td>
+                                  <td className="py-1.5">Bounded &mdash; no retrieved context means no confident fabrication</td>
+                                </tr>
+                                <tr>
+                                  <td className="py-1.5 pr-4 font-semibold text-zinc-400">Best suited for</td>
+                                  <td className="py-1.5 pr-4">Fixed style, tone, or output format</td>
+                                  <td className="py-1.5">Current, ever-changing facts</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-emerald-400">Why RAG wins here:</strong> internal documents change constantly (policies, specs, financials get revised), answers need per-query citations for trust and audit, and access usually varies by department or role &mdash; none of which fine-tuning can do, since knowledge gets permanently fused into the weights for every user regardless of permissions. Fine-tuning would also mean a full retraining run every time a single document changes, which is untenable at any real update cadence.
+                          </p>
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            This is exactly why this system is built as RAG rather than a fine-tuned model: <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">TableAwareSplitter</code>/<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">RecursiveTextSplitter</code> chunk documents into Pinecone, retrieval is hybrid (BM25 + dense) with cross-encoder reranking, and every answer traces back to <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">original_name</code> + <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">chunk_index</code> sources. Documents can be added, replaced, or deleted with zero retraining &mdash; the knowledge base updates the moment a file is uploaded.
+                          </p>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Architectural decision &bull; reflected across <code className="text-zinc-400">ingestion.py</code>, <code className="text-zinc-400">retrieval.py</code>, <code className="text-zinc-400">pinecone_service.py</code>
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
