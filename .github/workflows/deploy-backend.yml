@@ -1,0 +1,78 @@
+name: Deploy Backend to Azure App Service
+
+# Runs on every push to main that touches backend/ — a merged PR into main
+# produces exactly this kind of push, so no separate pull_request trigger
+# is needed (that would deploy on every PR update, before it's even merged).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+env:
+  AZURE_WEBAPP_NAME: CHANGE-ME-app-service-name   # e.g. rag-system-backend
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies (sanity check before deploy)
+        id: install
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify app imports cleanly
+        id: build_check
+        working-directory: backend
+        run: python -c "from app.main import app; print('import OK')"
+
+      - name: Deploy to Azure App Service
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: backend
+
+      # Fires if deps install, the import check, or the Azure deploy step failed.
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ steps.install.outcome }}" != "success" ]; then
+            REASON="Dependency install failed (requirements.txt) - a package likely broke or is unresolvable."
+          elif [ "${{ steps.build_check.outcome }}" != "success" ]; then
+            REASON="Build/import check failed - app.main failed to import (syntax error or broken import chain)."
+          elif [ "${{ steps.deploy.outcome }}" != "success" ]; then
+            REASON="Azure deploy step failed - check the publish profile/secret and App Service status."
+          else
+            REASON="Unknown step failed."
+          fi
+
+          TEXT=$(printf '%s\n%s\n%s\n%s\n%s\n%s\n%s' \
+            "Backend Deploy Failed" \
+            "Repo: ${{ github.repository }}" \
+            "Branch: ${{ github.ref_name }}" \
+            "Commit: ${{ github.sha }}" \
+            "Author: ${{ github.actor }}" \
+            "Reason: ${REASON}" \
+            "Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="${TEXT}"

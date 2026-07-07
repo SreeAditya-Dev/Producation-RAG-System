@@ -1,0 +1,77 @@
+name: Backend CI
+
+# Runs on every push and every PR targeting main. Separate from
+# deploy-backend.yml (which only runs on push to main) so a broken PR fails
+# loudly here before it's ever eligible to merge and deploy.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        id: install
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build / import sanity check
+        id: build_check
+        working-directory: backend
+        run: python -c "from app.main import app; print('import OK')"
+
+      - name: Run test suite
+        id: pytest
+        working-directory: backend
+        run: python -m pytest tests/ -v --tb=short
+
+      # Fires if ANY of the steps above failed — deps install, the build/import
+      # check, or the test suite — so a broken dependency is reported exactly
+      # like a broken test, not silently swallowed.
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ steps.install.outcome }}" != "success" ]; then
+            REASON="Dependency install failed (requirements.txt) - a package likely broke or is unresolvable."
+          elif [ "${{ steps.build_check.outcome }}" != "success" ]; then
+            REASON="Build/import check failed - app.main failed to import (syntax error or broken import chain)."
+          elif [ "${{ steps.pytest.outcome }}" != "success" ]; then
+            REASON="Test suite failed - one or more pytest cases did not pass."
+          else
+            REASON="Unknown step failed."
+          fi
+
+          TEXT=$(printf '%s\n%s\n%s\n%s\n%s\n%s\n%s' \
+            "Backend CI Failed" \
+            "Repo: ${{ github.repository }}" \
+            "Branch: ${{ github.ref_name }}" \
+            "Commit: ${{ github.sha }}" \
+            "Author: ${{ github.actor }}" \
+            "Reason: ${REASON}" \
+            "Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="${TEXT}"

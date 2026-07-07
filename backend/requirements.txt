@@ -21,3 +21,4 @@ markdown==3.7
 chardet==5.2.0
 boto3==1.35.93
 langsmith>=0.1.147
+pytest>=8.0.0
