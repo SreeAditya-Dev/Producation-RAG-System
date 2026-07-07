@@ -1261,7 +1261,7 @@ sources = reranker_service.rerank(
                         Addressing Core Production Challenges
                       </h4>
                       <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
-                        How we solved critical RAG failures: retaining layout structures in table parsers, avoiding information redundancy during semantic searches, handling informal code-mixed Hinglish queries, keeping prompt cost/latency bounded across turns, and catching exact numeric figures dense embeddings miss.
+                        How we solved critical RAG failures: retaining layout structures in table parsers, avoiding information redundancy during semantic searches, handling informal code-mixed Hinglish queries, keeping prompt cost/latency bounded across turns, catching exact numeric figures dense embeddings miss, and understanding parent document retrieval patterns.
                       </p>
                     </div>
 
@@ -1748,6 +1748,79 @@ sources = reranker_service.rerank(
                         <div className="border-t border-zinc-800/50 pt-3">
                           <span className="text-xs font-mono text-zinc-500">
                             Source code: <code className="text-zinc-400">backend/app/services/bm25_service.py</code> &bull; <code className="text-zinc-400">database.py</code> (<code className="text-zinc-400">Chunk</code> table) &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 16 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 16
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Parent Document Retriever &mdash; Why It&rsquo;s Preferred Over Traditional Chunk-Based Retrieval
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Question:</strong> Can you explain what a Parent Document Retriever is in RAG systems &mdash; and why it is often preferred over traditional chunk-based retrieval?
+                          </p>
+
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Core Problem:</strong> Traditional chunking forces a trade-off &mdash; <em>small chunks</em> produce precise embeddings but lose surrounding context when fed to the LLM; <em>large chunks</em> preserve context but dilute embedding quality, hurting search recall. You&rsquo;re forced to pick one chunk size that compromises both search and generation.
+                          </p>
+
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-emerald-400">What a Parent Document Retriever does:</strong> It decouples <em>what you search on</em> from <em>what you feed the LLM</em> using a two-tier chunking strategy:
+                            </p>
+                            <ol className="list-decimal list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Indexing:</strong> Split documents into large <em>parent chunks</em> (e.g. full sections, 1500&ndash;2000 chars). Sub-split each parent into small <em>child chunks</em> (200&ndash;300 chars). Embed and index <strong>only the children</strong> in the vector DB. Store the parent&ndash;child mapping in a document store or SQL table.</li>
+                              <li><strong>Query time:</strong> The user&rsquo;s query is searched against the <strong>small child chunks</strong> (high precision matching). When a child matches, the system retrieves its <strong>parent chunk</strong> instead &mdash; giving the LLM the full surrounding context.</li>
+                            </ol>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-zinc-100">Why it&rsquo;s preferred:</strong>
+                            </p>
+                            <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>Search precision + generation context:</strong> Small children keep embeddings focused; parent chunks give the LLM enough context to generate accurate answers.</li>
+                              <li><strong>Adjacent information is preserved:</strong> The sentence before/after the matched child is naturally included in the parent, preventing context loss at chunk boundaries.</li>
+                              <li><strong>No forced compromise:</strong> Search and generation each get their own optimal chunk size.</li>
+                            </ul>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-blue-400">Real-world example:</strong> A financial report states: <em>&ldquo;In Q3 2025, the company reported net revenue of &#8377;14.2 Cr. This represented a 23% increase over the previous quarter, driven primarily by expansion into Tier-2 markets.&rdquo;</em> With standard 200-char chunking, you match the first sentence but lose the 23% growth context. With Parent Document Retrieval, matching the first sentence pulls back the entire paragraph.
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg border border-zinc-700/60 bg-zinc-900/50 p-4 space-y-2">
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              <strong className="text-orange-400">How our system addresses this instead:</strong> We don&rsquo;t implement a named &ldquo;Parent Document Retriever&rdquo;, but we solve the same core tension through a complementary set of mechanisms:
+                            </p>
+                            <ul className="list-disc list-inside ml-2 space-y-1 text-sm text-zinc-300">
+                              <li><strong>512-char recursive chunks</strong> with semantic boundary detection &mdash; a balanced size for both search and generation.</li>
+                              <li><strong>50-char chunk overlap</strong> ensures boundary context is never fully lost between adjacent chunks.</li>
+                              <li><strong>Over-fetch <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">top_k &times; 4</code></strong> candidates, then cross-encoder rerank to the final top-K &mdash; casting a wide net retrieves surrounding chunks that a parent retriever would have included automatically.</li>
+                              <li><strong>Context Compression</strong> extracts only query-relevant sentences, so even if we retrieve more chunks, token cost stays bounded.</li>
+                              <li><strong>Table-aware splitting</strong> injects column headers into every row chunk &mdash; a form of &ldquo;parent context injection&rdquo; for structured data.</li>
+                              <li><strong>Query decomposition + MMR diversity</strong> ensures multi-angle coverage across different sections.</li>
+                            </ul>
+                            <p className="text-sm text-zinc-400 leading-relaxed mt-2">
+                              <strong>Trade-off:</strong> A Parent Document Retriever provides <em>deterministic</em> surrounding context (the parent is always returned). Our approach provides <em>probabilistic</em> coverage (over-fetch + rerank usually captures the same context, but isn&rsquo;t guaranteed). Parent Retrieval is most valuable for rigid hierarchical documents (legal contracts, regulatory filings with numbered sections) where guaranteed surrounding context is critical.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Status: <code className="text-zinc-400">Not implemented</code> &mdash; addressed by: <code className="text-zinc-400">overlap + over-fetch + rerank + context_compressor.py + table_splitter.py</code>
                           </span>
                         </div>
                       </div>
