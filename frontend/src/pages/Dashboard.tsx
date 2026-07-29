@@ -267,7 +267,7 @@ export function Dashboard() {
             <span>Telemetry clock</span>
           </div>
           
-          <h2 className="text-4.5xl font-black tracking-tight text-white tabular-nums flex items-baseline gap-1 select-none">
+          <h2 className="text-5xl font-black tracking-tight text-white tabular-nums flex items-baseline gap-1 select-none">
             {timeStr.split(' ')[0]}
             <span className="text-base font-bold text-slate-400 uppercase tracking-widest ml-1">{timeStr.split(' ')[1]}</span>
           </h2>
@@ -738,7 +738,7 @@ export function Dashboard() {
       </div>
 
       {/* Row 4: Feedback & Quality Analytics */}
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 
         {/* Feedback Rate */}
         <div className="p-5 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col justify-between min-h-[140px] group transition-all duration-300 hover:border-white/10">
