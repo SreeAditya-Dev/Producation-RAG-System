@@ -37,6 +37,10 @@ class CRAGEvaluator:
             logger.warning("CRAG evaluation failed, failing open to 'correct': %s", e)
             return "correct", 0.5
 
+    async def evaluate_context(self, question: str, sources: List[Dict[str, Any]]) -> Tuple[str, float]:
+        """Evaluate retrieved context against question (alias for grade)."""
+        return await self.grade(question, sources)
+
     async def _call_evaluator_llm(self, question: str, sources: List[Dict[str, Any]]) -> Tuple[str, float]:
         context_block = "\n\n".join(
             f"[{i + 1}] {s.get('text', '')[:400]}" for i, s in enumerate(sources[:5])
