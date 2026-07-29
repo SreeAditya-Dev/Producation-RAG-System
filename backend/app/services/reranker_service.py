@@ -11,19 +11,24 @@ logger = logging.getLogger(__name__)
 
 class RerankerService:
     """
-    Cross-encoder reranker via NVIDIA NIM's /v1/ranking endpoint.
+    Cross-encoder reranker via NVIDIA's hosted reranking API.
 
     Flow: receive N candidate chunks → send (query, passages) to the API →
     receive logit scores → return top-K re-sorted by relevance.
 
     Falls back to returning the first top_k candidates unmodified if the
     API key is missing or the call fails, so the pipeline stays functional.
+
+    Note: this is a different product surface than the OpenAI-compatible
+    chat/embeddings endpoints under `nvidia_base_url`. NVIDIA's hosted
+    catalog serves reranking at ai.api.nvidia.com under a model-specific
+    path (`/v1/retrieval/{model}/reranking`); the generic `/v1/ranking`
+    path only exists on self-hosted single-model NIM containers.
     """
 
     @property
     def _url(self) -> str:
-        base = settings.nvidia_base_url.rstrip("/")
-        return f"{base}/ranking"
+        return f"https://ai.api.nvidia.com/v1/retrieval/{settings.reranker_model}/reranking"
 
     @traceable(name="cross_encoder_rerank", run_type="retriever")
     def rerank(
@@ -68,8 +73,9 @@ class RerankerService:
                     },
                     json={
                         "model": settings.reranker_model,
-                        "query": {"text": query},
+                        "query": {"type": "text", "text": query},
                         "passages": passages,
+                        "truncate": "END",
                     },
                 )
                 resp.raise_for_status()

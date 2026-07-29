@@ -52,8 +52,17 @@ class Settings(BaseSettings):
     query_cache_enabled: bool = True
     query_cache_ttl_seconds: int = 3600
     query_cache_capacity: int = 500
-    semantic_cache_enabled: bool = False
+    # Tier 2 semantic cache: dense cosine over cached query embeddings (same
+    # embedding model as retrieval), so paraphrases hit. Threshold is strict on
+    # purpose — this replays a canned answer, so a false positive is a wrong
+    # answer. 0.90-0.95 is the usable band; below ~0.90 unrelated intents merge.
+    semantic_cache_enabled: bool = True
     semantic_cache_threshold: float = 0.92
+    # Tier 2b fragment cache: reuses retrieved+reranked chunks only. Generation
+    # still runs, so a near-miss costs a slightly-off context rather than a wrong
+    # canned answer — hence the looser threshold.
+    retrieval_cache_enabled: bool = True
+    retrieval_cache_threshold: float = 0.90
 
     # CRAG (Corrective RAG): an LLM grader classifies the reranked+compressed
     # context as correct / incorrect / ambiguous. "incorrect" discards internal
@@ -98,11 +107,11 @@ class Settings(BaseSettings):
     max_context_tokens: int = 3000
     mmr_enabled: bool = False
     mmr_lambda: float = 0.7
-    retrieval_retry_enabled: bool = False
+    retrieval_retry_enabled: bool = True
     retrieval_retry_max_attempts: int = 1
     retrieval_retry_token_budget: int = 400
     citation_validation_enabled: bool = True
-    citation_verifier_enabled: bool = False
+    citation_verifier_enabled: bool = True
     pii_redaction_enabled: bool = False
     evaluator_model: str = ""
     evaluator_timeout_seconds: int = 45

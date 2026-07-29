@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import math
+import threading
 import time
 import uuid
 import re
@@ -36,6 +37,21 @@ def _ms(t0: float) -> float:
 
 def _safe_mean(vals: List[float]) -> Optional[float]:
     return round(sum(vals) / len(vals), 4) if vals else None
+
+
+# Retrieval-quality metrics that stay true when cached chunks are replayed.
+# `retrieve_only` writes into the caller's live `qm` dict, so the fragment cache
+# must persist this allowlist only — storing the whole dict would replay a prior
+# request's status/guard/cache fields into the next one.
+_RETRIEVAL_METRIC_KEYS = (
+    "candidate_count", "returned_count", "retrieval_score_mean", "retrieval_score_max",
+    "rerank_score_top", "reranker_relevance_proxy", "mmr_applied", "bm25_candidates_added",
+)
+
+
+def _retrieval_fragment_metrics(metrics: Dict[str, Any]) -> Dict[str, Any]:
+    """Strip a live `qm` dict down to the fields safe to replay from cache."""
+    return {key: metrics[key] for key in _RETRIEVAL_METRIC_KEYS if key in metrics}
 
 
 def _reranker_relevance_proxy(sources: List[Dict]) -> Optional[float]:
@@ -123,6 +139,12 @@ async def _embed_and_retrieve_subqueries(
     """
     candidates_k = max(20, top_k * settings.reranker_candidates_multiplier)
     pinecone_filter = {"doc_id": {"$in": doc_ids}} if doc_ids else None
+    # `db_session` is a single SQLAlchemy Session (not thread-safe). Decomposed
+    # questions run multiple sub-query BM25 lookups concurrently via
+    # run_in_executor (real OS threads); without this lock they race on the
+    # same session and SQLAlchemy raises "concurrent operations are not
+    # permitted", silently dropping lexical search for the whole request.
+    db_session_lock = threading.Lock()
 
     async def _retrieve_single(t_q: str) -> List[Dict[str, Any]]:
         t = time.perf_counter()
@@ -145,15 +167,23 @@ async def _embed_and_retrieve_subqueries(
         qm["retrieve_ms"] = qm.get("retrieve_ms", 0.0) + _ms(t)
         return raw_matches
 
+    def _bm25_lookup_sync(t_q: str) -> List[Dict[str, Any]]:
+        # Both the search and the chunk-row lookup touch db_session, so both
+        # must happen inside the same lock hold to stay serialized against
+        # concurrent sub-query lookups.
+        with db_session_lock:
+            hits = bm25_service.search(db_session, t_q, candidates_k, doc_ids=doc_ids)
+            return _bm25_hits_to_candidates(db_session, hits)
+
     async def _bm25_single(t_q: str) -> List[Dict[str, Any]]:
         if not settings.bm25_hybrid_enabled:
             return []
         t = time.perf_counter()
-        hits = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: bm25_service.search(db_session, t_q, candidates_k, doc_ids=doc_ids)
+        candidates = await asyncio.get_event_loop().run_in_executor(
+            None, _bm25_lookup_sync, t_q
         )
         qm["bm25_ms"] = qm.get("bm25_ms", 0.0) + _ms(t)
-        return _bm25_hits_to_candidates(db_session, hits)
+        return candidates
 
     dense_tasks = [_retrieve_single(q) for q in translated_queries]
     bm25_tasks = [_bm25_single(q) for q in translated_queries]
@@ -324,9 +354,11 @@ async def retrieve_and_generate(
             question = redact_pii(question)
 
         # ── 0. Query cache check (stateless queries only) ─────────────────────
-        # Keyed to a corpus fingerprint, not just a TTL — invalidated the instant
-        # any document is ingested/replaced/deleted, so a cache hit can never
-        # return an answer that's gone stale relative to the document set.
+        # Three tiers, cheapest first: exact hash → semantic (dense cosine over
+        # cached query embeddings) → retrieval fragment. All are keyed to a
+        # corpus fingerprint, not just a TTL, so any ingest/replace/delete drops
+        # the whole cache and a hit can never predate a document change.
+        cache_embedding = None
         if not session_id:
             cached = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: query_cache.get(db_session, question, top_k, doc_ids)
@@ -355,11 +387,20 @@ async def retrieve_and_generate(
                     "processing_time": processing_time,
                     "created_at": datetime.utcnow(),
                 }
+            # One embedding of the raw question serves every approximate tier
+            # below (semantic answer + retrieval fragment). Computing it here
+            # rather than inside each tier keeps the miss-path overhead at a
+            # single embed call. None means the provider failed — the semantic
+            # tiers then no-op and the full pipeline runs.
+            cache_embedding = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: query_cache.embed_question(question)
+            )
             cached = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: query_cache.semantic_get(db_session, question, top_k, doc_ids)
+                None, lambda: query_cache.semantic_get(db_session, question, top_k, doc_ids, embedding=cache_embedding)
             )
             if cached is not None:
                 qm["cache_type"] = "semantic"
+                qm["cache_similarity"] = cached.get("_cache_similarity")
                 qm.update({"stream_completed": True, "total_ms": _ms(pipeline_start)})
                 db_session.add(QueryHistory(id=query_id, session_id=None, client_id=client_id, question=question, answer=cached["answer"], sources_json=json.dumps(cached["sources"]), processing_time=0.0, status="success", created_at=datetime.utcnow()))
                 _save_query_metrics(db_session, query_id, qm)
@@ -371,7 +412,41 @@ async def retrieve_and_generate(
         await emit("query_embedding_started", {"question": question})
         current_stage = "retrieve"
         retrieval_start = time.perf_counter()
-        retrieval = await retrieve_only(question, top_k, db_session, doc_ids=doc_ids, metrics=qm)
+        # Fragment cache: reuse the retrieved+reranked chunks for a repeat or
+        # paraphrase, skipping decompose/embed/BM25/rerank. Generation still
+        # runs on this turn, so the answer is fresh — only the evidence-gathering
+        # work is amortized. Session-bound turns skip it (cache_embedding is None
+        # and the exact key was never populated for them).
+        retrieval = None
+        if not session_id:
+            retrieval = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: query_cache.retrieval_get(db_session, question, top_k, doc_ids, embedding=cache_embedding)
+            )
+        if retrieval is not None:
+            # Quality metrics describe the chunks actually in use, so they carry
+            # over. Latency/token counters are zeroed: no work was done this turn,
+            # and replaying the original run's timings would corrupt the p95s.
+            qm.update(retrieval.get("metrics", {}))
+            qm.update({"embed_ms": 0.0, "retrieve_ms": 0.0, "bm25_ms": 0.0, "embed_tokens": 0})
+            qm["retrieval_cache_hit"] = True
+            qm["cache_type"] = "retrieval"
+            qm["cache_similarity"] = retrieval.get("_cache_similarity")
+            await emit("cache_hit", {"query_id": query_id, "type": "retrieval", "similarity": retrieval.get("_cache_similarity")})
+        else:
+            retrieval = await retrieve_only(question, top_k, db_session, doc_ids=doc_ids, metrics=qm)
+            qm["retrieval_cache_hit"] = False
+            if not session_id:
+                fragment = {
+                    "sources": retrieval["sources"],
+                    "translated_queries": retrieval["translated_queries"],
+                    "metrics": _retrieval_fragment_metrics(retrieval["metrics"]),
+                }
+                await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: query_cache.retrieval_set(
+                        db_session, question, top_k, fragment, doc_ids, embedding=cache_embedding
+                    ),
+                )
         sources = retrieval["sources"]
         translated_queries = retrieval["translated_queries"]
         qm["rerank_ms"] = qm.get("rerank_ms", _ms(retrieval_start))
@@ -612,7 +687,9 @@ async def retrieve_and_generate(
         if not session_id and citation_result["valid"] and not any(s.get("file_type") == "web" for s in sources):
             cache_value = {"answer": full_answer, "sources": sources}
             query_cache.set(db_session, question, top_k, cache_value, doc_ids=doc_ids)
-            query_cache.semantic_set(db_session, question, top_k, cache_value, doc_ids=doc_ids)
+            # Reuses the embedding already computed at lookup time — a cached
+            # write costs no additional provider call.
+            query_cache.semantic_set(db_session, question, top_k, cache_value, doc_ids=doc_ids, embedding=cache_embedding)
 
         logger.info(
             "Query %s (Session: %s): %.0f ms total | embed %.0f | retrieve %.0f | rerank %.0f | llm %.0f | rerank_proxy=%.2f",
