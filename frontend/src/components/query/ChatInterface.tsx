@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Zap, CornerDownLeft, Sparkles } from 'lucide-react';
+import { Send, Loader2, Zap, CornerDownLeft, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import type { QueryResponse } from '../../types';
+import { queryApi } from '../../services/api';
 
 export interface Message {
   id: string;
@@ -12,6 +13,7 @@ export interface Message {
   content: string;
   sources?: QueryResponse['sources'];
   processingTime?: number;
+  queryId?: string;
   isStreaming?: boolean;
 }
 
@@ -69,6 +71,20 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamMsgIdRef = useRef<string | null>(null);
+  const [feedbackSent, setFeedbackSent] = useState<Record<string, 'up' | 'down'>>({});
+
+  const submitFeedback = async (messageId: string, queryId: string, rating: 'up' | 'down') => {
+    if (feedbackSent[messageId]) return;
+    const correction = rating === 'down'
+      ? window.prompt('Optional correction or missing detail:')?.trim() || undefined
+      : undefined;
+    try {
+      await queryApi.feedback(queryId, rating, correction);
+      setFeedbackSent((current) => ({ ...current, [messageId]: rating }));
+    } catch {
+      // Feedback is non-critical; preserve the answer if the telemetry endpoint fails.
+    }
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -103,8 +119,9 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
                   ? {
                       ...m,
                       content: result.answer,
-                      sources: result.sources,
-                      processingTime: result.processing_time,
+                       sources: result.sources,
+                       processingTime: result.processing_time,
+                       queryId: result.query_id,
                       isStreaming: false,
                     }
                   : m
@@ -160,8 +177,9 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
               ? {
                   ...m,
                   content: result.answer,
-                  sources: result.sources,
-                  processingTime: result.processing_time,
+                sources: result.sources,
+                processingTime: result.processing_time,
+                queryId: result.query_id,
                   isStreaming: false,
                 }
               : m
@@ -240,6 +258,28 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
                     </span>
                   )}
                 </div>
+
+                {msg.role === 'assistant' && !msg.isStreaming && msg.queryId && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => submitFeedback(msg.id, msg.queryId!, 'up')}
+                      disabled={Boolean(feedbackSent[msg.id])}
+                      aria-label="Helpful answer"
+                      className="p-1 text-zinc-600 hover:text-emerald-400 disabled:opacity-50"
+                    >
+                      <ThumbsUp size={13} />
+                    </button>
+                    <button
+                      onClick={() => submitFeedback(msg.id, msg.queryId!, 'down')}
+                      disabled={Boolean(feedbackSent[msg.id])}
+                      aria-label="Unhelpful answer"
+                      className="p-1 text-zinc-600 hover:text-red-400 disabled:opacity-50"
+                    >
+                      <ThumbsDown size={13} />
+                    </button>
+                    {feedbackSent[msg.id] && <span className="text-[9px] font-mono text-zinc-600">feedback saved</span>}
+                  </div>
+                )}
 
                 <div className="text-zinc-200">
                   {msg.content ? (

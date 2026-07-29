@@ -29,8 +29,8 @@ class QueryRequest(BaseModel):
     session_id: Optional[str] = Field(default=None, description="Optional episodic chat session ID")
     doc_ids: Optional[List[str]] = Field(
         default=None,
-        description="Optional document subset to scope retrieval to (metadata-filtered search — "
-                     "skips the full-corpus scan; also serves as an access-control boundary).",
+        description="Optional document subset to scope retrieval (metadata-filtered search). "
+                    "This is not authorization; authorization needs a tenant/identity model.",
     )
 
 
@@ -56,6 +56,12 @@ class QueryResponse(BaseModel):
 class QueryHistoryResponse(BaseModel):
     queries: List[QueryResponse]
     total: int
+
+
+class FeedbackRequest(BaseModel):
+    rating: str = Field(..., pattern="^(up|down)$")
+    correction: Optional[str] = Field(default=None, max_length=4000)
+    reason: Optional[str] = Field(default=None, max_length=200)
 
 
 class StatsResponse(BaseModel):
@@ -106,8 +112,8 @@ class RetrievalStats(BaseModel):
     avg_score_mean: Optional[float] = None
     avg_score_max: Optional[float] = None
     avg_rerank_top: Optional[float] = None
-    avg_faithfulness: Optional[float] = None
-    low_faithfulness_count: int = 0   # faithfulness < 0.4
+    avg_reranker_relevance_proxy: Optional[float] = None
+    low_reranker_relevance_proxy_count: int = 0
 
 
 class FailureStats(BaseModel):

@@ -1,14 +1,18 @@
 import logging
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 logger = logging.getLogger(__name__)
+
+
+class PromptPolicyBlockedError(ValueError):
+    """Raised when a user question is an explicit instruction-override attempt."""
 
 _INJECTION_PATTERNS = [
     re.compile(p, re.IGNORECASE)
     for p in [
-        r"ignore (all|any|the) (previous|prior|above) instructions",
-        r"disregard (all|any|the) (previous|prior|above)",
+        r"ignore (?:(all|any|the) )?(previous|prior|above) instructions",
+        r"disregard (?:(all|any|the) )?(previous|prior|above)",
         r"you are now (a|an|the)",
         r"new system prompt",
         r"reveal (your|the) (system prompt|instructions)",
@@ -27,6 +31,42 @@ def scan(text: str) -> List[str]:
     if not text:
         return []
     return [pattern.pattern for pattern in _INJECTION_PATTERNS if pattern.search(text)]
+
+
+def screen_question(text: str) -> Dict[str, Any]:
+    """Return a policy decision before untrusted input reaches an LLM.
+
+    Heuristics intentionally block only strong prompt-override attempts. Less
+    certain matches are retained after removing the matched instruction span so
+    legitimate questions about prompt injection remain answerable.
+    """
+    hits = scan(text)
+    if not hits:
+        return {"action": "allow", "text": text, "hits": []}
+    severe = any("ignore" in hit or "override" in hit or "jailbreak" in hit for hit in hits)
+    if severe:
+        return {"action": "block", "text": "", "hits": hits}
+    sanitized = text
+    for pattern in _INJECTION_PATTERNS:
+        sanitized = pattern.sub("[removed instruction-like text]", sanitized)
+    return {"action": "sanitize", "text": sanitized.strip(), "hits": hits}
+
+
+def quarantine_context(sources: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], Dict[int, List[str]]]:
+    """Remove only instruction-like spans from retrieved content, preserving metadata."""
+    cleaned: List[Dict[str, Any]] = []
+    quarantined: Dict[int, List[str]] = {}
+    for index, source in enumerate(sources):
+        item = dict(source)
+        text = item.get("text", "")
+        hits = scan(text)
+        if hits:
+            for pattern in _INJECTION_PATTERNS:
+                text = pattern.sub("[quarantined instruction-like text]", text)
+            item["text"] = text
+            quarantined[index] = hits
+        cleaned.append(item)
+    return cleaned, quarantined
 
 
 def scan_question_and_context(question: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:

@@ -44,6 +44,23 @@ jobs:
         working-directory: backend
         run: python -m pytest tests/ -v --tb=short
 
+      - name: Run deterministic retrieval benchmark
+        id: retrieval_eval
+        working-directory: backend
+        run: >
+          python -m app.evaluation.runner
+          --fixture evaluation_data/rag_benchmark.v1.json
+          --rankings evaluation_data/empty_rankings.v1.json
+          --output-dir evaluation_artifacts
+
+      - name: Upload evaluation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-evaluation
+          path: backend/evaluation_artifacts/*.json
+          if-no-files-found: warn
+
       # Fires if ANY of the steps above failed — deps install, the build/import
       # check, or the test suite — so a broken dependency is reported exactly
       # like a broken test, not silently swallowed.

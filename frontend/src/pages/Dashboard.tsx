@@ -27,11 +27,16 @@ import {
   ChevronRight,
   RefreshCw,
   FileSpreadsheet,
-  GitCommitVertical
+  GitCommitVertical,
+  ThumbsUp,
+  ThumbsDown,
+  RotateCcw,
+  ShieldAlert,
+  BarChart3
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { clsx } from 'clsx';
-import { systemApi, queryApi, documentsApi } from '../services/api';
+import { systemApi, queryApi, documentsApi, feedbackApi } from '../services/api';
 import { usePipelineCtx } from '../components/layout/Layout';
 
 export function Dashboard() {
@@ -100,16 +105,47 @@ export function Dashboard() {
     refetchInterval: 10000,
   });
 
+  const { data: feedbackAgg } = useQuery({
+    queryKey: ['feedbackAggregates'],
+    queryFn: () => feedbackApi.aggregates().then((r) => r.data),
+    refetchInterval: 20000,
+  });
+
   // Calculate stats
   const totalQueries = stats?.total_queries ?? 0;
   const failedQueries = stats?.total_queries ? stats.failed_queries : 0;
   const completedQueries = totalQueries - failedQueries;
-  const avgFaithfulness = obs?.retrieval.avg_faithfulness != null 
-    ? Math.round(obs.retrieval.avg_faithfulness * 100) 
+  const avgRelevanceProxy = obs?.retrieval.avg_reranker_relevance_proxy != null
+    ? Math.round(obs.retrieval.avg_reranker_relevance_proxy * 100)
     : 0;
 
   const totalDocs = docsData?.total ?? 0;
   const docsList = docsData?.documents ?? [];
+
+  // Feedback / quality aggregates
+  const feedbackCount = feedbackAgg?.feedback_count ?? 0;
+  const positiveFeedbackPct = feedbackAgg?.positive_feedback_rate != null
+    ? Math.round(feedbackAgg.positive_feedback_rate * 100)
+    : null;
+  const retryRatePct = feedbackAgg?.retry_rate != null ? Math.round(feedbackAgg.retry_rate * 100) : 0;
+  const citationFailures = feedbackAgg?.citation_failures ?? 0;
+  const tokenP50 = feedbackAgg?.prompt_token_percentiles?.p50 ?? null;
+  const tokenP95 = feedbackAgg?.prompt_token_percentiles?.p95 ?? null;
+
+  const negativeReasons = Object.entries(feedbackAgg?.negative_feedback_reasons ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const maxReasonCount = Math.max(1, ...negativeReasons.map(([, count]) => count));
+
+  const cacheTypeEntries = Object.entries(feedbackAgg?.cache_types ?? {})
+    .filter(([type]) => type != null)
+    .sort((a, b) => b[1] - a[1]);
+  const maxCacheCount = Math.max(1, ...cacheTypeEntries.map(([, count]) => count));
+  const cacheColors: Record<string, string> = {
+    exact: '#3b82f6',
+    semantic: '#8b5cf6',
+    none: '#64748b',
+  };
 
   // Active Ingestion stages helper
   const getStageStatus = (stageName: string) => {
@@ -135,7 +171,7 @@ export function Dashboard() {
   // Generate data points for the graph
   const chartPoints = (() => {
     // 7 days default values if there are no query runs
-    const defaultPoints = [76, 82, 79, 85, 88, 84, avgFaithfulness || 90];
+    const defaultPoints = [76, 82, 79, 85, 88, 84, avgRelevanceProxy || 90];
     
     if (!queryHistory?.queries || queryHistory.queries.length === 0) {
       return defaultPoints.map((val, idx) => ({
@@ -156,14 +192,14 @@ export function Dashboard() {
       const isSuccess = q.status === 'success' || !q.failure_stage;
       let score = 0;
       if (isSuccess) {
-        // Average score of retrieved chunks, fallback to avgFaithfulness or 85
+        // Average score of retrieved chunks, fallback to relevance proxy or 85
         const validSources = q.sources?.filter((s: any) => s.score != null) ?? [];
         if (validSources.length > 0) {
           const sum = validSources.reduce((acc: number, curr: any) => acc + curr.score, 0);
           score = Math.round((sum / validSources.length) * 100);
           score = Math.max(50, Math.min(100, score));
         } else {
-          score = avgFaithfulness || 85;
+          score = avgRelevanceProxy || 85;
         }
       } else {
         score = 30; // Failed query represented as low grounding index
@@ -350,7 +386,7 @@ export function Dashboard() {
             <div className="text-left pl-2">
               <p className="text-xs text-slate-500 font-mono uppercase tracking-wider">Avg score</p>
               <div className="flex items-baseline gap-1 mt-1">
-                <p className="text-3xl font-black text-blue-400 tabular-nums">{avgFaithfulness}%</p>
+                <p className="text-3xl font-black text-blue-400 tabular-nums">{avgRelevanceProxy}%</p>
               </div>
               {/* Micro orange sparkline */}
               <div className="mt-2 h-4 w-full opacity-60">
@@ -377,7 +413,7 @@ export function Dashboard() {
                 </h3>
               </div>
               <p className="text-[10px] text-slate-500 mt-1 font-mono">
-                Query accuracy & faithfulness index relative to context logs
+                Retrieval relevance proxy relative to context logs
               </p>
             </div>
             
@@ -514,12 +550,12 @@ export function Dashboard() {
               </div>
               <h4 className="text-xs font-bold text-white mt-1">Grounding Confidence</h4>
               <div className="flex items-baseline gap-1 mt-1.5">
-                <span className="text-2xl font-black text-white">{avgFaithfulness || 89}%</span>
+                <span className="text-2xl font-black text-white">{avgRelevanceProxy || 89}%</span>
                 <span className="text-[10px] text-slate-400 font-mono">mean score</span>
               </div>
               {/* Progress bar */}
               <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden relative">
-                <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full" style={{ width: `${avgFaithfulness || 89}%` }} />
+                <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full" style={{ width: `${avgRelevanceProxy || 89}%` }} />
               </div>
             </div>
 
@@ -699,6 +735,160 @@ export function Dashboard() {
           </div>
         </div>
 
+      </div>
+
+      {/* Row 4: Feedback & Quality Analytics */}
+      <div className="grid gap-6 md:grid-cols-4">
+
+        {/* Feedback Rate */}
+        <div className="p-5 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col justify-between min-h-[140px] group transition-all duration-300 hover:border-white/10">
+          <div className="flex items-center gap-2">
+            <ThumbsUp size={13} className="text-emerald-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Feedback Rate
+            </h3>
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-1">
+              <p className="text-3xl font-black text-white tabular-nums">
+                {positiveFeedbackPct != null ? `${positiveFeedbackPct}%` : '—'}
+              </p>
+              <span className="text-[10px] text-slate-500 font-mono">positive</span>
+            </div>
+            <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden mt-2.5 relative">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-300" style={{ width: `${positiveFeedbackPct ?? 0}%` }} />
+            </div>
+            <p className="text-[9px] text-slate-500 font-mono mt-2">{feedbackCount} rated response{feedbackCount === 1 ? '' : 's'}</p>
+          </div>
+        </div>
+
+        {/* Retry Rate */}
+        <div className="p-5 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col justify-between min-h-[140px] group transition-all duration-300 hover:border-white/10">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={13} className="text-blue-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Retry Rate
+            </h3>
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-1">
+              <p className="text-3xl font-black text-white tabular-nums">{retryRatePct}%</p>
+              <span className="text-[10px] text-slate-500 font-mono">of queries</span>
+            </div>
+            <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden mt-2.5 relative">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full transition-all duration-300" style={{ width: `${retryRatePct}%` }} />
+            </div>
+            <p className="text-[9px] text-slate-500 font-mono mt-2">Bounded single retrieval-aware retry</p>
+          </div>
+        </div>
+
+        {/* Citation Failures */}
+        <div className="p-5 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col justify-between min-h-[140px] group transition-all duration-300 hover:border-white/10">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={13} className="text-red-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Citation Failures
+            </h3>
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-1">
+              <p className="text-3xl font-black text-white tabular-nums">{citationFailures}</p>
+              <span className="text-[10px] text-slate-500 font-mono">ungrounded</span>
+            </div>
+            <p className="text-[9px] text-slate-500 font-mono mt-4 flex items-center gap-1.5">
+              <span className={clsx("h-1.5 w-1.5 rounded-full shrink-0", citationFailures > 0 ? "bg-red-400 animate-pulse" : "bg-emerald-400")} />
+              {citationFailures > 0 ? 'Repair/insufficient-evidence path engaged' : 'All citations validated'}
+            </p>
+          </div>
+        </div>
+
+        {/* Prompt Token Budget */}
+        <div className="p-5 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col justify-between min-h-[140px] group transition-all duration-300 hover:border-white/10">
+          <div className="flex items-center gap-2">
+            <Gauge size={13} className="text-orange-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Prompt Tokens
+            </h3>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-2xl font-black text-white tabular-nums">{tokenP50 ?? '—'}</p>
+              <p className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">p50</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-orange-400 tabular-nums">{tokenP95 ?? '—'}</p>
+              <p className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">p95</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 5: Negative Feedback Reasons & Cache Distribution */}
+      <div className="grid gap-6 md:grid-cols-2">
+
+        {/* Negative Feedback Reasons */}
+        <div className="p-6 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col min-h-[220px]">
+          <div className="flex items-center gap-2 mb-4">
+            <ThumbsDown size={13} className="text-red-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Negative Feedback Reasons
+            </h3>
+          </div>
+          {negativeReasons.length > 0 ? (
+            <div className="space-y-3 flex-1 justify-center flex flex-col">
+              {negativeReasons.map(([reason, count]) => (
+                <div key={reason} className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-slate-300 font-semibold truncate max-w-[75%]">{reason}</span>
+                    <span className="text-slate-500">{count}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden relative">
+                    <div
+                      className="h-full bg-gradient-to-r from-red-500 to-rose-400 rounded-full transition-all duration-300"
+                      style={{ width: `${(count / maxReasonCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-xs text-slate-500 py-6 my-auto font-mono flex-1 flex items-center justify-center">
+              No negative feedback recorded yet.
+            </div>
+          )}
+        </div>
+
+        {/* Cache Type Distribution */}
+        <div className="p-6 rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent backdrop-blur-xl flex flex-col min-h-[220px]">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 size={13} className="text-indigo-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+              Cache Type Distribution
+            </h3>
+          </div>
+          {cacheTypeEntries.length > 0 ? (
+            <div className="space-y-3 flex-1 justify-center flex flex-col">
+              {cacheTypeEntries.map(([type, count]) => (
+                <div key={type} className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-slate-300 font-semibold uppercase tracking-wider">{type || 'none'}</span>
+                    <span className="text-slate-500">{count}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden relative">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{ width: `${(count / maxCacheCount) * 100}%`, backgroundColor: cacheColors[type] ?? '#f4831f' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-xs text-slate-500 py-6 my-auto font-mono flex-1 flex items-center justify-center">
+              No cache activity recorded yet.
+            </div>
+          )}
+        </div>
       </div>
 
     </div>

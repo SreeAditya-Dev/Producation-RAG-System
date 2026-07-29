@@ -116,5 +116,17 @@ class ContextCompressor:
         # Fallback estimation if tiktoken fails
         return len(text.split())
 
+    def count_tokens(self, text: str) -> int:
+        return self._count_tokens(text)
+
+    def truncate_to_tokens(self, text: str, max_tokens: int) -> str:
+        if max_tokens <= 0:
+            return ""
+        if self._count_tokens(text) <= max_tokens:
+            return text
+        if self.encoder:
+            return self.encoder.decode(self.encoder.encode(text)[:max_tokens])
+        return " ".join(text.split()[:max_tokens])
+
 
 context_compressor = ContextCompressor()

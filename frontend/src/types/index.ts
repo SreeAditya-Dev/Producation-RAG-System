@@ -93,8 +93,8 @@ export interface RetrievalStats {
   avg_score_mean: number | null;
   avg_score_max: number | null;
   avg_rerank_top: number | null;
-  avg_faithfulness: number | null;
-  low_faithfulness_count: number;
+  avg_reranker_relevance_proxy: number | null;
+  low_reranker_relevance_proxy_count: number;
 }
 
 export interface FailureStats {
@@ -121,6 +121,21 @@ export interface ObservabilityResponse {
   tokens: TokenStats;
   retrieval: RetrievalStats;
   failures: FailureStats;
+}
+
+// ── Feedback aggregates ───────────────────────────────────────────────────────
+
+export interface FeedbackAggregatesResponse {
+  feedback_count: number;
+  positive_feedback_rate: number | null;
+  negative_feedback_reasons: Record<string, number>;
+  cache_types: Record<string, number>;
+  retry_rate: number;
+  citation_failures: number;
+  prompt_token_percentiles: {
+    p50: number | null;
+    p95: number | null;
+  };
 }
 
 // ── WebSocket event types ─────────────────────────────────────────────────────

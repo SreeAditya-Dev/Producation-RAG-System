@@ -10,3 +10,5 @@ backend/uploads/
 
 docs/plans
 docs/records
+backend/evaluation_artifacts/
+backend/.tmp-evaluation/

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.auth import require_api_key, verify_ws_key
-from app.database import Document, QueryHistory, QueryMetrics, IngestionMetrics, Chunk, create_tables, get_db
+from app.database import Document, QueryHistory, QueryMetrics, QueryFeedback, IngestionMetrics, Chunk, create_tables, get_db
 from app.models import (
     DocumentListResponse,
     DocumentResponse,
@@ -33,6 +33,7 @@ from app.models import (
     TokenStats,
     RetrievalStats,
     FailureStats,
+    FeedbackRequest,
     QueryRequest,
     QueryResponse,
     SourceChunk,
@@ -44,6 +45,7 @@ from app.services.pinecone_service import pinecone_service
 from app.services.llm_service import llm_service
 from app.services.storage_service import storage_service, CONTENT_TYPES
 from app.services.rate_limiter import rate_limiter
+from app.services.prompt_guard import PromptPolicyBlockedError
 from app.services.cost_guard import check_daily_budget
 from app.services.ingestion_queue import ingestion_queue, IngestionTask
 from app.utils.file_parsers import detect_file_type
@@ -308,14 +310,19 @@ async def query(
     from app.database import SessionLocal
     session = SessionLocal()
     try:
-        result = await retrieve_and_generate(
-            question=req.question,
-            top_k=req.top_k,
-            db_session=session,
-            session_id=req.session_id,
-            client_id=x_client_id,
-            doc_ids=req.doc_ids,
-        )
+        try:
+            result = await retrieve_and_generate(
+                question=req.question,
+                top_k=req.top_k,
+                db_session=session,
+                session_id=req.session_id,
+                # Use the same fallback identity used for rate limiting and
+                # feedback authorization when the browser did not send a header.
+                client_id=identity,
+                doc_ids=req.doc_ids,
+            )
+        except PromptPolicyBlockedError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
         session.close()
 
@@ -370,6 +377,84 @@ def get_query_history(limit: int = 20, db: Session = Depends(get_db), _api_key: 
     return {"queries": result, "total": len(result)}
 
 
+@app.post("/api/queries/{query_id}/feedback", status_code=201)
+def submit_query_feedback(
+    query_id: str,
+    payload: FeedbackRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _api_key: str = Depends(require_api_key),
+    x_client_id: Optional[str] = Header(default=None),
+):
+    """Persist one up/down rating per client and query; corrections are review data."""
+    identity = x_client_id or (request.client.host if request.client else "unknown")
+    if not rate_limiter.allow(identity):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please slow down.")
+    if not db.query(QueryHistory.id).filter(QueryHistory.id == query_id, QueryHistory.client_id == identity).first():
+        raise HTTPException(status_code=404, detail="Query not found")
+
+    feedback = db.query(QueryFeedback).filter(
+        QueryFeedback.query_id == query_id,
+        QueryFeedback.client_id == identity,
+    ).first()
+    if feedback:
+        feedback.rating = payload.rating
+        feedback.correction = payload.correction
+        feedback.reason = payload.reason
+    else:
+        feedback = QueryFeedback(
+            query_id=query_id,
+            client_id=identity,
+            rating=payload.rating,
+            correction=payload.correction,
+            reason=payload.reason,
+        )
+        db.add(feedback)
+    db.commit()
+    return {"query_id": query_id, "rating": feedback.rating, "saved": True}
+
+
+@app.get("/api/feedback/aggregates")
+def feedback_aggregates(db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
+    """Operational feedback/citation/cache aggregates; feedback never mutates retrieval."""
+    total = db.query(QueryFeedback).count()
+    up = db.query(QueryFeedback).filter(QueryFeedback.rating == "up").count()
+    reasons = dict(db.query(QueryFeedback.reason, func.count(QueryFeedback.id)).filter(QueryFeedback.reason.isnot(None)).group_by(QueryFeedback.reason).all())
+    cache_types = dict(db.query(QueryMetrics.cache_type, func.count(QueryMetrics.id)).group_by(QueryMetrics.cache_type).all())
+    retry_count = db.query(QueryMetrics).filter(QueryMetrics.retry_attempt_count > 0).count()
+    query_count = db.query(QueryMetrics).count()
+    citation_failures = db.query(QueryMetrics).filter(QueryMetrics.citation_valid.is_(False)).count()
+    token_values = [row[0] for row in db.query(QueryMetrics.prompt_tokens).filter(QueryMetrics.prompt_tokens.isnot(None)).all()]
+    def percentile(value: float):
+        ordered = sorted(token_values)
+        return ordered[max(0, int((len(ordered) - 1) * value))] if ordered else None
+    return {
+        "feedback_count": total, "positive_feedback_rate": round(up / total, 4) if total else None,
+        "negative_feedback_reasons": reasons, "cache_types": cache_types,
+        "retry_rate": round(retry_count / query_count, 4) if query_count else 0.0,
+        "citation_failures": citation_failures, "prompt_token_percentiles": {"p50": percentile(.50), "p95": percentile(.95)},
+    }
+
+
+@app.get("/api/feedback/review-candidates")
+def feedback_review_candidates(limit: int = 100, db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
+    """Export candidate benchmark cases for human review only.
+
+    This route has no write path to benchmark fixtures, indexes, or models;
+    approved cases must be reviewed and committed to the versioned fixture.
+    """
+    rows = (
+        db.query(QueryFeedback, QueryHistory)
+        .join(QueryHistory, QueryHistory.id == QueryFeedback.query_id)
+        .filter((QueryFeedback.rating == "down") | QueryFeedback.correction.isnot(None))
+        .order_by(QueryFeedback.created_at.desc()).limit(min(max(limit, 1), 500)).all()
+    )
+    return {"requires_human_approval": True, "candidates": [{
+        "query_id": feedback.query_id, "question": history.question, "answer": history.answer,
+        "rating": feedback.rating, "correction": feedback.correction, "reason": feedback.reason,
+    } for feedback, history in rows]}
+
+
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 @app.get("/api/stats", response_model=StatsResponse)
@@ -411,7 +496,7 @@ async def get_stats(db: Session = Depends(get_db), _api_key: str = Depends(requi
 async def get_observability(db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     """
     Returns aggregate observability metrics across all queries and ingestions.
-    Covers: latency (per-stage), token usage, retrieval quality, faithfulness, failures.
+    Covers latency, token usage, retrieval relevance proxy, and failures.
     """
 
     def _avg(col) -> float | None:
@@ -472,17 +557,17 @@ async def get_observability(db: Session = Depends(get_db), _api_key: str = Depen
     )
 
     # ── Retrieval quality ─────────────────────────────────────────────────────
-    low_faith = db.query(QueryMetrics).filter(
-        QueryMetrics.faithfulness_score.isnot(None),
-        QueryMetrics.faithfulness_score < 0.4,
+    low_proxy = db.query(QueryMetrics).filter(
+        QueryMetrics.reranker_relevance_proxy.isnot(None),
+        QueryMetrics.reranker_relevance_proxy < 0.4,
     ).count()
 
     retrieval = RetrievalStats(
         avg_score_mean=_avg4(QueryMetrics.retrieval_score_mean),
         avg_score_max=_avg4(QueryMetrics.retrieval_score_max),
         avg_rerank_top=_avg4(QueryMetrics.rerank_score_top),
-        avg_faithfulness=_avg4(QueryMetrics.faithfulness_score),
-        low_faithfulness_count=low_faith,
+        avg_reranker_relevance_proxy=_avg4(QueryMetrics.reranker_relevance_proxy),
+        low_reranker_relevance_proxy_count=low_proxy,
     )
 
     # ── Failures ──────────────────────────────────────────────────────────────

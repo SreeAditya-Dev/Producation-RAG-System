@@ -13,13 +13,15 @@ class MaximalMarginalRelevanceFilter:
 
     def filter_candidates(
         self,
-        query_vector: List[float],
+        query_vector: List[float] | None,
         candidates: List[Dict[str, Any]],
         top_k: int,
     ) -> List[Dict[str, Any]]:
         """
         Selects top_k chunks from candidates using MMR.
-        Each candidate dict must contain a 'values' key with its embedding vector.
+        Candidates need a ``values`` embedding vector. When a query vector is not
+        available (for example after multi-query reranking), rerank score is used
+        for relevance and vectors are still used to penalize duplicates.
         """
         if len(candidates) <= top_k:
             return candidates
@@ -39,15 +41,23 @@ class MaximalMarginalRelevanceFilter:
         selected_indices = self._run_mmr(
             query_vector,
             candidate_vectors,
+            [c.get("rerank_score", c.get("score", 0.0)) for c in valid_candidates],
             top_k,
         )
 
-        return [valid_candidates[idx] for idx in selected_indices]
+        selected = [valid_candidates[idx] for idx in selected_indices]
+        # Lexical-only BM25 candidates have no vector to diversify against. Keep
+        # them as a fallback instead of silently removing that recall path.
+        for candidate in candidates:
+            if candidate.get("values") is None and len(selected) < top_k:
+                selected.append(candidate)
+        return selected
 
     def _run_mmr(
         self,
-        query_vector: List[float],
+        query_vector: List[float] | None,
         candidate_vectors: List[List[float]],
+        relevance_scores: List[float],
         top_k: int,
     ) -> List[int]:
         selected_indices: List[int] = []
@@ -56,7 +66,8 @@ class MaximalMarginalRelevanceFilter:
         # Precompute similarities of all candidates to the query vector
         sims_to_query = [
             self._cosine_similarity(query_vector, vec)
-            for vec in candidate_vectors
+            if query_vector is not None else float(valid_score)
+            for vec, valid_score in zip(candidate_vectors, relevance_scores)
         ]
 
         # Select the single most relevant chunk to start

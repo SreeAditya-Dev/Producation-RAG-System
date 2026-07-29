@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     # never serves a stale answer past a real corpus change.
     query_cache_enabled: bool = True
     query_cache_ttl_seconds: int = 3600
+    query_cache_capacity: int = 500
+    semantic_cache_enabled: bool = False
+    semantic_cache_threshold: float = 0.92
 
     # CRAG (Corrective RAG): an LLM grader classifies the reranked+compressed
     # context as correct / incorrect / ambiguous. "incorrect" discards internal
@@ -86,6 +89,24 @@ class Settings(BaseSettings):
     top_k: int = 5
     max_tokens: int = 1024
     temperature: float = 0.2
+
+    # Total prompt budgeting. Reserve generation capacity before packing history
+    # and retrieved context so requests cannot exceed the model context window.
+    context_window_tokens: int = 8192
+    reserved_completion_tokens: int = 1024
+    max_history_tokens: int = 1200
+    max_context_tokens: int = 3000
+    mmr_enabled: bool = False
+    mmr_lambda: float = 0.7
+    retrieval_retry_enabled: bool = False
+    retrieval_retry_max_attempts: int = 1
+    retrieval_retry_token_budget: int = 400
+    citation_validation_enabled: bool = True
+    citation_verifier_enabled: bool = False
+    pii_redaction_enabled: bool = False
+    evaluator_model: str = ""
+    evaluator_timeout_seconds: int = 45
+    evaluator_max_retries: int = 1
 
     cors_origins: str = '["http://localhost:3000","http://localhost:5173"]'
 

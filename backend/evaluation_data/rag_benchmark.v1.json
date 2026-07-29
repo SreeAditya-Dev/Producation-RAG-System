@@ -1,0 +1,5 @@
+{
+  "version": "1.0.0",
+  "description": "Human-reviewed benchmark fixture. Add examples only after a reviewer verifies document/chunk labels.",
+  "examples": []
+}

@@ -22,3 +22,7 @@ chardet==5.2.0
 boto3==1.35.93
 langsmith>=0.1.147
 pytest>=8.0.0
+numpy>=1.26.0
+# Offline evaluation only; not imported by the serving path.
+ragas==0.2.15
+datasets==3.2.0

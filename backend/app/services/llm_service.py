@@ -1,5 +1,5 @@
 from openai import OpenAI
-from typing import Generator, List, Dict, Any, Tuple
+from typing import Callable, Generator, List, Dict, Any, Tuple
 import logging
 from app.config import settings
 from app.observability import traceable, wrap_openai
@@ -12,7 +12,7 @@ Rules:
 - Answer ONLY based on the provided context
 - If the context doesn't contain enough information, say so clearly
 - Be concise but thorough
-- Cite which source document your information comes from when relevant
+- Cite factual statements using the supplied source IDs exactly as [S1], [S2], and so on
 - Use markdown formatting for better readability
 - Never make up information not present in the context
 
@@ -99,6 +99,43 @@ class LLMService:
             return tokens, usage
         except Exception as e:
             logger.error("LLM streaming messages error: %s", e)
+            raise
+
+    def generate_messages(self, messages: List[Dict[str, str]], max_tokens: int = 256) -> str:
+        """Small bounded non-streaming call for verifier/repair-only use."""
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.0,
+            max_tokens=max_tokens,
+            stream=False,
+        )
+        return response.choices[0].message.content or ""
+
+    def stream_messages(self, messages: List[Dict[str, str]], on_token: Callable[[str], None]) -> Dict[str, int]:
+        """Yield provider deltas through ``on_token`` and return final usage."""
+        usage: Dict[str, int] = {}
+        try:
+            stream = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=settings.temperature,
+                top_p=0.7,
+                max_tokens=settings.max_tokens,
+                stream=True,
+                stream_options={"include_usage": True},
+            )
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content is not None:
+                    on_token(chunk.choices[0].delta.content)
+                if getattr(chunk, "usage", None):
+                    usage = {
+                        "prompt_tokens": chunk.usage.prompt_tokens or 0,
+                        "completion_tokens": chunk.usage.completion_tokens or 0,
+                    }
+            return usage
+        except Exception as e:
+            logger.error("LLM incremental streaming error: %s", e)
             raise
 
     # ── Internal ──────────────────────────────────────────────────────────────

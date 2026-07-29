@@ -156,7 +156,7 @@ export function Docs() {
   const [activeStep, setActiveStep] = useState<number>(0);
   const [simulating, setSimulating] = useState(false);
   
-  // Faithfulness Simulator logit value
+  // Retrieval relevance proxy simulator logit value
   const [logitVal, setLogitVal] = useState<number>(0.8);
   
   // Config search state
@@ -209,9 +209,9 @@ sources = reranker_service.rerank(
     top_k=top_k
 )`,
 
-    faithfulness: `def _faithfulness(sources: List[Dict]) -> Optional[float]:
+    relevanceProxy: `def _reranker_relevance_proxy(sources: List[Dict]) -> Optional[float]:
     """
-    Proxy faithfulness score: sigmoid(mean rerank logit across returned sources).
+    Retrieval relevance proxy: sigmoid(mean rerank logit across returned sources).
     Range 0-1. Higher = sources were more relevant to the question.
     """
     logits = [s.get("rerank_score") for s in sources if s.get("rerank_score") is not None]
@@ -272,7 +272,7 @@ sources = reranker_service.rerank(
     },
     {
       title: "Augmented Generation & Evaluation",
-      desc: "Re-ordered context chunks are formatted into a prompt. meta/llama-3.1-70b streams the response. A proxy faithfulness rating is calculated using the sigmoid of rerank scores.",
+      desc: "Re-ordered context chunks are formatted into a prompt. meta/llama-3.1-70b streams the response. A reranker relevance proxy is calculated using the sigmoid of rerank scores; it is not answer faithfulness.",
       icon: Workflow,
       badge: "Stage 6: Generate",
       service: "Completion Hub",
@@ -322,11 +322,11 @@ sources = reranker_service.rerank(
       `[INFO] Formatting prompt templates. Candidate context payload injected (2,450 chars).`,
       `[INFO] Initializing streaming request to Llama-3.1-70b-instruct.`,
       `[DEBUG] Token streaming active. Mean throughput: 65 tokens/sec.`,
-      `[SUCCESS] Stream finalized. Sigmoid faithfulness evaluation: 0.8921 (Passed).`
+      `[SUCCESS] Stream finalized. Reranker relevance proxy: 0.8921 (retrieval signal only).`
     ]
   };
 
-  // Math variables for Faithfulness simulator
+  // Math variables for relevance-proxy simulator
   const expVal = Math.exp(-logitVal);
   const denomVal = 1 + expVal;
   const faithfulnessScore = 1 / denomVal;
@@ -381,7 +381,7 @@ sources = reranker_service.rerank(
         { name: 'sources', type: 'JSON', key: 'NULLABLE', desc: 'Reference chunk mappings.' },
         { name: 'prompt_tokens', type: 'Integer', key: 'NULLABLE', desc: 'Input token count.' },
         { name: 'completion_tokens', type: 'Integer', key: 'NULLABLE', desc: 'Output token count.' },
-        { name: 'faithfulness_score', type: 'Float', key: 'NULLABLE', desc: 'Sigmoid evaluation rating.' },
+        { name: 'reranker_relevance_proxy', type: 'Float', key: 'NULLABLE', desc: 'Sigmoid reranker relevance signal; not answer faithfulness.' },
         { name: 'created_at', type: 'DateTime', key: 'DEFAULT NOW', desc: 'Query timestamp.' }
       ]
     }

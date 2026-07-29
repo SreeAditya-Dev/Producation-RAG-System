@@ -6,6 +6,7 @@ import type {
   StatsResponse,
   HealthResponse,
   ObservabilityResponse,
+  FeedbackAggregatesResponse,
 } from '../types';
 import { getClientId } from './clientId';
 
@@ -58,10 +59,17 @@ export const queryApi = {
 
   history: (limit = 20) =>
     api.get<{ queries: QueryResponse[]; total: number }>(`/queries?limit=${limit}`),
+
+  feedback: (queryId: string, rating: 'up' | 'down', correction?: string) =>
+    api.post(`/queries/${queryId}/feedback`, { rating, correction }),
 };
 
 export const systemApi = {
   stats: () => api.get<StatsResponse>('/stats'),
   health: () => api.get<HealthResponse>('/health', { baseURL: API_BASE_URL }),
   observability: () => api.get<ObservabilityResponse>('/observability'),
+};
+
+export const feedbackApi = {
+  aggregates: () => api.get<FeedbackAggregatesResponse>('/feedback/aggregates'),
 };

@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 
 from app.services.llm_service import llm_service
+from app.config import settings
 from app.observability import traceable
 
 logger = logging.getLogger(__name__)
@@ -65,8 +66,12 @@ JSON Output:"""
         ]
 
         def call_api():
-            return llm_service.client.chat.completions.create(
-                model=llm_service.model,
+            client = llm_service.client
+            # The evaluator is independently configurable and deliberately
+            # bounded. Provider outages are handled by grade()'s fail-open path.
+            model = settings.evaluator_model or llm_service.model
+            return client.chat.completions.create(
+                model=model,
                 messages=messages,
                 temperature=0.0,
                 max_tokens=64,
@@ -74,7 +79,21 @@ JSON Output:"""
             )
 
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, call_api)
+        response = None
+        last_error = None
+        for attempt in range(max(1, settings.evaluator_max_retries + 1)):
+            try:
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(None, call_api),
+                    timeout=settings.evaluator_timeout_seconds,
+                )
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt + 1 < max(1, settings.evaluator_max_retries + 1):
+                    logger.warning("CRAG evaluator attempt %d failed: %s", attempt + 1, exc)
+        if response is None:
+            raise RuntimeError(f"CRAG evaluator unavailable: {last_error}") from last_error
         content = (response.choices[0].message.content or "").strip()
 
         if content.startswith("```"):
