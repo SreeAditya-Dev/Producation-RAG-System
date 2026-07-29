@@ -1013,8 +1013,8 @@ sources = reranker_service.rerank(
                     />
 
                     <CodeBlock 
-                      code={codeSnippets.faithfulness} 
-                      filename="Faithfulness Evaluation Logic" 
+                      code={codeSnippets.relevanceProxy} 
+                      filename="Relevance Proxy Signal Logic" 
                       language="python" 
                     />
                   </div>
@@ -2182,6 +2182,148 @@ sources = reranker_service.rerank(
                         <div className="border-t border-zinc-800/50 pt-3">
                           <span className="text-xs font-mono text-zinc-500">
                             Source code: <code className="text-zinc-400">backend/app/services/query_cache.py</code> &bull; <code className="text-zinc-400">bm25_service.py</code> &bull; Integrated in <code className="text-zinc-400">retrieval.py</code>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Challenge 24 */}
+                      <div className="rounded-xl border border-zinc-800/80 bg-black/40 p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                              CHALLENGE 24
+                            </span>
+                            <h4 className="text-lg font-bold text-white mt-2">
+                              Controlling Exploding Conversation Memory &amp; Token Usage
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <p className="text-sm text-zinc-300 leading-relaxed">
+                            <strong className="text-zinc-100">Question / Problem Scenario:</strong> In LangChain or multi-turn RAG applications, conversation memory keeps growing across turns and token usage explodes. What strategies would you implement to control context size, and how is it built in our system?
+                          </p>
+
+                          <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/10 p-4 space-y-3">
+                            <h5 className="text-sm font-bold text-emerald-400 flex items-center gap-1.5 font-mono">
+                              <CheckCircle2 size={14} className="text-emerald-500" />
+                              Part 1: Implemented in Our System (Codebase Proof)
+                            </h5>
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              Instead of letting conversation memory grow indefinitely, our system uses a <strong>Sliding Window + Reverse Token-Budgeting Engine</strong> powered by <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">tiktoken</code> across 4 core modules:
+                            </p>
+                            
+                            <div className="space-y-3 text-sm text-zinc-300">
+                              <div>
+                                <strong className="text-zinc-100">1. Turn-Count Limit (Sliding Window):</strong> In <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">session_episodic_memory.py</code>, we cap history to the <strong>last 5 successful turns</strong> (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">max_history_turns = 5</code>). We never fetch unlimited past messages from the database.
+                              </div>
+
+                              <div>
+                                <strong className="text-zinc-100">2. Strict Reverse Token Budgeting (Exact Token Trimming):</strong> In <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">hybrid_memory_coordinator.py</code>, we enforce a hard token budget cap of <strong>1,200 tokens</strong> (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">max_history_tokens = 1200</code> in <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">config.py</code>):
+                                <div className="mt-2 rounded-lg bg-zinc-900/80 border border-zinc-800 p-3 font-mono text-[11px] leading-relaxed text-zinc-300 space-y-1">
+                                  <p className="text-zinc-500"># 1. Calculate available budget after reserving completion tokens + prompt overhead</p>
+                                  <p className="text-orange-400">available = context_window_tokens - reserved_completion - prompt_overhead - system_prompt_tokens - user_query_tokens</p>
+                                  <p className="text-zinc-500"># 2. Cap history budget to max_history_tokens (1,200)</p>
+                                  <p className="text-orange-400">history_budget = min(settings.max_history_tokens, available)</p>
+                                  <p className="text-zinc-500"># 3. Iterate BACKWARDS from most recent to oldest turn using tiktoken counting</p>
+                                  <p className="text-blue-400">for message in reversed(history):</p>
+                                  <p className="text-zinc-300 pl-4">tokens = context_compressor.count_tokens(message.get("content", ""))</p>
+                                  <p className="text-zinc-300 pl-4">if history_tokens + tokens &gt; history_budget:</p>
+                                  <p className="text-red-400 pl-8">break # Drop older messages immediately if budget is exceeded</p>
+                                  <p className="text-zinc-300 pl-4">selected_history.append(message)</p>
+                                  <p className="text-zinc-300 pl-4">history_tokens += tokens</p>
+                                </div>
+                              </div>
+
+                              <div>
+                                <strong className="text-zinc-100">3. Prioritized Context Budgeting:</strong> Whatever budget remains (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">available - history_tokens</code>) is dynamically allocated to retrieved context chunks (<code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">max_context_tokens = 3000</code>).
+                              </div>
+
+                              <div>
+                                <strong className="text-zinc-100">4. Extractive Context Compression:</strong> In <code className="text-xs font-mono bg-zinc-900 text-zinc-300 px-1.5 py-0.5 rounded">context_compressor.py</code>, retrieved document chunks are compressed at the sentence level using keyword scoring so we don't send filler sentences to the LLM.
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <h5 className="text-sm font-bold text-zinc-100 font-mono">
+                              Part 2: Strategies to Control Conversation Memory in General (Interview Theory)
+                            </h5>
+                            <p className="text-sm text-zinc-300 leading-relaxed">
+                              When asked how to prevent memory/token explosion in LangChain or custom RAG applications, compare these 4 Industry Standard Strategies:
+                            </p>
+
+                            <div className="rounded-lg bg-zinc-900/70 border border-zinc-800/60 p-4 overflow-x-auto">
+                              <table className="w-full text-xs text-zinc-300 border-collapse">
+                                <thead>
+                                  <tr className="border-b border-zinc-800 text-zinc-400 text-left">
+                                    <th className="py-2 pr-4 font-mono font-semibold">Strategy</th>
+                                    <th className="py-2 pr-4 font-mono font-semibold">How It Works</th>
+                                    <th className="py-2 pr-4 font-mono font-semibold text-emerald-400">Pros</th>
+                                    <th className="py-2 font-mono font-semibold text-rose-400">Cons</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="align-top divide-y divide-zinc-900">
+                                  <tr>
+                                    <td className="py-2.5 pr-4 font-semibold text-orange-400 font-mono">1. Sliding Window<br/><span className="text-[10px] text-zinc-500 font-normal">(ConversationBufferWindowMemory)</span></td>
+                                    <td className="py-2.5 pr-4">Keep only the last K message turns (e.g., last 5 turns). Drop older turns.</td>
+                                    <td className="py-2.5 pr-4 text-emerald-400/90">Simple, fast, zero latency overhead.</td>
+                                    <td className="py-2.5 text-rose-400/90">Forgets information discussed 10 turns ago.</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="py-2.5 pr-4 font-semibold text-blue-400 font-mono">2. Token Trimming<br/><span className="text-[10px] text-zinc-500 font-normal">(trim_messages / tiktoken)</span></td>
+                                    <td className="py-2.5 pr-4">Set a hard token budget (e.g., 1,200 tokens). Iterate backwards from latest turn and pack messages until budget fills.</td>
+                                    <td className="py-2.5 pr-4 text-emerald-400/90">Exact token control; guaranteed zero context overflow.</td>
+                                    <td className="py-2.5 text-rose-400/90">May truncate a multi-paragraph turn mid-conversation.</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="py-2.5 pr-4 font-semibold text-purple-400 font-mono">3. LLM Summarization<br/><span className="text-[10px] text-zinc-500 font-normal">(ConversationSummaryMemory)</span></td>
+                                    <td className="py-2.5 pr-4">Periodically use a smaller LLM (e.g., Llama-3.2 1B) to summarize older turns into a concise 2-sentence running context block.</td>
+                                    <td className="py-2.5 pr-4 text-emerald-400/90">Retains long-term context in very few tokens.</td>
+                                    <td className="py-2.5 text-rose-400/90">Adds an extra LLM call (latency + cost) on every turn.</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="py-2.5 pr-4 font-semibold text-cyan-400 font-mono">4. Vector Store Memory<br/><span className="text-[10px] text-zinc-500 font-normal">(VectorStoreRetrieverMemory)</span></td>
+                                    <td className="py-2.5 pr-4">Save past turns in a vector DB and retrieve only relevant past messages based on current user query semantic similarity.</td>
+                                    <td className="py-2.5 pr-4 text-emerald-400/90">Great for long, complex domain workflows.</td>
+                                    <td className="py-2.5 text-rose-400/90">Setup complexity; potential retrieval mismatches.</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <h5 className="text-sm font-bold text-zinc-100 font-mono">
+                              Part 3: What Answer to Give the Interviewer
+                            </h5>
+                            <div className="rounded-lg border border-orange-500/30 bg-orange-950/10 p-4 space-y-2 text-sm text-zinc-300">
+                              <p className="text-xs font-mono text-orange-400 font-bold">
+                                Interviewer Question: "In LangChain, conversation memory keeps growing and token usage explodes. What strategies would you implement to control context size, and how have you built it?"
+                              </p>
+                              <p className="text-sm leading-relaxed text-zinc-200 italic">
+                                &ldquo;Unbounded memory growth is a major cause of context window overflow and ballooning LLM costs. To solve this, I implement a 3-Layer Memory Control Architecture combining token budgeting, sliding windows, and extractive compression:
+                              </p>
+                              <ol className="list-decimal list-inside ml-2 space-y-1.5 text-xs text-zinc-300 leading-relaxed">
+                                <li><strong>Reverse Token-Budgeted Trimming (tiktoken):</strong> Instead of relying solely on turn count, we enforce a strict token budget (e.g., 1,200 tokens) for chat history. We iterate backwards from the most recent message using <code className="text-[11px] font-mono bg-zinc-900 text-zinc-300 px-1 py-0.5 rounded">tiktoken (cl100k_base)</code> to accumulate only as many recent turns as fit inside the budget. Older messages are automatically pruned.</li>
+                                <li><strong>Proportional Prompt Allocation:</strong> We reserve output completion tokens (e.g., 1,024 tokens) first. Then we calculate remaining tokens dynamically:
+                                  <div className="my-1.5 p-2 rounded bg-black/60 font-mono text-[11px] text-orange-300 border border-zinc-800">
+                                    Available = Context Window - Completion Tokens - System Prompt - User Query
+                                  </div>
+                                  We split the remaining budget deterministically between Episodic Chat History (capped at 1,200 tokens) and Retrieved Document Context (capped at 3,000 tokens).
+                                </li>
+                                <li><strong>Sentence-Level Extractive Compression:</strong> For retrieved context chunks, we run sentence-level keyword scoring to prune filler sentences before injecting them into the prompt.</li>
+                              </ol>
+                              <p className="text-xs text-zinc-400 leading-relaxed italic pt-1">
+                                If long-term history retention were required across 50+ turns, I would upgrade from sliding token trimming to an asynchronous LLM Summarization strategy—summarizing older turns into a running state via a lightweight LLM while keeping the last 3 turns raw.&rdquo;
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-zinc-800/50 pt-3">
+                          <span className="text-xs font-mono text-zinc-500">
+                            Source code: <code className="text-zinc-400">backend/app/services/session_episodic_memory.py</code> &bull; <code className="text-zinc-400">hybrid_memory_coordinator.py</code> &bull; <code className="text-zinc-400">context_compressor.py</code> &bull; <code className="text-zinc-400">config.py</code>
                           </span>
                         </div>
                       </div>
