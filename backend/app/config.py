@@ -114,8 +114,8 @@ class Settings(BaseSettings):
     citation_verifier_enabled: bool = True
     pii_redaction_enabled: bool = False
     evaluator_model: str = ""
-    evaluator_timeout_seconds: int = 45
-    evaluator_max_retries: int = 1
+    evaluator_timeout_seconds: int = 10
+    evaluator_max_retries: int = 0
 
     cors_origins: str = '["http://localhost:3000","http://localhost:5173"]'
 

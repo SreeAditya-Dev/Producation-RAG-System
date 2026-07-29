@@ -64,7 +64,7 @@ class RerankerService:
         passages = [{"text": c.get(text_key, "")} for c in candidates]
 
         try:
-            with httpx.Client(timeout=30) as client:
+            with httpx.Client(timeout=5) as client:
                 resp = client.post(
                     self._url,
                     headers={
