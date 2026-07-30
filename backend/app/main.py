@@ -48,6 +48,7 @@ from app.services.rate_limiter import rate_limiter
 from app.services.prompt_guard import PromptPolicyBlockedError
 from app.services.cost_guard import check_daily_budget
 from app.services.ingestion_queue import ingestion_queue, IngestionTask
+from app.services.startup_checks import run_async_startup_checks, health_tracker
 from app.utils.file_parsers import detect_file_type
 from app.ws_manager import manager
 
@@ -81,7 +82,9 @@ app.add_middleware(
 async def startup():
     create_tables()
     ingestion_queue.start()
-    logger.info("RAG System started. Tables ready. Ingestion queue active.")
+    # Non-blocking async background connection check pass (Pinecone, S3, Redis, Database, LLM, Embeddings)
+    asyncio.create_task(run_async_startup_checks())
+    logger.info("RAG System started. Tables ready. Ingestion queue active. Async service checks initiated in background.")
 
 
 @app.on_event("shutdown")
@@ -119,13 +122,18 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health", response_model=HealthResponse)
 async def health():
-    pinecone_ok = await asyncio.get_event_loop().run_in_executor(
-        None, pinecone_service.test_connection
-    )
+    status_data = health_tracker.get_status()
+    services = status_data.get("services", {})
+    pinecone_check = services.get("pinecone", {})
+    pinecone_status = pinecone_check.get("status", "checking" if status_data.get("is_running") else "unknown")
+
     return HealthResponse(
         status="ok",
-        pinecone="connected" if pinecone_ok else "error",
+        pinecone="connected" if pinecone_status == "ok" else pinecone_status,
         nvidia="configured" if settings.nvidia_api_key else "not configured",
+        version="2.1.0",
+        startup_checks_completed=status_data.get("completed", False),
+        details=services if status_data.get("completed") else None,
     )
 
 

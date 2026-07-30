@@ -94,8 +94,36 @@ class IngestionQueue:
         if self._running:
             return
         self._running = True
-        self._worker_task = asyncio.get_event_loop().create_task(self._worker())
-        logger.info("Ingestion queue started (serial processing).")
+        loop = asyncio.get_event_loop()
+        self._worker_task = loop.create_task(self._worker())
+        loop.create_task(self.recover_pending_documents())
+        logger.info("Ingestion queue started (serial processing + auto recovery active).")
+
+    async def recover_pending_documents(self) -> None:
+        """
+        Finds documents stuck in 'queued' or 'processing' status in DB (e.g., from a prior server restart)
+        and automatically re-enqueues them for background processing.
+        """
+        try:
+            from app.database import SessionLocal, Document
+            session = SessionLocal()
+            stuck_docs = session.query(Document).filter(Document.status.in_(["queued", "processing"])).all()
+            if not stuck_docs:
+                session.close()
+                return
+
+            logger.info("Found %d pending/stuck document(s) in DB upon startup. Re-enqueuing...", len(stuck_docs))
+            for doc in stuck_docs:
+                task = IngestionTask(
+                    doc_id=doc.id,
+                    s3_key=doc.filename,
+                    original_name=doc.original_name,
+                    file_type=doc.file_type,
+                )
+                await self.enqueue(task)
+            session.close()
+        except Exception as exc:
+            logger.error("Failed to recover pending documents on startup: %s", exc)
 
     async def stop(self, timeout: float = 60.0) -> None:
         """

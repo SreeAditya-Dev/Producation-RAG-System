@@ -85,7 +85,9 @@ class HealthResponse(BaseModel):
     status: str
     pinecone: str
     nvidia: str
-    version: str = "1.0.0"
+    version: str = "2.1.0"
+    startup_checks_completed: Optional[bool] = False
+    details: Optional[Dict[str, Any]] = None
 
 
 # ── Observability ─────────────────────────────────────────────────────────────
