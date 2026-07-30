@@ -154,7 +154,9 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: `Error: ${err.message}`, isStreaming: false }
+                ? m.content
+                  ? { ...m, isStreaming: false }
+                  : { ...m, content: `Error: ${err.message}`, isStreaming: false }
                 : m
             )
           );
@@ -209,10 +211,16 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
         );
       }
     } catch {
+      // The answer streams in over the WebSocket, independently of this POST.
+      // If tokens already landed, the request failing (a client-side timeout on
+      // the slow corrective path, typically) must not overwrite a correct
+      // answer with an error — just drop the streaming indicator.
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
-            ? { ...m, content: 'Error: Connection lost. Failed to synthesize answer.', isStreaming: false }
+            ? m.content
+              ? { ...m, isStreaming: false }
+              : { ...m, content: 'Error: Connection lost. Failed to synthesize answer.', isStreaming: false }
             : m
         )
       );

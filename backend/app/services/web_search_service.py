@@ -47,6 +47,12 @@ Search Query:"""
                 temperature=0.0,
                 max_tokens=48,
                 stream=False,
+                # Same rationale as the decomposer and translator: a 48-token
+                # helper call must not ride the client's 30 s default when the
+                # provider stalls. This one is the worst place to pay it — it
+                # only runs on the corrective path, where the request has
+                # already spent its budget on two retrieval rounds.
+                timeout=settings.query_rewrite_timeout_seconds,
             )
 
         try:

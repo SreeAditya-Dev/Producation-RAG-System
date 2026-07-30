@@ -257,28 +257,55 @@ def _source_quality(sources: List[Dict[str, Any]]) -> float:
     return sum(scores) / len(scores) if scores else float("-inf")
 
 
+async def _plan_sub_queries(question: str) -> List[str]:
+    """Decompose into sub-queries and rewrite each, under one stage-wide deadline.
+
+    Decompose must run first (it produces the sub-queries), but the per-sub-query
+    rewrites are independent LLM calls — run them concurrently so one stalled
+    provider request delays the stage by one timeout, not one timeout per
+    sub-query. Neither helper raises (both fall back to the raw query), so only
+    the budget can cut this short, and it exists because the provider SDK retries
+    every stalled call: three sub-queries can otherwise serialize into 30 s+ of
+    backoff. On timeout we keep whatever the decomposer produced and retrieve on
+    the user's own wording — worse recall, not a failed query.
+    """
+    planned: List[str] = [question]
+
+    async def _plan() -> List[str]:
+        nonlocal planned
+        sub_queries = await query_decomposer.decompose(question) or [question]
+        planned = sub_queries  # usable on its own if the rewrites run out of budget
+        translator = QueryTranslator()
+        return list(await asyncio.gather(*(translator.translate_query(q) for q in sub_queries)))
+
+    try:
+        return await asyncio.wait_for(_plan(), timeout=settings.query_planning_budget_seconds)
+    except asyncio.TimeoutError:
+        logger.warning(
+            "Query planning exceeded its %.0fs budget; retrieving on un-rewritten sub-queries: %s",
+            settings.query_planning_budget_seconds, planned,
+        )
+        return planned
+
+
 async def retrieve_only(
     question: str, top_k: int, db_session, doc_ids: Optional[List[str]] = None,
     *, evaluation_mode: bool = False, metrics: Optional[Dict[str, Any]] = None,
+    plan_query: bool = True,
 ) -> Dict[str, Any]:
     """Callable retrieval contract: ordered chunks and stage metadata, no generation.
 
     Evaluation mode avoids decomposition/translation LLM calls so mocked and CI
-    runs are deterministic for a fixed vector/reranker fixture.
+    runs are deterministic for a fixed vector/reranker fixture. `plan_query=False`
+    skips the same LLM calls for callers whose `question` is already a machine-built
+    search string that decomposition can only blur.
     """
     qm = metrics if metrics is not None else {}
     translate_start = time.perf_counter()
-    if evaluation_mode:
+    if evaluation_mode or not plan_query:
         translated = [question]
     else:
-        # Decompose must run first (it produces the sub-queries), but the
-        # per-sub-query rewrites are independent LLM calls — run them
-        # concurrently so one stalled provider request delays the stage by
-        # one timeout, not one timeout per sub-query. translate_query never
-        # raises (it falls back to the raw query), so gather can't blow up.
-        sub_queries = await query_decomposer.decompose(question) or [question]
-        translator = QueryTranslator()
-        translated = list(await asyncio.gather(*(translator.translate_query(q) for q in sub_queries)))
+        translated = await _plan_sub_queries(question)
     qm["translate_ms"] = _ms(translate_start)
     raw = await _embed_and_retrieve_subqueries(translated, top_k, qm, db_session, doc_ids=doc_ids)
     candidates = _verify_active_documents(db_session, raw)
@@ -554,7 +581,14 @@ async def retrieve_and_generate(
                 rewritten = f"{question}\nRetrieve direct evidence; prioritize details related to: {context_hint}"[:settings.retrieval_retry_token_budget * 4]
                 qm["retry_rewritten_query"] = rewritten
                 retry_start = time.perf_counter()
-                retry_result = await retrieve_only(rewritten, top_k, db_session, doc_ids=doc_ids, metrics={})
+                # `rewritten` is already a targeted English search string naming
+                # the documents to prioritize. Decomposing and rewriting it again
+                # is a second full round of planning LLM calls — the single
+                # largest slice of retry latency — and it can only dilute the
+                # hint this branch just added, so plan_query is off here.
+                retry_result = await retrieve_only(
+                    rewritten, top_k, db_session, doc_ids=doc_ids, metrics={}, plan_query=False
+                )
                 retry_sources = retry_result["sources"]
                 original_ids = {s.get("id") for s in sources}
                 retry_ids = {s.get("id") for s in retry_sources}
@@ -628,7 +662,10 @@ async def retrieve_and_generate(
             await emit("generation_token", {"token": token_queue.get_nowait()})
 
         full_answer = "".join(tokens)
-        qm["stream_completed"] = True
+        # A stream that breaks mid-answer returns the tokens it managed to emit
+        # rather than failing the query, so this is a real signal now — not every
+        # run is a clean stream.
+        qm["stream_completed"] = bool(llm_usage.get("stream_completed", 1))
         qm["llm_ms"] = _ms(t)
         qm["prompt_tokens"] = llm_usage.get("prompt_tokens")
         qm["completion_tokens"] = llm_usage.get("completion_tokens")
@@ -638,7 +675,12 @@ async def retrieve_and_generate(
         # Citation-grounding failure can use the one allowed retrieval retry if
         # CRAG did not already consume it. The answer is then repaired only
         # against this new bounded source set; no web/tool recursion is possible.
+        # A truncated answer is excluded: its citations are missing because the
+        # stream was cut, not because retrieval was wrong, so another retrieval
+        # round cannot repair it and would only add latency to a request that
+        # has already degraded.
         if (not citation_result["valid"] and settings.retrieval_retry_enabled
+                and qm["stream_completed"]
                 and qm.get("retry_attempt_count", 0) < settings.retrieval_retry_max_attempts):
             qm.update({"retry_attempt_count": 1, "retry_reason": "citation_grounding"})
             retry_start = time.perf_counter()
@@ -719,7 +761,8 @@ async def retrieve_and_generate(
         # `cacheable` was computed before this turn's own history row was
         # committed, so it still means "generated with empty history" — safe
         # to serve to any other history-free asker of the same question.
-        if cacheable and citation_result["valid"] and not any(s.get("file_type") == "web" for s in sources):
+        if (cacheable and citation_result["valid"] and qm["stream_completed"]
+                and not any(s.get("file_type") == "web" for s in sources)):
             cache_value = {"answer": full_answer, "sources": sources}
             query_cache.set(db_session, question, top_k, cache_value, doc_ids=doc_ids)
             # Reuses the embedding already computed at lookup time — a cached

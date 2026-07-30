@@ -18,6 +18,14 @@ const api = axios.create({
   timeout: 120000,
 });
 
+// /query is the one endpoint that can legitimately run for minutes: when CRAG
+// grades the retrieved context incorrect/ambiguous it runs a second retrieval
+// round plus a web-search fallback before generation even starts. Aborting here
+// does not cancel the backend — the pipeline finishes and delivers the answer
+// over the WebSocket — so a tight timeout produces a false error toast next to a
+// correct on-screen answer rather than saving anyone any waiting.
+const QUERY_TIMEOUT_MS = 300000;
+
 api.interceptors.request.use((config) => {
   const apiKey = import.meta.env.VITE_API_KEY;
   if (apiKey) {
@@ -56,7 +64,7 @@ export const documentsApi = {
 
 export const queryApi = {
   query: (question: string, top_k = 5, session_id?: string) =>
-    api.post<QueryResponse>('/query', { question, top_k, session_id }),
+    api.post<QueryResponse>('/query', { question, top_k, session_id }, { timeout: QUERY_TIMEOUT_MS }),
 
   history: (limit = 20) =>
     api.get<{ queries: QueryResponse[]; total: number }>(`/queries?limit=${limit}`),

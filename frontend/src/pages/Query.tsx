@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { clsx } from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,8 +16,15 @@ export function Query() {
   });
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const { query } = useRAG();
   const { queryState, eventLog, clearLog, connected } = usePipelineCtx();
+  // The pipeline broadcasts `generation_completed` over the WebSocket the moment
+  // the answer is final, whether or not the POST is still open. Reading that
+  // here keeps a late HTTP failure from toasting over an answer already shown.
+  const queryStateRef = useRef(queryState);
+  queryStateRef.current = queryState;
+  const { query } = useRAG({
+    answerDeliveredOutOfBand: () => queryStateRef.current.stage === 'complete',
+  });
   const [logCollapsed, setLogCollapsed] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [telemetryCollapsed, setTelemetryCollapsed] = useState(false);

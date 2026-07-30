@@ -130,6 +130,22 @@ class Settings(BaseSettings):
     # SDK retry succeeds in ~1 s. A tight per-request timeout converts that
     # 30 s stall into a ~10 s worst case per call; the SDK retries after it.
     query_rewrite_timeout_seconds: float = 10.0
+    # Query planning (decompose + one rewrite per sub-query) is the only stage
+    # whose worst case is a *multiple* of its per-call timeout: the SDK retries
+    # each stalled call, so a single sub-query can burn 3 x 10 s before it
+    # succeeds. On the CRAG-corrective path the stage runs twice, which is how a
+    # query crosses the client's timeout. Cap the whole stage on wall clock and
+    # fall back to the un-rewritten sub-queries — rewriting buys recall, so
+    # losing it degrades results slightly rather than failing the request.
+    query_planning_budget_seconds: float = 15.0
+    # Generation streaming. The read timeout is a *gap* budget, not a total: it
+    # fires when the provider sends no bytes for this long, which covers both a
+    # slow first token on a large context and a mid-stream stall. The hosted
+    # endpoint intermittently returns 200 headers and then sends nothing at all,
+    # and the SDK does not retry that (its retries end once headers arrive), so
+    # a stall before the first token is retried here instead.
+    llm_stream_timeout_seconds: float = 30.0
+    llm_stream_max_attempts: int = 2
 
     cors_origins: str = '["http://localhost:3000","http://localhost:5173"]'
 

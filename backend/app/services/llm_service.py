@@ -1,3 +1,4 @@
+import httpx
 from openai import OpenAI
 from typing import Callable, Generator, List, Dict, Any, Tuple
 import logging
@@ -113,30 +114,75 @@ class LLMService:
         return response.choices[0].message.content or ""
 
     def stream_messages(self, messages: List[Dict[str, str]], on_token: Callable[[str], None]) -> Dict[str, int]:
-        """Yield provider deltas through ``on_token`` and return final usage."""
+        """Yield provider deltas through ``on_token`` and return final usage.
+
+        A stall *before* the first token is retried: the hosted endpoint
+        intermittently returns 200 headers and then sends nothing until the read
+        timeout, and a fresh attempt starts producing tokens normally. The SDK
+        cannot cover this itself — its retries stop once headers arrive.
+
+        A stall *after* tokens have been emitted is never retried: those tokens
+        already reached the browser over the WebSocket, so a second attempt would
+        duplicate them. The partial answer is kept and reported via
+        ``stream_completed``, which beats collapsing a mostly-written answer into
+        a 500.
+        """
+        attempts = max(1, settings.llm_stream_max_attempts)
+        for attempt in range(attempts):
+            emitted = 0
+
+            def track(token: str) -> None:
+                nonlocal emitted
+                emitted += 1
+                on_token(token)
+
+            try:
+                usage = self._consume_stream(messages, track)
+                usage["stream_completed"] = 1
+                return usage
+            except Exception as e:
+                if emitted:
+                    logger.error(
+                        "LLM stream broke after %d tokens; keeping the partial answer: %s", emitted, e
+                    )
+                    # Usage only ever arrives on the final chunk, so a broken
+                    # stream has none to report.
+                    return {"stream_completed": 0}
+                if attempt + 1 >= attempts:
+                    logger.error("LLM incremental streaming error: %s", e)
+                    raise
+                logger.warning(
+                    "LLM stream produced no tokens (attempt %d/%d), retrying: %s",
+                    attempt + 1, attempts, e,
+                )
+        raise RuntimeError("unreachable: stream attempts exhausted without result or raise")
+
+    def _consume_stream(
+        self, messages: List[Dict[str, str]], on_token: Callable[[str], None]
+    ) -> Dict[str, int]:
         usage: Dict[str, int] = {}
-        try:
-            stream = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=settings.temperature,
-                top_p=0.7,
-                max_tokens=settings.max_tokens,
-                stream=True,
-                stream_options={"include_usage": True},
-            )
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content is not None:
-                    on_token(chunk.choices[0].delta.content)
-                if getattr(chunk, "usage", None):
-                    usage = {
-                        "prompt_tokens": chunk.usage.prompt_tokens or 0,
-                        "completion_tokens": chunk.usage.completion_tokens or 0,
-                    }
-            return usage
-        except Exception as e:
-            logger.error("LLM incremental streaming error: %s", e)
-            raise
+        stream = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=settings.temperature,
+            top_p=0.7,
+            max_tokens=settings.max_tokens,
+            stream=True,
+            stream_options={"include_usage": True},
+            # Explicit per-request budget so generation does not inherit the
+            # client default: `read` is the allowed gap between chunks, which is
+            # what a stalled stream actually violates.
+            timeout=httpx.Timeout(settings.llm_stream_timeout_seconds, connect=10.0),
+        )
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content is not None:
+                on_token(chunk.choices[0].delta.content)
+            if getattr(chunk, "usage", None):
+                usage = {
+                    "prompt_tokens": chunk.usage.prompt_tokens or 0,
+                    "completion_tokens": chunk.usage.completion_tokens or 0,
+                }
+        return usage
 
     # ── Internal ──────────────────────────────────────────────────────────────
 
