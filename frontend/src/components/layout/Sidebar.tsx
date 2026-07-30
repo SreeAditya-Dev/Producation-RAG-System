@@ -7,7 +7,8 @@ import {
   Cpu,
   ChevronLeft,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  ClipboardCheck
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -17,6 +18,7 @@ const links = [
   { to: '/query', icon: MessageSquare, label: 'Query', color: '#10b981' },
   { to: '/kt-graph', icon: Cpu, label: 'Memory Graph', color: '#ec4899' },
   { to: '/visualizer', icon: Activity, label: 'Live Pipeline', color: '#f59e0b' },
+  { to: '/review', icon: ClipboardCheck, label: 'Feedback Review', color: '#f43f5e' },
   { to: '/docs', icon: BookOpen, label: 'Documentation', color: '#a855f7' },
 ];
 

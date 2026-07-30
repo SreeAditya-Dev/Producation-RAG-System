@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Loader2, Zap, CornerDownLeft, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import ReactMarkdown from 'react-markdown';
-import type { QueryResponse } from '../../types';
+import type { QueryResponse, FeedbackReason } from '../../types';
+import { FEEDBACK_REASONS, FEEDBACK_REASON_LABELS } from '../../types';
 import { queryApi } from '../../services/api';
 
 export interface Message {
@@ -71,16 +72,37 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamMsgIdRef = useRef<string | null>(null);
-  const [feedbackSent, setFeedbackSent] = useState<Record<string, 'up' | 'down'>>({});
+  const [feedbackSent, setFeedbackSent] = useState<Record<string, { rating: 'up' | 'down'; reason?: string }>>({});
+  // A down-vote opens an inline reason picker instead of submitting straight
+  // away — the reason is what makes the aggregate dashboard readable.
+  const [reasonPanelFor, setReasonPanelFor] = useState<string | null>(null);
+  const [draftReason, setDraftReason] = useState<FeedbackReason | null>(null);
+  const [draftCorrection, setDraftCorrection] = useState('');
 
-  const submitFeedback = async (messageId: string, queryId: string, rating: 'up' | 'down') => {
+  const closeReasonPanel = () => {
+    setReasonPanelFor(null);
+    setDraftReason(null);
+    setDraftCorrection('');
+  };
+
+  const openReasonPanel = (messageId: string) => {
+    setReasonPanelFor(messageId);
+    setDraftReason(null);
+    setDraftCorrection('');
+  };
+
+  const submitFeedback = async (
+    messageId: string,
+    queryId: string,
+    rating: 'up' | 'down',
+    reason?: FeedbackReason,
+    correction?: string,
+  ) => {
     if (feedbackSent[messageId]) return;
-    const correction = rating === 'down'
-      ? window.prompt('Optional correction or missing detail:')?.trim() || undefined
-      : undefined;
     try {
-      await queryApi.feedback(queryId, rating, correction);
-      setFeedbackSent((current) => ({ ...current, [messageId]: rating }));
+      await queryApi.feedback(queryId, rating, correction?.trim() || undefined, reason);
+      setFeedbackSent((current) => ({ ...current, [messageId]: { rating, reason } }));
+      closeReasonPanel();
     } catch {
       // Feedback is non-critical; preserve the answer if the telemetry endpoint fails.
     }
@@ -260,24 +282,109 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
                 </div>
 
                 {msg.role === 'assistant' && !msg.isStreaming && msg.queryId && (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => submitFeedback(msg.id, msg.queryId!, 'up')}
-                      disabled={Boolean(feedbackSent[msg.id])}
-                      aria-label="Helpful answer"
-                      className="p-1 text-zinc-600 hover:text-emerald-400 disabled:opacity-50"
-                    >
-                      <ThumbsUp size={13} />
-                    </button>
-                    <button
-                      onClick={() => submitFeedback(msg.id, msg.queryId!, 'down')}
-                      disabled={Boolean(feedbackSent[msg.id])}
-                      aria-label="Unhelpful answer"
-                      className="p-1 text-zinc-600 hover:text-red-400 disabled:opacity-50"
-                    >
-                      <ThumbsDown size={13} />
-                    </button>
-                    {feedbackSent[msg.id] && <span className="text-[9px] font-mono text-zinc-600">feedback saved</span>}
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => submitFeedback(msg.id, msg.queryId!, 'up')}
+                        disabled={Boolean(feedbackSent[msg.id])}
+                        aria-label="Helpful answer"
+                        className={clsx(
+                          'p-1 disabled:opacity-50',
+                          feedbackSent[msg.id]?.rating === 'up'
+                            ? 'text-emerald-400'
+                            : 'text-zinc-600 hover:text-emerald-400'
+                        )}
+                      >
+                        <ThumbsUp size={13} />
+                      </button>
+                      <button
+                        onClick={() => openReasonPanel(msg.id)}
+                        disabled={Boolean(feedbackSent[msg.id])}
+                        aria-label="Unhelpful answer"
+                        aria-expanded={reasonPanelFor === msg.id}
+                        className={clsx(
+                          'p-1 disabled:opacity-50',
+                          feedbackSent[msg.id]?.rating === 'down'
+                            ? 'text-red-400'
+                            : 'text-zinc-600 hover:text-red-400'
+                        )}
+                      >
+                        <ThumbsDown size={13} />
+                      </button>
+                      {feedbackSent[msg.id] && (
+                        <span className="text-[9px] font-mono text-zinc-600">
+                          feedback saved
+                          {feedbackSent[msg.id].reason
+                            ? ` · ${FEEDBACK_REASON_LABELS[feedbackSent[msg.id].reason!] ?? feedbackSent[msg.id].reason}`
+                            : ''}
+                        </span>
+                      )}
+                    </div>
+
+                    <AnimatePresence>
+                      {reasonPanelFor === msg.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-2 space-y-2.5 rounded-lg border border-zinc-900 bg-zinc-950/80 p-3">
+                            <p className="text-[9px] font-mono uppercase tracking-wider text-zinc-500">
+                              What went wrong?
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {FEEDBACK_REASONS.map((reason) => (
+                                <button
+                                  key={reason.value}
+                                  type="button"
+                                  title={reason.hint}
+                                  onClick={() => setDraftReason(reason.value)}
+                                  className={clsx(
+                                    'rounded border px-2 py-1 text-[10px] font-mono transition-colors',
+                                    draftReason === reason.value
+                                      ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                                      : 'border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
+                                  )}
+                                >
+                                  {reason.label}
+                                </button>
+                              ))}
+                            </div>
+                            <textarea
+                              value={draftCorrection}
+                              onChange={(e) => setDraftCorrection(e.target.value)}
+                              rows={2}
+                              maxLength={4000}
+                              placeholder="Optional: the correct answer, or the detail that was missed"
+                              className="w-full resize-none rounded border border-zinc-900 bg-black px-2 py-1.5 text-[10px] font-mono text-zinc-300 placeholder-zinc-700 focus:border-zinc-700 focus:outline-none"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={!draftReason}
+                                onClick={() =>
+                                  submitFeedback(msg.id, msg.queryId!, 'down', draftReason!, draftCorrection)
+                                }
+                                className="rounded border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-[10px] font-mono text-red-300 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Send feedback
+                              </button>
+                              <button
+                                type="button"
+                                onClick={closeReasonPanel}
+                                className="rounded border border-zinc-800 px-2.5 py-1 text-[10px] font-mono text-zinc-500 transition-colors hover:text-zinc-300"
+                              >
+                                Cancel
+                              </button>
+                              {!draftReason && (
+                                <span className="text-[9px] font-mono text-zinc-700">pick a reason first</span>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
 

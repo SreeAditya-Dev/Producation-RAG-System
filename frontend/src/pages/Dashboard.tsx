@@ -37,6 +37,7 @@ import {
 import { ResponsiveContainer, LineChart, Line, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { clsx } from 'clsx';
 import { systemApi, queryApi, documentsApi, feedbackApi } from '../services/api';
+import { FEEDBACK_REASON_LABELS } from '../types';
 import { usePipelineCtx } from '../components/layout/Layout';
 
 export function Dashboard() {
@@ -839,7 +840,9 @@ export function Dashboard() {
               {negativeReasons.map(([reason, count]) => (
                 <div key={reason} className="space-y-1">
                   <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-slate-300 font-semibold truncate max-w-[75%]">{reason}</span>
+                    <span className="text-slate-300 font-semibold truncate max-w-[75%]">
+                      {FEEDBACK_REASON_LABELS[reason] ?? reason}
+                    </span>
                     <span className="text-slate-500">{count}</span>
                   </div>
                   <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden relative">

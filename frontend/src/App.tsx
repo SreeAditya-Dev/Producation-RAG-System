@@ -8,6 +8,7 @@ import { Query } from './pages/Query';
 import { Visualizer } from './pages/Visualizer';
 import { Docs } from './pages/Docs';
 import { KTGraph } from './pages/KTGraph';
+import { Review } from './pages/Review';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/visualizer" element={<Visualizer />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/kt-graph" element={<KTGraph />} />
+            <Route path="/review" element={<Review />} />
           </Route>
         </Routes>
       </BrowserRouter>

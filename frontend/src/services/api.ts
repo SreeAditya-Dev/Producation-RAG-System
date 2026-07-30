@@ -7,6 +7,7 @@ import type {
   HealthResponse,
   ObservabilityResponse,
   FeedbackAggregatesResponse,
+  FeedbackReviewCandidatesResponse,
 } from '../types';
 import { getClientId } from './clientId';
 
@@ -60,8 +61,8 @@ export const queryApi = {
   history: (limit = 20) =>
     api.get<{ queries: QueryResponse[]; total: number }>(`/queries?limit=${limit}`),
 
-  feedback: (queryId: string, rating: 'up' | 'down', correction?: string) =>
-    api.post(`/queries/${queryId}/feedback`, { rating, correction }),
+  feedback: (queryId: string, rating: 'up' | 'down', correction?: string, reason?: string) =>
+    api.post(`/queries/${queryId}/feedback`, { rating, correction, reason }),
 };
 
 export const systemApi = {
@@ -72,4 +73,9 @@ export const systemApi = {
 
 export const feedbackApi = {
   aggregates: () => api.get<FeedbackAggregatesResponse>('/feedback/aggregates'),
+
+  // Read-only export of down-rated / corrected queries. The backend has no write
+  // path from here into fixtures or indexes — approved cases are committed by hand.
+  reviewCandidates: (limit = 200) =>
+    api.get<FeedbackReviewCandidatesResponse>(`/feedback/review-candidates?limit=${limit}`),
 };

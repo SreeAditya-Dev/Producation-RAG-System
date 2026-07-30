@@ -123,7 +123,38 @@ export interface ObservabilityResponse {
   failures: FailureStats;
 }
 
-// ── Feedback aggregates ───────────────────────────────────────────────────────
+// ── Feedback ──────────────────────────────────────────────────────────────────
+
+// A closed vocabulary, not free text: `/api/feedback/aggregates` groups by the
+// raw `reason` column, so anything typed by hand would shard into one-off
+// buckets and never form a signal.
+export const FEEDBACK_REASONS = [
+  { value: 'incorrect', label: 'Incorrect', hint: 'The answer states something false' },
+  { value: 'incomplete', label: 'Incomplete', hint: 'Left out information that is in the documents' },
+  { value: 'unsupported', label: 'Unsupported', hint: 'Not backed by the sources it cited' },
+  { value: 'wrong_sources', label: 'Wrong sources', hint: 'Retrieval surfaced the wrong chunks' },
+  { value: 'unclear', label: 'Unclear', hint: 'Hard to follow or badly structured' },
+] as const;
+
+export type FeedbackReason = (typeof FEEDBACK_REASONS)[number]['value'];
+
+export const FEEDBACK_REASON_LABELS: Record<string, string> = Object.fromEntries(
+  FEEDBACK_REASONS.map((reason) => [reason.value, reason.label])
+);
+
+export interface FeedbackReviewCandidate {
+  query_id: string;
+  question: string;
+  answer: string | null;
+  rating: 'up' | 'down' | null;
+  correction: string | null;
+  reason: string | null;
+}
+
+export interface FeedbackReviewCandidatesResponse {
+  requires_human_approval: boolean;
+  candidates: FeedbackReviewCandidate[];
+}
 
 export interface FeedbackAggregatesResponse {
   feedback_count: number;
