@@ -268,10 +268,17 @@ async def retrieve_only(
     """
     qm = metrics if metrics is not None else {}
     translate_start = time.perf_counter()
-    translated = [question] if evaluation_mode else [await QueryTranslator().translate_query(q) for q in (await query_decomposer.decompose(question) or [question])]
-    # Decompose + per-sub-query rewrite are serial LLM calls, so a slow provider
-    # shows up here rather than inflating whichever stage happens to be measured
-    # across the whole retrieval block.
+    if evaluation_mode:
+        translated = [question]
+    else:
+        # Decompose must run first (it produces the sub-queries), but the
+        # per-sub-query rewrites are independent LLM calls — run them
+        # concurrently so one stalled provider request delays the stage by
+        # one timeout, not one timeout per sub-query. translate_query never
+        # raises (it falls back to the raw query), so gather can't blow up.
+        sub_queries = await query_decomposer.decompose(question) or [question]
+        translator = QueryTranslator()
+        translated = list(await asyncio.gather(*(translator.translate_query(q) for q in sub_queries)))
     qm["translate_ms"] = _ms(translate_start)
     raw = await _embed_and_retrieve_subqueries(translated, top_k, qm, db_session, doc_ids=doc_ids)
     candidates = _verify_active_documents(db_session, raw)
@@ -360,19 +367,33 @@ async def retrieve_and_generate(
         if settings.pii_redaction_enabled:
             question = redact_pii(question)
 
-        # ── 0. Query cache check (stateless queries only) ─────────────────────
+        # ── 0. Query cache check (history-free queries only) ──────────────────
         # Three tiers, cheapest first: exact hash → semantic (dense cosine over
         # cached query embeddings) → retrieval fragment. All are keyed to a
         # corpus fingerprint, not just a TTL, so any ingest/replace/delete drops
         # the whole cache and a hit can never predate a document change.
+        #
+        # Eligibility is "no conversation history", not "no session": the UI
+        # sends a session_id on every query, but a session's FIRST turn has no
+        # episodic history yet (memory_coordinator packs prior successful
+        # QueryHistory rows), so its answer cannot depend on the thread — it is
+        # cache-equivalent to a stateless call. Turn 2+ still bypasses all
+        # tiers: those answers are conditioned on history, and replaying one
+        # keyed only on question text could contradict the conversation.
         cache_embedding = None
-        if not session_id:
+        cacheable = not session_id or db_session.query(QueryHistory.id).filter(
+            QueryHistory.session_id == session_id,
+            QueryHistory.status == "success",
+        ).first() is None
+        if cacheable:
             cached = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: query_cache.get(db_session, question, top_k, doc_ids)
             )
             if cached is not None:
                 qm.update({"cache_type": "exact", "stream_completed": True, "total_ms": _ms(pipeline_start)})
-                history = QueryHistory(id=query_id, session_id=None, client_id=client_id, question=question, answer=cached["answer"], sources_json=json.dumps(cached["sources"]), processing_time=0.0, status="success", created_at=datetime.utcnow())
+                # Keep the real session_id: a first-turn hit must still anchor
+                # its thread so the next turn sees this exchange as history.
+                history = QueryHistory(id=query_id, session_id=session_id, client_id=client_id, question=question, answer=cached["answer"], sources_json=json.dumps(cached["sources"]), processing_time=0.0, status="success", created_at=datetime.utcnow())
                 db_session.add(history)
                 _save_query_metrics(db_session, query_id, qm)
                 db_session.commit()
@@ -409,7 +430,7 @@ async def retrieve_and_generate(
                 qm["cache_type"] = "semantic"
                 qm["cache_similarity"] = cached.get("_cache_similarity")
                 qm.update({"stream_completed": True, "total_ms": _ms(pipeline_start)})
-                db_session.add(QueryHistory(id=query_id, session_id=None, client_id=client_id, question=question, answer=cached["answer"], sources_json=json.dumps(cached["sources"]), processing_time=0.0, status="success", created_at=datetime.utcnow()))
+                db_session.add(QueryHistory(id=query_id, session_id=session_id, client_id=client_id, question=question, answer=cached["answer"], sources_json=json.dumps(cached["sources"]), processing_time=0.0, status="success", created_at=datetime.utcnow()))
                 _save_query_metrics(db_session, query_id, qm)
                 db_session.commit()
                 await emit("cache_hit", {"query_id": query_id, "type": "semantic", "similarity": cached.get("_cache_similarity")})
@@ -422,10 +443,10 @@ async def retrieve_and_generate(
         # Fragment cache: reuse the retrieved+reranked chunks for a repeat or
         # paraphrase, skipping decompose/embed/BM25/rerank. Generation still
         # runs on this turn, so the answer is fresh — only the evidence-gathering
-        # work is amortized. Session-bound turns skip it (cache_embedding is None
-        # and the exact key was never populated for them).
+        # work is amortized. History-bearing turns skip it (cache_embedding is
+        # None and the keys were never populated for them).
         retrieval = None
-        if not session_id:
+        if cacheable:
             retrieval = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: query_cache.retrieval_get(db_session, question, top_k, doc_ids, embedding=cache_embedding)
             )
@@ -443,7 +464,7 @@ async def retrieve_and_generate(
         else:
             retrieval = await retrieve_only(question, top_k, db_session, doc_ids=doc_ids, metrics=qm)
             qm["retrieval_cache_hit"] = False
-            if not session_id:
+            if cacheable:
                 fragment = {
                     "sources": retrieval["sources"],
                     "translated_queries": retrieval["translated_queries"],
@@ -695,7 +716,10 @@ async def retrieve_and_generate(
         _save_query_metrics(db_session, query_id, qm)
         db_session.commit()
 
-        if not session_id and citation_result["valid"] and not any(s.get("file_type") == "web" for s in sources):
+        # `cacheable` was computed before this turn's own history row was
+        # committed, so it still means "generated with empty history" — safe
+        # to serve to any other history-free asker of the same question.
+        if cacheable and citation_result["valid"] and not any(s.get("file_type") == "web" for s in sources):
             cache_value = {"answer": full_answer, "sources": sources}
             query_cache.set(db_session, question, top_k, cache_value, doc_ids=doc_ids)
             # Reuses the embedding already computed at lookup time — a cached

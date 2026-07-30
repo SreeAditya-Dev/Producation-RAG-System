@@ -125,6 +125,11 @@ class Settings(BaseSettings):
     evaluator_model: str = ""
     evaluator_timeout_seconds: int = 10
     evaluator_max_retries: int = 0
+    # Decompose/translate are tiny (≤128-token) helper calls, but the provider
+    # intermittently stalls a request for the full client timeout before the
+    # SDK retry succeeds in ~1 s. A tight per-request timeout converts that
+    # 30 s stall into a ~10 s worst case per call; the SDK retries after it.
+    query_rewrite_timeout_seconds: float = 10.0
 
     cors_origins: str = '["http://localhost:3000","http://localhost:5173"]'
 

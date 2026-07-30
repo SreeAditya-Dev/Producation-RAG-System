@@ -312,6 +312,43 @@ async def test_semantic_query_cache_hit(monkeypatch, db_session):
     assert mocks["llm"].stream_count == 1, "LLM should not execute on semantic cache hit"
 
 
+# ── Test 3b: First session turn is cacheable; later turns bypass ─────────────
+
+@pytest.mark.asyncio
+async def test_session_first_turn_uses_cache_later_turns_bypass(monkeypatch, db_session):
+    """
+    Cache eligibility is "no conversation history", not "no session_id":
+    - Session A turn 1 (no prior turns): populates the cache.
+    - Session B turn 1, same question: exact cache hit; thread keeps B's session_id.
+    - Session B turn 2 (now has history): bypasses cache, full pipeline runs.
+    """
+    _clear_query_cache()
+    mocks = _configure_pipeline_mocks(monkeypatch)
+    monkeypatch.setattr(retrieval.settings, "query_cache_enabled", True)
+    monkeypatch.setattr(retrieval.settings, "semantic_cache_enabled", False)
+
+    question = "Explain reranker cross-encoder scoring"
+
+    # --- Session A, turn 1: miss, populates cache ---
+    res1 = await retrieval.retrieve_and_generate(question, top_k=2, db_session=db_session, session_id="sess-A")
+    assert mocks["llm"].stream_count == 1
+    assert db_session.query(QueryMetrics).filter_by(id=res1["query_id"]).one().cache_type == "none"
+
+    # --- Session B, turn 1: exact hit despite carrying a session_id ---
+    res2 = await retrieval.retrieve_and_generate(question, top_k=2, db_session=db_session, session_id="sess-B")
+    assert res2["answer"] == res1["answer"]
+    assert res2["processing_time"] == 0.0
+    assert mocks["llm"].stream_count == 1, "LLM must not run on a first-turn cache hit"
+    assert db_session.query(QueryMetrics).filter_by(id=res2["query_id"]).one().cache_type == "exact"
+    # The hit must anchor the thread: turn 2 of session B needs this as history.
+    assert db_session.query(QueryHistory).filter_by(id=res2["query_id"]).one().session_id == "sess-B"
+
+    # --- Session B, turn 2: history exists now -> cache bypassed ---
+    res3 = await retrieval.retrieve_and_generate(question, top_k=2, db_session=db_session, session_id="sess-B")
+    assert mocks["llm"].stream_count == 2, "History-bearing turn must bypass the cache"
+    assert db_session.query(QueryMetrics).filter_by(id=res3["query_id"]).one().cache_type == "none"
+
+
 # ── Test 4: Corpus Fingerprint Cache Invalidation ─────────────────────────────
 
 @pytest.mark.asyncio

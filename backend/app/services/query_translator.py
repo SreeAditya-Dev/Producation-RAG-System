@@ -1,4 +1,5 @@
 import logging
+from app.config import settings
 from app.services.llm_service import llm_service
 from app.observability import traceable
 
@@ -56,7 +57,11 @@ English Query:"""
                 messages=messages,
                 temperature=0.0,
                 max_tokens=64,
-                stream=False
+                stream=False,
+                # Per-request override of the client's 30 s default; the SDK
+                # retries a timed-out call, and retries after a stall
+                # consistently succeed fast.
+                timeout=settings.query_rewrite_timeout_seconds,
             )
 
         # Run blocking OpenAI call in a separate thread

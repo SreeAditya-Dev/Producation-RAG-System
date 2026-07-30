@@ -2,6 +2,7 @@ import logging
 import json
 import asyncio
 from typing import List
+from app.config import settings
 from app.services.llm_service import llm_service
 from app.observability import traceable
 
@@ -59,7 +60,10 @@ JSON Output:"""
                 messages=messages,
                 temperature=0.0,
                 max_tokens=128,
-                stream=False
+                stream=False,
+                # Same rationale as the translator: don't let a helper call
+                # ride the 30 s client default when a retry succeeds in ~1 s.
+                timeout=settings.query_rewrite_timeout_seconds,
             )
 
         loop = asyncio.get_event_loop()

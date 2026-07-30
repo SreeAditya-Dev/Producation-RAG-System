@@ -95,9 +95,11 @@ JSON Output:"""
             except Exception as exc:
                 last_error = exc
                 if attempt + 1 < max(1, settings.evaluator_max_retries + 1):
-                    logger.warning("CRAG evaluator attempt %d failed: %s", attempt + 1, exc)
+                    logger.warning("CRAG evaluator attempt %d failed: %r", attempt + 1, exc)
         if response is None:
-            raise RuntimeError(f"CRAG evaluator unavailable: {last_error}") from last_error
+            # repr, not str: asyncio.TimeoutError stringifies to "" and would
+            # otherwise log an unactionable blank reason.
+            raise RuntimeError(f"CRAG evaluator unavailable: {last_error!r}") from last_error
         content = (response.choices[0].message.content or "").strip()
 
         if content.startswith("```"):
