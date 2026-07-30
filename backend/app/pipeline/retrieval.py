@@ -384,6 +384,10 @@ async def retrieve_and_generate(
         await emit("query_started", {"query_id": query_id, "question": question})
 
         # Enforce question policy before decomposition, retrieval, or grading.
+        # Named as its own stage: a policy block used to persist under the
+        # initial "embed" value, so a refused question was indistinguishable
+        # from an embedding-service outage in both telemetry and the UI.
+        current_stage = "prompt_policy"
         policy = prompt_guard.screen_question(question)
         qm["prompt_injection_question_flagged"] = bool(policy["hits"])
         if policy["action"] == "block":
@@ -393,6 +397,7 @@ async def retrieve_and_generate(
             question = policy["text"]
         if settings.pii_redaction_enabled:
             question = redact_pii(question)
+        current_stage = "embed"
 
         # ── 0. Query cache check (history-free queries only) ──────────────────
         # Three tiers, cheapest first: exact hash → semantic (dense cosine over
@@ -731,8 +736,15 @@ async def retrieve_and_generate(
             if repaired_result["valid"]:
                 full_answer, citation_result, qm["citation_repaired"] = repaired, repaired_result, True
         if not citation_result["valid"]:
+            # Deliberately NOT re-validating into `citation_result`. The
+            # boilerplate always passes (it opens with "I don't have enough", so
+            # it carries no material claims, and it lists every source), so
+            # re-validating overwrote the real verdict and every citation
+            # failure was persisted as a citation *success* — this whole class
+            # of discarded answer was invisible in the dashboard. Keeping the
+            # original verdict also stops the boilerplate reaching the answer
+            # cache, where it would have been replayed to later askers.
             full_answer = insufficient_evidence_answer(sources)
-            citation_result = validate_citations(full_answer, sources)
         qm.update({f"citation_{key}": value for key, value in citation_result.items()})
 
         qm["total_ms"] = _ms(pipeline_start)

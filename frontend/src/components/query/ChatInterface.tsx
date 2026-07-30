@@ -235,17 +235,22 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
           )
         );
       }
-    } catch {
+    } catch (err: any) {
       // The answer streams in over the WebSocket, independently of this POST.
       // If tokens already landed, the request failing (a client-side timeout on
       // the slow corrective path, typically) must not overwrite a correct
       // answer with an error — just drop the streaming indicator.
+      //
+      // Otherwise show what the server actually said: a policy refusal and a
+      // rate-limit both arrive here, and reporting either as "connection lost"
+      // sends the user looking for a network problem they don't have.
+      const detail = err?.message || 'Connection lost. Failed to synthesize answer.';
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId
             ? m.content
               ? { ...m, isStreaming: false }
-              : { ...m, content: 'Error: Connection lost. Failed to synthesize answer.', isStreaming: false }
+              : { ...m, content: `Error: ${detail}`, isStreaming: false }
             : m
         )
       );

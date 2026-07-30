@@ -143,7 +143,9 @@ async def test_citation_failure_uses_at_most_one_retry_and_safe_answer(monkeypat
     assert result["answer"].startswith("I don't have enough grounded evidence")
     metrics = db_session.query(QueryMetrics).one()
     assert metrics.retry_attempt_count == 1
-    assert metrics.citation_valid is True
+    # The uncited answer failed validation and was replaced; the persisted
+    # verdict describes that answer, not the boilerplate that replaced it.
+    assert metrics.citation_valid is False
 
 
 @pytest.mark.asyncio

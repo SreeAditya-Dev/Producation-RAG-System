@@ -10,6 +10,22 @@ import { QueryVisualizer } from '../components/visualizer/QueryVisualizer';
 import { EventLog } from '../components/visualizer/EventLog';
 import { queryApi } from '../services/api';
 
+// Failed queries persist with a null answer and the stage that failed. Without
+// this a refused question read as "Error: query failed at embed" — the initial
+// stage value — which described an embedding outage rather than what happened.
+const FAILURE_MESSAGES: Record<string, string> = {
+  prompt_policy: 'This question was blocked by the prompt-safety policy. Rephrase it as a normal question about your documents.',
+  embed: 'Could not turn the question into an embedding — the embedding service did not respond.',
+  retrieve: 'Could not search the document index.',
+  crag_evaluate: 'Could not grade the retrieved context.',
+  web_search: 'The web-search fallback failed.',
+  llm: 'The model stopped responding before the answer was finished.',
+};
+
+function failureMessage(stage?: string | null): string {
+  return (stage && FAILURE_MESSAGES[stage]) || 'This query failed before an answer was produced.';
+}
+
 export function Query() {
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
     return 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
@@ -105,9 +121,9 @@ export function Query() {
           // buttons vanished seconds after appearing — and never came back for
           // any restored session.
           queryId: q.query_id,
-          // Failed queries persist with a null answer; show the failure instead
-          // of an empty assistant bubble.
-          content: q.answer ?? `Error: query failed${q.failure_stage ? ` at ${q.failure_stage}` : ''}.`,
+          // Failed queries persist with a null answer; show what actually went
+          // wrong instead of an empty assistant bubble.
+          content: q.answer ?? failureMessage(q.failure_stage),
           sources: q.sources,
           processingTime: q.processing_time,
           feedbackRating: q.feedback_rating,

@@ -3,6 +3,20 @@ from app.services.session_episodic_memory import SessionEpisodicMemory
 from app.config import settings
 from app.services.context_compressor import context_compressor
 
+
+def source_prefix(index: int, label: str) -> str:
+    """Label a context chunk so the citation token is the only `[S…]` in the prompt.
+
+    Models mirror the shape they are shown. The filename used to sit *inside* the
+    brackets (`[S1: guide.md]`), which taught the model to cite that way — and the
+    citation validator scores anything but a bare index as malformed, so a
+    correct, well-sourced answer got replaced by the insufficient-evidence
+    boilerplate. Keeping the filename outside the brackets removes the ambiguity
+    at the source; the validator is separately tolerant of both shapes.
+    """
+    return f"[S{index}] (source: {label})\n"
+
+
 class HybridMemoryCoordinator:
     """
     Coordinates various memory modules to build a unified working context
@@ -69,8 +83,9 @@ class HybridMemoryCoordinator:
                 continue
             text = chunk.get("text", "")
             source_label = chunk.get("original_name", "Unknown")
-            source_prefix = f"[S{len(packed_chunks) + 1}: {source_label}]\n"
-            prefix_tokens = context_compressor.count_tokens(source_prefix)
+            prefix_tokens = context_compressor.count_tokens(
+                source_prefix(len(packed_chunks) + 1, source_label)
+            )
             if remaining <= prefix_tokens:
                 dropped += 1
                 continue
@@ -119,5 +134,5 @@ class HybridMemoryCoordinator:
         for i, chunk in enumerate(chunks, 1):
             source = chunk.get("original_name", "Unknown")
             text = chunk.get("text", "")
-            parts.append(f"[S{i}: {source}]\n{text}")
+            parts.append(f"{source_prefix(i, source)}{text}")
         return "\n\n---\n\n".join(parts)

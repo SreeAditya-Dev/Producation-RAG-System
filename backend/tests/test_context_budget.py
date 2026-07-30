@@ -27,4 +27,8 @@ def test_context_budget_keeps_only_prompted_sources(monkeypatch):
 
     assert metrics["context_tokens_estimated"] <= 30
     assert len(chunks) <= 1
-    assert "[S1:" in messages[-1]["content"]
+    # The citation token stands alone and the filename sits outside the
+    # brackets, so the only `[S…]` shape the model is shown is the one the
+    # citation validator accepts.
+    assert "[S1]" in messages[-1]["content"]
+    assert "[S1:" not in messages[-1]["content"]

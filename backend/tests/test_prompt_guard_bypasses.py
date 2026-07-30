@@ -71,3 +71,38 @@ def test_discussing_a_system_prompt_stays_answerable():
 
 def test_empty_question_is_allowed():
     assert screen_question("")["action"] == "allow"
+
+
+class _NoopManager:
+    async def broadcast(self, *args, **kwargs):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_blocked_question_is_attributed_to_the_policy_stage(monkeypatch):
+    """A refusal must not persist under the initial "embed" stage — that read to
+    the user as an embedding-service outage rather than a refusal."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.database import Base, QueryHistory
+    from app.pipeline import retrieval
+    from app.services.prompt_guard import PromptPolicyBlockedError
+
+    monkeypatch.setattr(retrieval, "manager", _NoopManager())
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine)()
+    try:
+        with pytest.raises(PromptPolicyBlockedError):
+            await retrieval.retrieve_and_generate(_REPORTED_BYPASS, 1, db, client_id="client-a")
+
+        row = db.query(QueryHistory).one()
+        assert row.status == "error"
+        assert row.failure_stage == "prompt_policy"
+        assert row.error_type == "PromptPolicyBlockedError"
+    finally:
+        db.close()

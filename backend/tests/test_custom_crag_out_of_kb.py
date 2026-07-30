@@ -316,7 +316,11 @@ async def test_pipeline_fallback_to_insufficient_evidence_when_out_of_kb_and_no_
     metrics = db_session.query(QueryMetrics).one()
     assert metrics.crag_grade == "incorrect"
     assert metrics.crag_web_results_used == 0
-    assert metrics.citation_valid is True  # validate() marks insufficient_evidence fallback as valid (no hallucinations allowed)
+    # The fallback answer is served, but the recorded verdict is the one for the
+    # answer the model actually produced. Re-validating the boilerplate here used
+    # to report False as True, which hid every discarded answer from the
+    # dashboard.
+    assert metrics.citation_valid is False
 
 
 # ── Helpers for Pipeline Mocking ─────────────────────────────────────────────
