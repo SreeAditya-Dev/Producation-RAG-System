@@ -542,6 +542,13 @@ async def retrieve_and_generate(
         qm["prompt_injection_flagged"] = guard_result["flagged"]
         if guard_result["flagged"]:
             await emit("prompt_injection_flagged", guard_result)
+        # Question-level hits only. A poisoned *document* must not be able to
+        # switch off a pipeline feature for everyone who retrieves it — that
+        # would hand an attacker a denial-of-capability primitive. What the
+        # asker typed is a different matter: see the web fallback below.
+        question_injection_flagged = bool(
+            qm.get("prompt_injection_question_flagged") or guard_result["question_hits"]
+        )
         sources, quarantined = prompt_guard.quarantine_context(sources)
         if settings.pii_redaction_enabled:
             sources = [{**source, "text": redact_pii(source.get("text", ""))} for source in sources]
@@ -599,7 +606,23 @@ async def retrieve_and_generate(
                     sources = retry_sources
                 await emit("retrieval_retry_completed", {"attempt_count": 1, "reason": qm["retry_reason"], "chosen": qm["retry_chosen"], "candidate_overlap": qm["retry_candidate_overlap"], "elapsed_ms": qm["retry_latency_ms"]})
 
-            if grade in ("incorrect", "ambiguous"):
+            # A flagged question never reaches the web. An injection attempt
+            # grades "incorrect" almost by construction — nothing in the corpus
+            # answers it — so the corrective path would otherwise turn every
+            # attempt into an outbound search on the attacker's chosen topic and
+            # return the results as a cited answer. Skipping it leaves the
+            # internal (irrelevant) context in place, which is what produces the
+            # correct "not enough information" response.
+            if grade in ("incorrect", "ambiguous") and question_injection_flagged:
+                qm["web_search_skipped"] = "prompt_injection_question_flagged"
+                logger.warning(
+                    "Query %s: skipping CRAG web fallback (grade=%s) — question matched "
+                    "injection heuristics", query_id[:8], grade,
+                )
+                await emit("web_search_skipped", {
+                    "grade": grade, "reason": "prompt_injection_question_flagged",
+                })
+            elif grade in ("incorrect", "ambiguous"):
                 current_stage = "web_search"
                 await emit("web_search_started", {"grade": grade, "question": question})
                 t = time.perf_counter()
