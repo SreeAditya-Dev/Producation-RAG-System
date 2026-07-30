@@ -21,14 +21,11 @@ class RerankerService:
 
     Note: this is a different product surface than the OpenAI-compatible
     chat/embeddings endpoints under `nvidia_base_url`. NVIDIA's hosted
-    catalog serves reranking at ai.api.nvidia.com under a model-specific
-    path (`/v1/retrieval/{model}/reranking`); the generic `/v1/ranking`
-    path only exists on self-hosted single-model NIM containers.
+    catalog serves reranking at ai.api.nvidia.com from a single shared path
+    (`/v1/retrieval/nvidia/reranking`) that picks the model from the request
+    body; the per-model paths it used to expose are gone (HTTP 410), and the
+    generic `/v1/ranking` path only exists on self-hosted NIM containers.
     """
-
-    @property
-    def _url(self) -> str:
-        return f"https://ai.api.nvidia.com/v1/retrieval/{settings.reranker_model}/reranking"
 
     @traceable(name="cross_encoder_rerank", run_type="retriever")
     def rerank(
@@ -61,19 +58,32 @@ class RerankerService:
             logger.warning("NVIDIA_API_KEY not set — skipping reranker, returning top-%d as-is", top_k)
             return candidates[:top_k]
 
-        passages = [{"text": c.get(text_key, "")} for c in candidates]
+        # The API rejects the whole batch (422) if any passage is empty, so blank
+        # chunks are dropped here and `positions` maps each sent passage back to
+        # its index in `candidates`.
+        passages, positions = [], []
+        for i, c in enumerate(candidates):
+            text = (c.get(text_key) or "").strip()
+            if text:
+                passages.append({"text": text})
+                positions.append(i)
+
+        if not passages:
+            logger.warning("All %d candidates had empty '%s' — skipping reranker", len(candidates), text_key)
+            return candidates[:top_k]
 
         try:
-            with httpx.Client(timeout=5) as client:
+            with httpx.Client(timeout=settings.reranker_timeout_seconds) as client:
                 resp = client.post(
-                    self._url,
+                    settings.reranker_url,
                     headers={
                         "Authorization": f"Bearer {settings.nvidia_api_key}",
                         "Content-Type": "application/json",
+                        "Accept": "application/json",
                     },
                     json={
                         "model": settings.reranker_model,
-                        "query": {"type": "text", "text": query},
+                        "query": {"text": query},
                         "passages": passages,
                         "truncate": "END",
                     },
@@ -90,8 +100,8 @@ class RerankerService:
 
             reranked: List[Dict[str, Any]] = []
             for idx, logit in scored[:top_k]:
-                if idx < len(candidates):
-                    item = dict(candidates[idx])
+                if 0 <= idx < len(positions):
+                    item = dict(candidates[positions[idx]])
                     item["rerank_score"] = round(logit, 4)
                     reranked.append(item)
 

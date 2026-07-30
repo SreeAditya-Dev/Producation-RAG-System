@@ -267,12 +267,19 @@ async def retrieve_only(
     runs are deterministic for a fixed vector/reranker fixture.
     """
     qm = metrics if metrics is not None else {}
+    translate_start = time.perf_counter()
     translated = [question] if evaluation_mode else [await QueryTranslator().translate_query(q) for q in (await query_decomposer.decompose(question) or [question])]
+    # Decompose + per-sub-query rewrite are serial LLM calls, so a slow provider
+    # shows up here rather than inflating whichever stage happens to be measured
+    # across the whole retrieval block.
+    qm["translate_ms"] = _ms(translate_start)
     raw = await _embed_and_retrieve_subqueries(translated, top_k, qm, db_session, doc_ids=doc_ids)
     candidates = _verify_active_documents(db_session, raw)
+    rerank_start = time.perf_counter()
     reranked = await asyncio.get_event_loop().run_in_executor(
         None, lambda: reranker_service.rerank(question, candidates, top_k=top_k * 2)
     )
+    qm["rerank_ms"] = _ms(rerank_start)
     if settings.mmr_enabled and len(reranked) > top_k:
         reranked = MaximalMarginalRelevanceFilter(settings.mmr_lambda).filter_candidates(None, reranked, top_k)
         qm["mmr_applied"] = True
@@ -427,7 +434,8 @@ async def retrieve_and_generate(
             # over. Latency/token counters are zeroed: no work was done this turn,
             # and replaying the original run's timings would corrupt the p95s.
             qm.update(retrieval.get("metrics", {}))
-            qm.update({"embed_ms": 0.0, "retrieve_ms": 0.0, "bm25_ms": 0.0, "embed_tokens": 0})
+            qm.update({"embed_ms": 0.0, "retrieve_ms": 0.0, "bm25_ms": 0.0, "embed_tokens": 0,
+                       "translate_ms": 0.0, "rerank_ms": 0.0})
             qm["retrieval_cache_hit"] = True
             qm["cache_type"] = "retrieval"
             qm["cache_similarity"] = retrieval.get("_cache_similarity")
@@ -449,7 +457,10 @@ async def retrieve_and_generate(
                 )
         sources = retrieval["sources"]
         translated_queries = retrieval["translated_queries"]
-        qm["rerank_ms"] = qm.get("rerank_ms", _ms(retrieval_start))
+        # `rerank_ms` is set by the reranker stage itself; a fragment-cache hit
+        # zeroes it. This only backstops callers that bypass both.
+        qm.setdefault("rerank_ms", 0.0)
+        qm["retrieval_ms"] = _ms(retrieval_start)
         candidates = [{"original_name": s["original_name"], "score": s["score"], "text": s["text"]} for s in sources]
 
         await emit("chunks_retrieved", {
@@ -692,10 +703,11 @@ async def retrieve_and_generate(
             query_cache.semantic_set(db_session, question, top_k, cache_value, doc_ids=doc_ids, embedding=cache_embedding)
 
         logger.info(
-            "Query %s (Session: %s): %.0f ms total | embed %.0f | retrieve %.0f | rerank %.0f | llm %.0f | rerank_proxy=%.2f",
+            "Query %s (Session: %s): %.0f ms total | translate %.0f | embed %.0f | retrieve %.0f | "
+            "rerank %.0f | llm %.0f | rerank_proxy=%.2f",
             query_id[:8],
             session_id,
-            qm["total_ms"], qm.get("embed_ms", 0), qm.get("retrieve_ms", 0),
+            qm["total_ms"], qm.get("translate_ms", 0), qm.get("embed_ms", 0), qm.get("retrieve_ms", 0),
             qm["rerank_ms"], qm["llm_ms"],
             qm.get("reranker_relevance_proxy") or 0,
         )

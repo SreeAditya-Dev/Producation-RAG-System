@@ -18,8 +18,17 @@ class Settings(BaseSettings):
     pinecone_cloud: str = "aws"
     pinecone_region: str = "us-east-1"
 
-    # NVIDIA NIM reranker
-    reranker_model: str = "nvidia/llama-3.2-nv-rerankqa-1b-v2"
+    # NVIDIA NIM reranker.
+    # The hosted catalog serves reranking from its own host (not `nvidia_base_url`,
+    # which is the OpenAI-compatible chat/embeddings surface). The per-model paths
+    # (`/v1/retrieval/nvidia/{model}/reranking`) were retired on 2026-05-18 — the
+    # surviving endpoint is the shared one below, which selects via the `model` field.
+    reranker_url: str = "https://ai.api.nvidia.com/v1/retrieval/nvidia/reranking"
+    reranker_model: str = "nvidia/rerank-qa-mistral-4b"
+    # Measured 3.6-16 s for a 40-passage batch on the hosted endpoint (cold starts
+    # sit at the top of that range), so a short timeout means silently degrading to
+    # unranked retrieval on most calls rather than occasionally.
+    reranker_timeout_seconds: float = 20.0
 
     # PDF image / chart handling
     # Leave empty to disable vision descriptions (OCR still runs if Tesseract is installed)
