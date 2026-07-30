@@ -356,13 +356,34 @@ async def query(
 
 
 @app.get("/api/queries", response_model=dict)
-def get_query_history(limit: int = 20, db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
+def get_query_history(
+    request: Request,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    _api_key: str = Depends(require_api_key),
+    x_client_id: Optional[str] = Header(default=None),
+):
     queries = (
         db.query(QueryHistory)
         .order_by(QueryHistory.created_at.desc())
         .limit(limit)
         .all()
     )
+
+    # The caller's own rating rides along with each row so a reload can restore
+    # which answers they already voted on. Without it the UI re-offers the
+    # buttons on an answer the user already rated. Scoped to this client's
+    # identity — the same one the POST writes under — so one user's vote is
+    # never shown to another.
+    identity = x_client_id or (request.client.host if request.client else "unknown")
+    feedback_by_query = {
+        row.query_id: row
+        for row in db.query(QueryFeedback).filter(
+            QueryFeedback.client_id == identity,
+            QueryFeedback.query_id.in_([q.id for q in queries]),
+        ).all()
+    } if queries else {}
+
     result = []
     for q in queries:
         sources = []
@@ -371,6 +392,7 @@ def get_query_history(limit: int = 20, db: Session = Depends(get_db), _api_key: 
                 sources = json.loads(q.sources_json)
             except Exception:
                 pass
+        feedback = feedback_by_query.get(q.id)
         result.append({
             "query_id": q.id,
             "session_id": q.session_id,
@@ -381,6 +403,8 @@ def get_query_history(limit: int = 20, db: Session = Depends(get_db), _api_key: 
             "status": getattr(q, "status", "success"),
             "failure_stage": getattr(q, "failure_stage", None),
             "created_at": q.created_at.isoformat(),
+            "feedback_rating": feedback.rating if feedback else None,
+            "feedback_reason": feedback.reason if feedback else None,
         })
     return {"queries": result, "total": len(result)}
 

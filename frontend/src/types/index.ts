@@ -35,6 +35,12 @@ export interface QueryResponse {
   sources: SourceChunk[];
   processing_time: number;
   created_at: string;
+  status?: 'success' | 'error';
+  failure_stage?: string | null;
+  // Only `/api/queries` populates these, and only with the calling client's own
+  // rating — they let a reloaded session show which answers were already voted on.
+  feedback_rating?: 'up' | 'down' | null;
+  feedback_reason?: string | null;
 }
 
 export interface QueryHistoryItem extends QueryResponse {}

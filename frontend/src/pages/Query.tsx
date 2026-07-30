@@ -100,9 +100,18 @@ export function Query() {
         msgs.push({
           id: `a-${q.query_id}`,
           role: 'assistant',
-          content: q.answer,
+          // `queryId` is what gates the vote buttons. Omitting it here meant the
+          // 500 ms post-answer refetch rebuilt the thread without it and the
+          // buttons vanished seconds after appearing — and never came back for
+          // any restored session.
+          queryId: q.query_id,
+          // Failed queries persist with a null answer; show the failure instead
+          // of an empty assistant bubble.
+          content: q.answer ?? `Error: query failed${q.failure_stage ? ` at ${q.failure_stage}` : ''}.`,
           sources: q.sources,
-          processingTime: q.processing_time
+          processingTime: q.processing_time,
+          feedbackRating: q.feedback_rating,
+          feedbackReason: q.feedback_reason
         });
       });
       setMessages(msgs);

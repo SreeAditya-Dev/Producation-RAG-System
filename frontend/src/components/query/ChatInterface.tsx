@@ -16,6 +16,10 @@ export interface Message {
   processingTime?: number;
   queryId?: string;
   isStreaming?: boolean;
+  // Ratings this client already submitted, replayed from history so a reload
+  // or session switch shows the vote instead of re-offering the buttons.
+  feedbackRating?: 'up' | 'down' | null;
+  feedbackReason?: string | null;
 }
 
 interface Props {
@@ -72,6 +76,10 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamMsgIdRef = useRef<string | null>(null);
+  // Keyed by queryId, not message id. Message ids are regenerated every time
+  // the thread is rebuilt from history (which happens 500 ms after each answer
+  // and on a 10 s poll), so anything keyed by them was discarded almost
+  // immediately. queryId is stable for the life of the answer.
   const [feedbackSent, setFeedbackSent] = useState<Record<string, { rating: 'up' | 'down'; reason?: string }>>({});
   // A down-vote opens an inline reason picker instead of submitting straight
   // away — the reason is what makes the aggregate dashboard readable.
@@ -79,29 +87,46 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
   const [draftReason, setDraftReason] = useState<FeedbackReason | null>(null);
   const [draftCorrection, setDraftCorrection] = useState('');
 
+  // Replay ratings the server already knows about. Locally-submitted votes win
+  // over the replay: the refetch that carries a vote back can lag the click,
+  // and reverting the button in between would read as the vote being lost.
+  useEffect(() => {
+    const restored: Record<string, { rating: 'up' | 'down'; reason?: string }> = {};
+    for (const msg of messages) {
+      if (msg.queryId && msg.feedbackRating) {
+        restored[msg.queryId] = {
+          rating: msg.feedbackRating,
+          reason: msg.feedbackReason ?? undefined,
+        };
+      }
+    }
+    if (Object.keys(restored).length > 0) {
+      setFeedbackSent((current) => ({ ...restored, ...current }));
+    }
+  }, [messages]);
+
   const closeReasonPanel = () => {
     setReasonPanelFor(null);
     setDraftReason(null);
     setDraftCorrection('');
   };
 
-  const openReasonPanel = (messageId: string) => {
-    setReasonPanelFor(messageId);
+  const openReasonPanel = (queryId: string) => {
+    setReasonPanelFor(queryId);
     setDraftReason(null);
     setDraftCorrection('');
   };
 
   const submitFeedback = async (
-    messageId: string,
     queryId: string,
     rating: 'up' | 'down',
     reason?: FeedbackReason,
     correction?: string,
   ) => {
-    if (feedbackSent[messageId]) return;
+    if (feedbackSent[queryId]) return;
     try {
       await queryApi.feedback(queryId, rating, correction?.trim() || undefined, reason);
-      setFeedbackSent((current) => ({ ...current, [messageId]: { rating, reason } }));
+      setFeedbackSent((current) => ({ ...current, [queryId]: { rating, reason } }));
       closeReasonPanel();
     } catch {
       // Feedback is non-critical; preserve the answer if the telemetry endpoint fails.
@@ -293,12 +318,13 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
                   <div>
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => submitFeedback(msg.id, msg.queryId!, 'up')}
-                        disabled={Boolean(feedbackSent[msg.id])}
+                        onClick={() => submitFeedback(msg.queryId!, 'up')}
+                        disabled={Boolean(feedbackSent[msg.queryId])}
                         aria-label="Helpful answer"
+                        title="This answered my question"
                         className={clsx(
                           'p-1 disabled:opacity-50',
-                          feedbackSent[msg.id]?.rating === 'up'
+                          feedbackSent[msg.queryId]?.rating === 'up'
                             ? 'text-emerald-400'
                             : 'text-zinc-600 hover:text-emerald-400'
                         )}
@@ -306,31 +332,32 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
                         <ThumbsUp size={13} />
                       </button>
                       <button
-                        onClick={() => openReasonPanel(msg.id)}
-                        disabled={Boolean(feedbackSent[msg.id])}
+                        onClick={() => openReasonPanel(msg.queryId!)}
+                        disabled={Boolean(feedbackSent[msg.queryId])}
                         aria-label="Unhelpful answer"
-                        aria-expanded={reasonPanelFor === msg.id}
+                        title="Something was wrong with this answer"
+                        aria-expanded={reasonPanelFor === msg.queryId}
                         className={clsx(
                           'p-1 disabled:opacity-50',
-                          feedbackSent[msg.id]?.rating === 'down'
+                          feedbackSent[msg.queryId]?.rating === 'down'
                             ? 'text-red-400'
                             : 'text-zinc-600 hover:text-red-400'
                         )}
                       >
                         <ThumbsDown size={13} />
                       </button>
-                      {feedbackSent[msg.id] && (
+                      {feedbackSent[msg.queryId] && (
                         <span className="text-[9px] font-mono text-zinc-600">
                           feedback saved
-                          {feedbackSent[msg.id].reason
-                            ? ` · ${FEEDBACK_REASON_LABELS[feedbackSent[msg.id].reason!] ?? feedbackSent[msg.id].reason}`
+                          {feedbackSent[msg.queryId].reason
+                            ? ` · ${FEEDBACK_REASON_LABELS[feedbackSent[msg.queryId].reason!] ?? feedbackSent[msg.queryId].reason}`
                             : ''}
                         </span>
                       )}
                     </div>
 
                     <AnimatePresence>
-                      {reasonPanelFor === msg.id && (
+                      {reasonPanelFor === msg.queryId && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
@@ -372,7 +399,7 @@ export function ChatInterface({ onQuery, streamingAnswer, isLoading, stage, mess
                                 type="button"
                                 disabled={!draftReason}
                                 onClick={() =>
-                                  submitFeedback(msg.id, msg.queryId!, 'down', draftReason!, draftCorrection)
+                                  submitFeedback(msg.queryId!, 'down', draftReason!, draftCorrection)
                                 }
                                 className="rounded border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-[10px] font-mono text-red-300 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                               >
