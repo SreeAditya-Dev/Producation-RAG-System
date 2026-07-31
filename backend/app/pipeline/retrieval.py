@@ -690,6 +690,8 @@ async def retrieve_and_generate(
             await emit("generation_token", {"token": token_queue.get_nowait()})
 
         full_answer = "".join(tokens)
+        if settings.pii_redaction_enabled:
+            full_answer = redact_pii(full_answer)
         # A stream that breaks mid-answer returns the tokens it managed to emit
         # rather than failing the query, so this is a real signal now — not every
         # run is a clean stream.
