@@ -20,12 +20,19 @@ import {
   ChevronRight,
   X,
   Copy,
-  Check
+  Check,
+  Cpu,
+  Lock,
+  MessageSquare,
+  BarChart3,
+  BookOpen
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import toast from 'react-hot-toast';
 import { queryApi } from '../services/api';
 import type { ValidationMetricItem } from '../types';
+
+type ModalTab = 'overview' | 'latency' | 'sources' | 'security';
 
 export function QueryValidation() {
   const [page, setPage] = useState(1);
@@ -35,6 +42,7 @@ export function QueryValidation() {
   const [cragFilter, setCragFilter] = useState<string>('all');
   const [feedbackFilter, setFeedbackFilter] = useState<string>('all');
   const [selectedQuery, setSelectedQuery] = useState<ValidationMetricItem | null>(null);
+  const [activeTab, setActiveTab] = useState<ModalTab>('overview');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -72,7 +80,7 @@ export function QueryValidation() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-3 sm:px-6 py-4 pb-16">
-      {/* ── Header ────────────────────────────────────────────────────────────── */}
+      {/* ── Page Header ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
@@ -201,7 +209,6 @@ export function QueryValidation() {
 
           {/* Filter Group */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Status Select */}
             <div className="flex items-center gap-1.5 bg-[#121215] border border-white/10 px-3 py-2 rounded-xl text-xs text-gray-300">
               <Filter className="h-3.5 w-3.5 text-gray-500" />
               <select
@@ -215,7 +222,6 @@ export function QueryValidation() {
               </select>
             </div>
 
-            {/* CRAG Select */}
             <div className="flex items-center gap-1.5 bg-[#121215] border border-white/10 px-3 py-2 rounded-xl text-xs text-gray-300">
               <select
                 value={cragFilter}
@@ -229,7 +235,6 @@ export function QueryValidation() {
               </select>
             </div>
 
-            {/* Feedback Select */}
             <div className="flex items-center gap-1.5 bg-[#121215] border border-white/10 px-3 py-2 rounded-xl text-xs text-gray-300">
               <select
                 value={feedbackFilter}
@@ -242,7 +247,6 @@ export function QueryValidation() {
               </select>
             </div>
 
-            {/* Per Page Select */}
             <div className="flex items-center gap-1.5 bg-[#121215] border border-white/10 px-3 py-2 rounded-xl text-xs text-gray-300">
               <span className="text-gray-400">Rows:</span>
               <select
@@ -302,7 +306,6 @@ export function QueryValidation() {
                       key={item.query_id}
                       className="hover:bg-white/[0.03] transition-colors duration-150 group"
                     >
-                      {/* ID */}
                       <td className="py-3.5 px-4 text-emerald-400 font-semibold">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate max-w-[80px]">{item.query_id}</span>
@@ -316,12 +319,10 @@ export function QueryValidation() {
                         </div>
                       </td>
 
-                      {/* Question */}
                       <td className="py-3.5 px-4 font-sans text-gray-200 font-medium">
                         <p className="line-clamp-1 max-w-[280px]">{item.question}</p>
                       </td>
 
-                      {/* Status */}
                       <td className="py-3.5 px-4">
                         <span
                           className={clsx(
@@ -336,12 +337,10 @@ export function QueryValidation() {
                         </span>
                       </td>
 
-                      {/* Latency */}
                       <td className="py-3.5 px-4 text-gray-300 font-bold">
                         {latencySec}s
                       </td>
 
-                      {/* CRAG Grade */}
                       <td className="py-3.5 px-4">
                         {item.crag_grade ? (
                           <span
@@ -359,12 +358,10 @@ export function QueryValidation() {
                         )}
                       </td>
 
-                      {/* Max Score */}
                       <td className="py-3.5 px-4 text-gray-300 font-semibold">
                         {item.retrieval_score_max ? item.retrieval_score_max.toFixed(3) : 'N/A'}
                       </td>
 
-                      {/* Citations */}
                       <td className="py-3.5 px-4">
                         {item.citation_valid !== null ? (
                           item.citation_valid ? (
@@ -381,7 +378,6 @@ export function QueryValidation() {
                         )}
                       </td>
 
-                      {/* Feedback */}
                       <td className="py-3.5 px-4 font-sans text-xs">
                         {item.feedback_rating === 'up' && (
                           <span className="text-emerald-400 inline-flex items-center gap-1">
@@ -396,10 +392,9 @@ export function QueryValidation() {
                         {!item.feedback_rating && <span className="text-gray-600">—</span>}
                       </td>
 
-                      {/* Inspect Action */}
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => setSelectedQuery(item)}
+                          onClick={() => { setSelectedQuery(item); setActiveTab('overview'); }}
                           className="p-1.5 bg-[#18181b] hover:bg-emerald-600 text-gray-300 hover:text-white rounded-lg transition shadow-md active:scale-95"
                           title="Inspect Detailed Diagnostics"
                         >
@@ -446,113 +441,295 @@ export function QueryValidation() {
         </div>
       </div>
 
-      {/* ── Diagnostic Drawer / Modal ─────────────────────────────────────────── */}
+      {/* ── Centered Multi-Tab Diagnostic Modal View ────────────────────────────── */}
       {selectedQuery && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex justify-end p-0 transition-all duration-300">
-          <div className="w-full sm:w-[600px] md:w-[680px] bg-[#09090b] border-l border-white/10 h-full overflow-y-auto p-5 sm:p-6 space-y-6 shadow-2xl flex flex-col justify-between">
-            <div className="space-y-6">
-              {/* Drawer Header */}
-              <div className="flex items-start justify-between border-b border-white/10 pb-4">
-                <div className="space-y-0.5">
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-emerald-400" />
-                    Query Diagnostic Inspector
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 transition-all duration-300 animate-in fade-in">
+          <div className="w-full max-w-4xl bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header & Title */}
+            <div className="bg-[#121215] border-b border-white/10 px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    Query Telemetry & Diagnostics
                   </h2>
-                  <p className="text-xs text-gray-400 font-mono">ID: {selectedQuery.query_id}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedQuery(null)}
-                  className="p-1.5 text-gray-400 hover:text-white bg-[#18181b] hover:bg-gray-800 rounded-lg transition"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* User Question & Generated Answer */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">User Question</h3>
-                  <div className="p-3.5 bg-[#121215] border border-white/10 rounded-xl text-xs text-gray-100 font-medium leading-relaxed">
-                    {selectedQuery.question}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Generated Answer</h3>
-                  <div className="p-3.5 bg-[#121215] border border-white/10 rounded-xl text-xs text-gray-300 space-y-2 whitespace-pre-wrap max-h-64 overflow-y-auto leading-relaxed">
-                    {selectedQuery.answer || <span className="text-gray-500 italic">No answer content recorded.</span>}
-                  </div>
+                  <p className="text-[11px] text-gray-400 font-mono">Query ID: {selectedQuery.query_id}</p>
                 </div>
               </div>
 
-              {/* Latency Stage Breakdown */}
-              <div>
-                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Stage Latency Breakdown</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-mono">
-                  <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
-                    <span className="text-gray-400 block text-[10px]">Embedding</span>
-                    <span className="text-blue-400 font-bold text-sm">{selectedQuery.embed_ms ? `${selectedQuery.embed_ms}ms` : '—'}</span>
-                  </div>
-                  <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
-                    <span className="text-gray-400 block text-[10px]">Retrieval</span>
-                    <span className="text-indigo-400 font-bold text-sm">{selectedQuery.retrieve_ms ? `${selectedQuery.retrieve_ms}ms` : '—'}</span>
-                  </div>
-                  <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
-                    <span className="text-gray-400 block text-[10px]">Reranking</span>
-                    <span className="text-amber-400 font-bold text-sm">{selectedQuery.rerank_ms ? `${selectedQuery.rerank_ms}ms` : '—'}</span>
-                  </div>
-                  <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
-                    <span className="text-gray-400 block text-[10px]">LLM Stream</span>
-                    <span className="text-emerald-400 font-bold text-sm">{selectedQuery.llm_ms ? `${selectedQuery.llm_ms}ms` : '—'}</span>
-                  </div>
-                </div>
-              </div>
+              <button
+                onClick={() => setSelectedQuery(null)}
+                className="p-1.5 text-gray-400 hover:text-white bg-[#18181b] hover:bg-gray-800 rounded-xl transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              {/* Evaluation Metrics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 bg-[#121215] border border-white/10 rounded-xl space-y-1">
-                  <span className="text-gray-400 font-medium">CRAG Grade:</span>{' '}
-                  <span className="text-emerald-400 font-bold uppercase">{selectedQuery.crag_grade || 'Standard RAG'}</span>
-                  {selectedQuery.crag_confidence && (
-                    <span className="text-gray-400 block text-[11px]">Confidence: {(selectedQuery.crag_confidence * 100).toFixed(0)}%</span>
-                  )}
-                </div>
+            {/* Modal Navigation Tabs */}
+            <div className="bg-[#0d0d11] border-b border-white/10 px-5 flex items-center gap-2 overflow-x-auto text-xs font-semibold">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={clsx(
+                  'flex items-center gap-2 py-3 px-3 border-b-2 transition-all duration-150',
+                  activeTab === 'overview'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                )}
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>Overview & Q/A</span>
+              </button>
 
-                <div className="p-3.5 bg-[#121215] border border-white/10 rounded-xl space-y-1">
-                  <span className="text-gray-400 font-medium">Max Retrieval Score:</span>{' '}
-                  <span className="text-indigo-400 font-bold font-mono text-xs">
-                    {selectedQuery.retrieval_score_max ? selectedQuery.retrieval_score_max.toFixed(4) : 'N/A'}
-                  </span>
-                  <span className="text-gray-400 block text-[11px]">Candidates: {selectedQuery.candidate_count ?? 0}</span>
-                </div>
-              </div>
+              <button
+                onClick={() => setActiveTab('latency')}
+                className={clsx(
+                  'flex items-center gap-2 py-3 px-3 border-b-2 transition-all duration-150',
+                  activeTab === 'latency'
+                    ? 'border-blue-400 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                )}
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Latency Waterfall</span>
+              </button>
 
-              {/* Retrieved Sources */}
-              <div>
-                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Retrieved Sources ({selectedQuery.sources?.length ?? 0})</h3>
-                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                  {selectedQuery.sources?.map((s, idx) => (
-                    <div key={idx} className="p-3 bg-[#121215] border border-white/10 rounded-xl text-xs space-y-1">
-                      <div className="flex items-center justify-between text-gray-400 font-mono text-[11px]">
-                        <span className="text-emerald-400 font-bold truncate max-w-[200px]">{s.original_name}</span>
-                        <span>Score: {s.score?.toFixed(3) ?? 'N/A'}</span>
-                      </div>
-                      <p className="text-gray-300 font-sans line-clamp-2 text-[11px]">{s.text}</p>
+              <button
+                onClick={() => setActiveTab('sources')}
+                className={clsx(
+                  'flex items-center gap-2 py-3 px-3 border-b-2 transition-all duration-150',
+                  activeTab === 'sources'
+                    ? 'border-indigo-400 text-indigo-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                )}
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Retrieved Chunks ({selectedQuery.sources?.length ?? 0})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('security')}
+                className={clsx(
+                  'flex items-center gap-2 py-3 px-3 border-b-2 transition-all duration-150',
+                  activeTab === 'security'
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                )}
+              >
+                <Lock className="h-4 w-4" />
+                <span>Security & Guardrails</span>
+              </button>
+            </div>
+
+            {/* Modal Body Content */}
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5 text-xs">
+              
+              {/* TAB 1: OVERVIEW & QA */}
+              {activeTab === 'overview' && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
+                      <span className="text-gray-400 text-[10px] font-medium block uppercase">Total Latency</span>
+                      <span className="text-emerald-400 font-mono font-bold text-sm">
+                        {selectedQuery.total_ms ? `${(selectedQuery.total_ms / 1000).toFixed(2)}s` : `${(selectedQuery.processing_time || 0).toFixed(2)}s`}
+                      </span>
                     </div>
-                  ))}
+
+                    <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
+                      <span className="text-gray-400 text-[10px] font-medium block uppercase">Prompt Tokens</span>
+                      <span className="text-indigo-400 font-mono font-bold text-sm">{selectedQuery.prompt_tokens ?? 'N/A'}</span>
+                    </div>
+
+                    <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
+                      <span className="text-gray-400 text-[10px] font-medium block uppercase">Completion Tokens</span>
+                      <span className="text-blue-400 font-mono font-bold text-sm">{selectedQuery.completion_tokens ?? 'N/A'}</span>
+                    </div>
+
+                    <div className="p-3 bg-[#121215] border border-white/10 rounded-xl">
+                      <span className="text-gray-400 text-[10px] font-medium block uppercase">Cache / Retry</span>
+                      <span className="text-amber-400 font-mono font-bold text-xs">
+                        {selectedQuery.retry_attempt_count && selectedQuery.retry_attempt_count > 0
+                          ? `Retry: ${selectedQuery.retry_reason}`
+                          : selectedQuery.cache_type || 'Fresh Run'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Question */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                      <span>User Prompt</span>
+                      <button
+                        onClick={() => copyToClipboard(selectedQuery.question, 'q-text')}
+                        className="text-emerald-400 hover:underline flex items-center gap-1 font-sans text-xs"
+                      >
+                        <Copy className="h-3 w-3" /> Copy Prompt
+                      </button>
+                    </div>
+                    <div className="p-4 bg-[#121215] border border-white/10 rounded-xl text-gray-100 font-medium leading-relaxed font-sans text-sm">
+                      {selectedQuery.question}
+                    </div>
+                  </div>
+
+                  {/* Answer */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-gray-400 text-[11px] font-bold uppercase tracking-wider">
+                      <span>RAG Generated Answer</span>
+                      {selectedQuery.answer && (
+                        <button
+                          onClick={() => copyToClipboard(selectedQuery.answer || '', 'a-text')}
+                          className="text-emerald-400 hover:underline flex items-center gap-1 font-sans text-xs"
+                        >
+                          <Copy className="h-3 w-3" /> Copy Answer
+                        </button>
+                      )}
+                    </div>
+                    <div className="p-4 bg-[#121215] border border-white/10 rounded-xl text-gray-300 leading-relaxed font-sans whitespace-pre-wrap max-h-72 overflow-y-auto">
+                      {selectedQuery.answer || <span className="text-gray-500 italic">No answer content recorded.</span>}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* TAB 2: LATENCY WATERFALL */}
+              {activeTab === 'latency' && (
+                <div className="space-y-5">
+                  <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Pipeline Stage Execution Breakdown</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Embedding */}
+                    <div>
+                      <div className="flex justify-between text-xs font-mono text-gray-300 mb-1">
+                        <span>1. Embedding Query</span>
+                        <span className="text-blue-400 font-bold">{selectedQuery.embed_ms ? `${selectedQuery.embed_ms}ms` : '—'}</span>
+                      </div>
+                      <div className="w-full bg-[#18181b] h-3 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="bg-blue-500 h-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, ((selectedQuery.embed_ms || 0) / (selectedQuery.total_ms || 1)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Retrieval */}
+                    <div>
+                      <div className="flex justify-between text-xs font-mono text-gray-300 mb-1">
+                        <span>2. Dense Vector & Lexical BM25 Search</span>
+                        <span className="text-indigo-400 font-bold">{selectedQuery.retrieve_ms ? `${selectedQuery.retrieve_ms}ms` : '—'}</span>
+                      </div>
+                      <div className="w-full bg-[#18181b] h-3 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="bg-indigo-500 h-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, ((selectedQuery.retrieve_ms || 0) / (selectedQuery.total_ms || 1)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Reranker */}
+                    <div>
+                      <div className="flex justify-between text-xs font-mono text-gray-300 mb-1">
+                        <span>3. NVIDIA Neural Reranking</span>
+                        <span className="text-amber-400 font-bold">{selectedQuery.rerank_ms ? `${selectedQuery.rerank_ms}ms` : '—'}</span>
+                      </div>
+                      <div className="w-full bg-[#18181b] h-3 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="bg-amber-500 h-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, ((selectedQuery.rerank_ms || 0) / (selectedQuery.total_ms || 1)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* LLM Streaming */}
+                    <div>
+                      <div className="flex justify-between text-xs font-mono text-gray-300 mb-1">
+                        <span>4. Llama 3.1 LLM Token Streaming</span>
+                        <span className="text-emerald-400 font-bold">{selectedQuery.llm_ms ? `${selectedQuery.llm_ms}ms` : '—'}</span>
+                      </div>
+                      <div className="w-full bg-[#18181b] h-3 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className="bg-emerald-500 h-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, ((selectedQuery.llm_ms || 0) / (selectedQuery.total_ms || 1)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: RETRIEVED SOURCES */}
+              {activeTab === 'sources' && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                    Context Chunks Injected into Prompt ({selectedQuery.sources?.length ?? 0})
+                  </h3>
+
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {selectedQuery.sources?.map((source, idx) => (
+                      <div key={idx} className="p-4 bg-[#121215] border border-white/10 rounded-xl space-y-2 font-mono">
+                        <div className="flex items-center justify-between text-gray-300">
+                          <span className="text-emerald-400 font-bold">[S{idx + 1}] {source.original_name}</span>
+                          <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px]">
+                            Similarity Score: {source.score?.toFixed(4) ?? 'N/A'}
+                          </span>
+                        </div>
+                        <p className="text-gray-300 font-sans text-xs leading-relaxed whitespace-pre-wrap">
+                          {source.text}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: SECURITY & GUARDRAILS */}
+              {activeTab === 'security' && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Security, Masking & Grounding Verification</h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
+                    <div className="p-4 bg-[#121215] border border-white/10 rounded-xl space-y-1.5">
+                      <span className="text-gray-400 block text-[10px] uppercase font-bold">PII/PCI Masking Policy</span>
+                      <span className="text-emerald-400 font-bold block text-sm">Strategy 1 Active</span>
+                      <span className="text-gray-400 text-xs font-sans block">
+                        First-4 and Last-4 Card Masking (e.g. 4532-XXXX-XXXX-6789)
+                      </span>
+                    </div>
+
+                    <div className="p-4 bg-[#121215] border border-white/10 rounded-xl space-y-1.5">
+                      <span className="text-gray-400 block text-[10px] uppercase font-bold">Citation Verification</span>
+                      <span className={clsx("font-bold block text-sm", selectedQuery.citation_valid ? "text-emerald-400" : "text-red-400")}>
+                        {selectedQuery.citation_valid ? "Valid Grounding" : "Citation Failure"}
+                      </span>
+                      <span className="text-gray-400 text-xs font-sans block">
+                        Cited sources: {selectedQuery.citation_cited_source_count ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-white/10 pt-4 mt-6">
+            <div className="bg-[#121215] border-t border-white/10 px-5 py-3.5 flex items-center justify-end">
               <button
                 onClick={() => setSelectedQuery(null)}
-                className="w-full py-2.5 bg-[#18181b] hover:bg-[#27272a] text-white rounded-xl text-xs font-bold transition shadow-lg"
+                className="px-5 py-2 bg-[#18181b] hover:bg-[#27272a] text-white rounded-xl text-xs font-bold transition shadow-md"
               >
-                Close Diagnostics
+                Close Inspector
               </button>
             </div>
+
           </div>
         </div>
       )}
