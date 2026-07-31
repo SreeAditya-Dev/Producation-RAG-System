@@ -11,6 +11,7 @@ from fastapi import (
     File,
     Header,
     HTTPException,
+    Query as QueryParam,
     Request,
     UploadFile,
     WebSocket,
