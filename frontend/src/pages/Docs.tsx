@@ -179,7 +179,9 @@ export function Docs() {
     { name: 'llm_model', value: 'meta/llama-3.1-70b-instruct', desc: 'LLM for streaming completion generation.', type: 'String', provider: 'NVIDIA NIM', category: 'llm', envVar: 'LLM_MODEL', impact: 'Determines complete response quality, streaming speed, and reasoning capability.' },
     { name: 'embedding_model', value: 'nvidia/nv-embedqa-e5-v5', desc: 'Dense passage retrieval vectorizer.', type: 'String', provider: 'NVIDIA NIM', category: 'embedding', envVar: 'EMBEDDING_MODEL', impact: 'Sets vector space semantic matching. Ingestion and queries must share this exact model.' },
     { name: 'embedding_dimension', value: '1024', desc: 'Size of vectors generated for Pinecone.', type: 'Integer', provider: 'NVIDIA NIM', category: 'embedding', envVar: 'EMBEDDING_DIMENSION', impact: 'Matches Pinecone serverless index schema bounds.' },
-    { name: 'reranker_model', value: 'nvidia/llama-3.2-nv-rerankqa-1b-v2', desc: 'Neural cross-encoder reranker.', type: 'String', provider: 'NVIDIA NIM', category: 'reranker', envVar: 'RERANKER_MODEL', impact: 'Assesses document-query pair relevance with high precision prior to generation.' },
+    { name: 'reranker_model', value: 'nvidia/rerank-qa-mistral-4b', desc: 'Neural cross-encoder reranker.', type: 'String', provider: 'NVIDIA NIM', category: 'reranker', envVar: 'RERANKER_MODEL', impact: 'Assesses document-query pair relevance with high precision prior to generation.' },
+    { name: 'pdf_vision_model', value: 'meta/llama-3.2-11b-vision-instruct', desc: 'Multimodal vision model for PDF tables/images.', type: 'String', provider: 'NVIDIA NIM', category: 'llm', envVar: 'PDF_VISION_MODEL', impact: 'Generates textual descriptions of charts, diagrams, and complex visual tables.' },
+    { name: 'pii_redaction_enabled', value: 'true (Strategy 1)', desc: 'PCI-DSS partial masking & PII/PHI redaction.', type: 'Boolean', provider: 'Security', category: 'security', envVar: 'PII_REDACTION_ENABLED', impact: 'Masks card numbers (4532-XXXX-XXXX-6789), Aadhaar (XXXX-XXXX-9012), and redacts CVVs/SSNs.' },
     { name: 'max_chunk_size', value: '512 chars', desc: 'Soft limit on character count per chunk.', type: 'Integer', provider: 'Splitter', category: 'splitter', envVar: 'MAX_CHUNK_SIZE', impact: 'Controls narrative chunk bounds. Smaller sizes prevent cross-talk; larger sizes preserve context.' },
     { name: 'chunk_overlap', value: '50 chars', desc: 'Characters shared between adjacent chunks.', type: 'Integer', provider: 'Splitter', category: 'splitter', envVar: 'CHUNK_OVERLAP', impact: 'Bridges context transitions between chunks to avoid losing key information at slice edges.' },
     { name: 'top_k', value: '5', desc: 'Final context segments fed into LLM prompt.', type: 'Integer', provider: 'Pipeline', category: 'pinecone', envVar: 'RETRIEVAL_TOP_K', impact: 'Determines how many high-precision contexts are combined in the completion prompt.' },
@@ -264,11 +266,11 @@ sources = reranker_service.rerank(
     },
     {
       title: "RAG Retrieval & Rerank Query",
-      desc: "A user query is vectorized via e5-v5. Pinecone performs HNSW search to fetch 20 candidate vectors (top_k * 4). NVIDIA Reranker (llama-3.2-1b) re-scores them to fetch top 5.",
+      desc: "A user query is vectorized via e5-v5. Pinecone performs HNSW search to fetch 20 candidate vectors (top_k * 4). NVIDIA Reranker (rerank-qa-mistral-4b) re-scores them to fetch top 5.",
       icon: Activity,
       badge: "Stage 5: Query",
       service: "Retrieval Pipeline",
-      engine: "llama-3.2-nv-rerankqa-1b"
+      engine: "nvidia/rerank-qa-mistral-4b"
     },
     {
       title: "Augmented Generation & Evaluation",
@@ -916,7 +918,7 @@ sources = reranker_service.rerank(
                             Stage 2: Cross-Encoder Reranking
                           </h4>
                           <p className="text-zinc-455">
-                            The candidate vector array is re-scored alongside the query using <code className="text-blue-400 font-mono">nvidia/llama-3.2-nv-rerankqa-1b-v2</code>. Unlike dual-encoders, Cross-Encoders evaluate text-query tokens simultaneously, scoring exact relevance and discarding false matches.
+                            The candidate vector array is re-scored alongside the query using <code className="text-blue-400 font-mono">nvidia/rerank-qa-mistral-4b</code>. Unlike dual-encoders, Cross-Encoders evaluate text-query tokens simultaneously, scoring exact relevance and discarding false matches.
                           </p>
                         </div>
 
