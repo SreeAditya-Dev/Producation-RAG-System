@@ -69,6 +69,26 @@ export const queryApi = {
   history: (limit = 20) =>
     api.get<{ queries: QueryResponse[]; total: number }>(`/queries?limit=${limit}`),
 
+  getValidationMetrics: (params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    crag_grade?: string;
+    citation_valid?: boolean;
+    feedback?: string;
+    search?: string;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    if (params.status) searchParams.set('status', params.status);
+    if (params.crag_grade) searchParams.set('crag_grade', params.crag_grade);
+    if (params.citation_valid !== undefined) searchParams.set('citation_valid', params.citation_valid.toString());
+    if (params.feedback) searchParams.set('feedback', params.feedback);
+    if (params.search) searchParams.set('search', params.search);
+    return api.get<import('../types').ValidationMetricsResponse>(`/queries/validation-metrics?${searchParams.toString()}`);
+  },
+
   feedback: (queryId: string, rating: 'up' | 'down', correction?: string, reason?: string) =>
     api.post(`/queries/${queryId}/feedback`, { rating, correction, reason }),
 };

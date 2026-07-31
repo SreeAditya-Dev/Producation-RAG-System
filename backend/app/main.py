@@ -468,6 +468,143 @@ def feedback_aggregates(db: Session = Depends(get_db), _api_key: str = Depends(r
     }
 
 
+@app.get("/api/queries/validation-metrics")
+def get_validation_metrics(
+    page: int = QueryParam(1, ge=1),
+    limit: int = QueryParam(10, ge=1, le=100),
+    status: Optional[str] = None,
+    crag_grade: Optional[str] = None,
+    citation_valid: Optional[bool] = None,
+    feedback: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _api_key: str = Depends(require_api_key),
+):
+    """
+    Paginated observability and validation metrics endpoint for RAG query auditing.
+    """
+    import math
+
+    # Base query joining QueryHistory with QueryMetrics
+    query = (
+        db.query(QueryHistory, QueryMetrics, QueryFeedback)
+        .outerjoin(QueryMetrics, QueryHistory.id == QueryMetrics.id)
+        .outerjoin(QueryFeedback, QueryHistory.id == QueryFeedback.query_id)
+    )
+
+    if status:
+        query = query.filter(QueryHistory.status == status)
+    if crag_grade:
+        query = query.filter(QueryMetrics.crag_grade == crag_grade)
+    if citation_valid is not None:
+        query = query.filter(QueryMetrics.citation_valid == citation_valid)
+    if feedback:
+        query = query.filter(QueryFeedback.rating == feedback)
+    if search:
+        search_filter = f"%{search.strip()}%"
+        query = query.filter(
+            (QueryHistory.question.ilike(search_filter)) | (QueryHistory.answer.ilike(search_filter))
+        )
+
+    total_count = query.count()
+    pages = math.ceil(total_count / limit) if total_count > 0 else 1
+    page = min(page, max(1, pages))
+
+    # Summary KPI aggregation across matching dataset
+    all_metrics = db.query(QueryMetrics).all()
+    all_history = db.query(QueryHistory).all()
+    all_feedback = db.query(QueryFeedback).all()
+
+    avg_total_ms = sum(m.total_ms or 0 for m in all_metrics if m.total_ms) / max(1, len([m for m in all_metrics if m.total_ms]))
+    avg_score = sum(m.retrieval_score_max or 0 for m in all_metrics if m.retrieval_score_max) / max(1, len([m for m in all_metrics if m.retrieval_score_max]))
+
+    crag_counts = {
+        "correct": sum(1 for m in all_metrics if m.crag_grade == "correct"),
+        "ambiguous": sum(1 for m in all_metrics if m.crag_grade == "ambiguous"),
+        "incorrect": sum(1 for m in all_metrics if m.crag_grade == "incorrect"),
+    }
+    valid_citations = sum(1 for m in all_metrics if m.citation_valid is True)
+    total_citation_records = sum(1 for m in all_metrics if m.citation_valid is not None)
+    citation_valid_pct = (valid_citations / total_citation_records * 100) if total_citation_records > 0 else 100.0
+
+    pos_feedback = sum(1 for f in all_feedback if f.rating == "up")
+    neg_feedback = sum(1 for f in all_feedback if f.rating == "down")
+
+    # Fetch paginated slice
+    results = (
+        query.order_by(QueryHistory.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    items = []
+    for h, m, f in results:
+        sources = []
+        if h.sources_json:
+            try:
+                sources = json.loads(h.sources_json)
+            except Exception:
+                pass
+
+        items.append({
+            "query_id": h.id,
+            "session_id": h.session_id,
+            "question": h.question,
+            "answer": h.answer,
+            "sources": sources,
+            "created_at": h.created_at.isoformat() if h.created_at else None,
+            "status": h.status,
+            "failure_stage": h.failure_stage,
+            "error_type": h.error_type,
+            "processing_time": h.processing_time,
+            # Telemetry Metrics
+            "total_ms": m.total_ms if m else None,
+            "embed_ms": m.embed_ms if m else None,
+            "retrieve_ms": m.retrieve_ms if m else None,
+            "rerank_ms": m.rerank_ms if m else None,
+            "llm_ms": m.llm_ms if m else None,
+            "prompt_tokens": m.prompt_tokens if m else None,
+            "completion_tokens": m.completion_tokens if m else None,
+            "candidate_count": m.candidate_count if m else None,
+            "returned_count": m.returned_count if m else None,
+            "retrieval_score_max": m.retrieval_score_max if m else None,
+            "retrieval_score_mean": m.retrieval_score_mean if m else None,
+            "crag_grade": m.crag_grade if m else None,
+            "crag_confidence": m.crag_confidence if m else None,
+            "crag_web_results_used": m.crag_web_results_used if m else None,
+            "citation_valid": m.citation_valid if m else None,
+            "citation_cited_source_count": m.citation_cited_source_count if m else None,
+            "citation_invalid_citations": m.citation_invalid_citations if m else None,
+            "cache_type": m.cache_type if m else None,
+            "retry_attempt_count": m.retry_attempt_count if m else 0,
+            "retry_reason": m.retry_reason if m else None,
+            # Feedback
+            "feedback_rating": f.rating if f else None,
+            "feedback_reason": f.reason if f else None,
+            "feedback_correction": f.correction if f else None,
+        })
+
+    return {
+        "summary": {
+            "total_queries": len(all_history),
+            "avg_total_ms": round(avg_total_ms, 2),
+            "avg_retrieval_score": round(avg_score, 4),
+            "crag_grades": crag_counts,
+            "citation_valid_pct": round(citation_valid_pct, 1),
+            "positive_feedback": pos_feedback,
+            "negative_feedback": neg_feedback,
+        },
+        "items": items,
+        "page": page,
+        "limit": limit,
+        "total": total_count,
+        "pages": pages,
+    }
+
+
+
+
 @app.get("/api/feedback/review-candidates")
 def feedback_review_candidates(limit: int = 100, db: Session = Depends(get_db), _api_key: str = Depends(require_api_key)):
     """Export candidate benchmark cases for human review only.

@@ -175,6 +175,64 @@ export interface FeedbackAggregatesResponse {
   };
 }
 
+export interface ValidationMetricItem {
+  query_id: string;
+  session_id?: string;
+  question: string;
+  answer: string | null;
+  sources: SourceChunk[];
+  created_at: string | null;
+  status: string;
+  failure_stage?: string | null;
+  error_type?: string | null;
+  processing_time: number;
+  total_ms?: number | null;
+  embed_ms?: number | null;
+  retrieve_ms?: number | null;
+  rerank_ms?: number | null;
+  llm_ms?: number | null;
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  candidate_count?: number | null;
+  returned_count?: number | null;
+  retrieval_score_max?: number | null;
+  retrieval_score_mean?: number | null;
+  crag_grade?: string | null;
+  crag_confidence?: number | null;
+  crag_web_results_used?: number | null;
+  citation_valid?: boolean | null;
+  citation_cited_source_count?: number | null;
+  citation_invalid_citations?: string | null;
+  cache_type?: string | null;
+  retry_attempt_count?: number;
+  retry_reason?: string | null;
+  feedback_rating?: 'up' | 'down' | null;
+  feedback_reason?: string | null;
+  feedback_correction?: string | null;
+}
+
+export interface ValidationMetricsResponse {
+  summary: {
+    total_queries: number;
+    avg_total_ms: number;
+    avg_retrieval_score: number;
+    crag_grades: {
+      correct: number;
+      ambiguous: number;
+      incorrect: number;
+    };
+    citation_valid_pct: number;
+    positive_feedback: number;
+    negative_feedback: number;
+  };
+  items: ValidationMetricItem[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+
 // ── WebSocket event types ─────────────────────────────────────────────────────
 
 export type WSEventType =

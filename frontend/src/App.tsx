@@ -8,6 +8,7 @@ import { Query } from './pages/Query';
 import { Visualizer } from './pages/Visualizer';
 import { Docs } from './pages/Docs';
 import { KTGraph } from './pages/KTGraph';
+import { QueryValidation } from './pages/QueryValidation';
 import { Review } from './pages/Review';
 
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/query" element={<Query />} />
+            <Route path="/validation" element={<QueryValidation />} />
             <Route path="/visualizer" element={<Visualizer />} />
             <Route path="/docs" element={<Docs />} />
             <Route path="/kt-graph" element={<KTGraph />} />

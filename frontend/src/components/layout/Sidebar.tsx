@@ -16,6 +16,7 @@ const links = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', color: '#F4831F' },
   { to: '/documents', icon: FileText, label: 'Documents', color: '#3b82f6' },
   { to: '/query', icon: MessageSquare, label: 'Query', color: '#10b981' },
+  { to: '/validation', icon: Activity, label: 'Query Validation', color: '#34d399' },
   { to: '/kt-graph', icon: Cpu, label: 'Memory Graph', color: '#ec4899' },
   { to: '/visualizer', icon: Activity, label: 'Live Pipeline', color: '#f59e0b' },
   { to: '/review', icon: ClipboardCheck, label: 'Feedback Review', color: '#f43f5e' },
